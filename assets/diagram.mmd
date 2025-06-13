@@ -1,0 +1,65 @@
+graph TD
+    subgraph "User & Admin Interfaces"
+        Frontend["🌐 Frontend - React or Vue.js"]
+    end
+
+    subgraph "API Gateway"
+        API["🚀 FastAPI Server"]
+    end
+
+    subgraph "Asynchronous Processing Layer"
+        Broker["🔄 Redis Message Broker"]
+        Workers["🛠️ Dramatiq Workers"]
+    end
+
+    subgraph "Core & Specialized Services - Python Modules"
+        Parser["📄 Document Parsing Service"]
+        QueryTransform["🔍 Query Transformation Service"]
+        RAGEngine["🧠 Core RAG Engine"]
+        Evaluation["⚖️ Evaluation Service"]
+        PromptStudio["🎨 Prompt Engineering Studio Logic"]
+    end
+
+    subgraph "Persistence Layer"
+        MongoDB["📦 MongoDB Atlas with Beanie ODM"]
+        VectorDB["🧠 Vector DB - Mongo Atlas Vector Search"]
+    end
+
+    subgraph "External Services"
+        LLM_API["🤖 LLM API - Gemini, OpenAI"]
+        Vision_API["👁️ Vision Model API - Gemini 1.5 Pro"]
+    end
+
+    %% User Flows
+    Frontend -- "REST API Calls" --> API
+    API -- "Returns Data" --> Frontend
+
+    %% Ingestion Flow (Asynchronous)
+    API -- "i. Upload Request" --> API
+    API -- "ii. Enqueue Ingestion Task" --> Broker
+    Broker -- "iii. Pushes Task" --> Workers
+    Workers -- "iv. Executes Task" --> Parser
+    Parser -- "v. Calls for OCR/Vision" --> Vision_API
+    Parser -- "vi. Creates & Embeds Chunks" --> RAGEngine
+    RAGEngine -- "vii. Stores Metadata" --> MongoDB
+    RAGEngine -- "viii. Stores Vectors" --> VectorDB
+    Workers -- "ix. Updates Doc Status" --> MongoDB
+
+    %% Generation Flow (Asynchronous)
+    API -- "a) Generation Request" --> API
+    API -- "b) Enqueue Generation Task" --> Broker
+    API -- "c) Returns Task ID to Frontend" --> Frontend
+    Broker -- "d) Pushes Task" --> Workers
+    Workers -- "e) Executes Task" --> QueryTransform
+    QueryTransform -- "f) Calls LLM to shorten prompt" --> LLM_API
+    Workers -- "g) Uses concise query" --> RAGEngine
+    RAGEngine -- "h) Retrieves Chunks" --> VectorDB
+    RAGEngine -- "i) Augments prompt & generates" --> LLM_API
+    Workers -- "j) Stores Result & Citations" --> MongoDB
+    Workers -- "k) Enqueues Evaluation Task" --> Broker
+
+    %% Evaluation Flow (Asynchronous)
+    Broker -- "l) Pushes Task" --> Workers
+    Workers -- "m) Executes LLM-as-a-Judge" --> Evaluation
+    Evaluation -- "n) Calls LLM with rubric" --> LLM_API
+    Evaluation -- "o) Stores results" --> MongoDB
