@@ -1,50 +1,113 @@
-# RAG Memo Generation - Monorepo
+# TinyRAG - Intelligent Memo Generation Platform
 
-This repository contains the complete system for enterprise memo generation, including both backend services and frontend UI. The backend handles document ingestion, retrieval-augmented generation (RAG), and evaluation, while the frontend provides an intuitive user interface for interacting with the system.
+## Overview
+TinyRAG is an intelligent AI-powered platform that automates the creation of first-draft memos from dense, complex documents. Using cutting-edge Retrieval-Augmented Generation (RAG), it ensures every statement is grounded in source documents with verifiable citations.
 
-## Structure
+## 🚀 Quick Start
 
-- **tiny-rag-be:** Backend services built with FastAPI and Dramatiq.
-- **tiny-rag-fe:** Frontend application built with React/Vue.js.
-
-## Tech Stack
-
-### Backend
+### Prerequisites
 - Python 3.11+
-- FastAPI
-- Dramatiq & Redis
-- LlamaIndex
-- Beanie (MongoDB ODM)
-- Pydantic
+- Node.js 18+
+- Docker & Docker Compose
+- MongoDB Atlas Account
+- OpenAI API Key
 
-### Frontend
-- Node.js
-- React / Vue.js
-- TypeScript
-- Vite
-- TailwindCSS
+### Local Development Setup
+1. Clone the repositories:
+```bash
+git clone https://github.com/your-org/rag-memo-api.git
+git clone https://github.com/your-org/rag-memo-ui.git
+git clone https://github.com/your-org/rag-memo-core-lib.git
+```
 
-## Setup & Installation
+2. Set up the backend:
+```bash
+cd rag-memo-api
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
+```
 
-### Backend
-1. Navigate to the backend directory: `cd tiny-rag-be`
-2. Create and activate a virtual environment: `python -m venv venv && source venv/bin/activate`
-3. Install dependencies: `pip install -r requirements.txt`
-4. Set up environment variables by copying `.env.example` to `.env` and filling in the values (DB URI, LLM API Keys, etc.).
+3. Set up the frontend:
+```bash
+cd rag-memo-ui
+npm install
+```
 
-### Frontend
-1. Navigate to the frontend directory: `cd tiny-rag-fe`
-2. Install dependencies: `npm install`
-3. Set up environment variables by copying `.env.local.example` to `.env.local` and setting the `VITE_API_BASE_URL`.
+4. Configure environment variables:
+```bash
+# Copy example env files
+cp .env.example .env  # in each repository
+```
 
-## Running the Application
+5. Start the development environment:
+```bash
+docker-compose up -d
+```
 
-### Backend
-- **API Server:** `uvicorn api.main:app --reload`
-- **Dramatiq Workers:** `dramatiq workers.actors`
+## 🛠️ Features
 
-### Frontend
-- **Development Server:** `npm run dev`
+### Core Features
+- 📄 PDF Document Processing
+- 🤖 AI-Powered Memo Generation
+- 📝 Citation System
+- 🔍 Source Verification
+- 🎯 Customizable Prompts
 
-## Notes
-Ensure both backend and frontend services are running for full functionality. The frontend communicates with the backend via the API gateway.
+### Technical Features
+- ⚡ FastAPI Backend
+- 🔄 Asynchronous Processing
+- 🎨 Modern React/Vue.js Frontend
+- 📊 MongoDB + Vector Search
+- 🔒 Secure Authentication
+
+## 📚 Documentation
+
+- [API Documentation](docs/api/README.md)
+- [Architecture Overview](docs/architecture/README.md)
+- [Development Guide](docs/Contributing.md)
+- [User Guide](docs/user/README.md)
+
+## 🧪 Testing
+
+```bash
+# Backend Tests
+cd rag-memo-api
+pytest
+
+# Frontend Tests
+cd rag-memo-ui
+npm test
+```
+
+## 📈 Performance Metrics
+
+- Document Processing: < 30 seconds
+- Memo Generation: < 60 seconds
+- API Response: < 200ms
+- System Uptime: > 99%
+
+## 🔄 Development Workflow
+
+1. Create feature branch
+2. Implement changes
+3. Run tests
+4. Submit PR
+5. Code review
+6. Merge to main
+
+## 🤝 Contributing
+
+Please read our [Contributing Guide](docs/Contributing.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Links
+
+- [Project Structure](docs/ProjectStructure.md)
+- [Version Plan](docs/Todo/VersionPlanDoc.md)
+- [Change Log](docs/ChangeLog.md)
+- [FAQ](docs/FAQ.md)
+- [Technical Debt](docs/TechDebt.md)
