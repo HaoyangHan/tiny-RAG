@@ -64,7 +64,7 @@
 ## 5. Performance Optimization
 
 - **Asynchronous Programming:** Leverage `async` and `await` for I/O-bound operations to maximize concurrency.
-- **Caching:** Apply `functools.lru_cache`, `@cache` (Python 3.9+), or `fastapi.Depends` caching where appropriate.
+- **Caching:** Apply `functools.lru_cache`, `@cache` (Python 3.10+), or `fastapi.Depends` caching where appropriate.
 - **Resource Monitoring:** Use `psutil` or similar to monitor resource usage and identify bottlenecks.
 - **Memory Efficiency:** Ensure proper release of unused resources to prevent memory leaks.
 - **Concurrency:** Employ `concurrent.futures` or `asyncio` to manage concurrent tasks effectively.
