@@ -20,7 +20,7 @@ WORKDIR /app
 
 # Copy package files and install production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy built assets from builder
 COPY --from=builder /app/.next ./.next
