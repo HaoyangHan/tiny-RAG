@@ -33,10 +33,32 @@ class Settings(BaseSettings):
     
     # LLM API settings
     OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = "https://api.openai-proxy.org/v1"
     GEMINI_API_KEY: str = ""
+    GEMINI_BASE_URL: str = "https://api.openai-proxy.org/google"
+    
+    # RAG framework settings
+    RAG_FRAMEWORK: str = "llamaindex"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    VECTOR_STORE: str = "mongodb_atlas"
     
     # JWT settings
     JWT_SECRET_KEY: str = "your-secret-key"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # Worker settings
+    DRAMATIQ_BROKER: str = "redis"
+    WORKER_CONCURRENCY: int = 4
+    REQUEST_TIMEOUT: int = 300
+    
+    # Document processing settings
+    MAX_CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
+    MAX_FILE_SIZE: int = 52428800
+    SUPPORTED_FORMATS: str = "pdf,docx,png,jpg,jpeg,tiff"
+    OCR_ENGINE: str = "tesseract"
+    OCR_LANGUAGES: str = "eng"
     
     class Config:
         env_file = ".env"
