@@ -1,45 +1,151 @@
 version: '3.8'
 
 services:
-  api:
-    build: ./rag-memo-api
-    ports:
-      - "8000:8000"
-    environment:
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB_NAME=tinyrag
-      - REDIS_URL=redis://redis:6379
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-    depends_on:
-      - mongodb
-      - redis
-    volumes:
-      - ./rag-memo-api:/app
-    networks:
-      - tinyrag-network
-
+  # MongoDB Database
   mongodb:
-    image: mongo:6.0
+    image: mongo:7.0
+    container_name: tinyrag-mongodb
+    restart: unless-stopped
     ports:
       - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: tinyrag
     volumes:
       - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - tinyrag-network
 
+  # Redis Cache & Task Queue
   redis:
-    image: redis:7.0
+    image: redis:7.2-alpine
+    container_name: tinyrag-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
       - tinyrag-network
 
+  # Backend API
+  api:
+    build:
+      context: ./rag-memo-api
+      dockerfile: Dockerfile
+    container_name: tinyrag-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/tinyrag?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
+      - GEMINI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
+      - DEBUG=true
+      - API_V1_STR=/api/v1
+      - PROJECT_NAME=TinyRAG
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./rag-memo-api:/app
+      - api_uploads:/app/uploads
+    networks:
+      - tinyrag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Dramatiq Worker
+  worker:
+    build:
+      context: ./rag-memo-api
+      dockerfile: Dockerfile
+    container_name: tinyrag-worker
+    restart: unless-stopped
+    command: dramatiq workers.tasks
+    environment:
+      - MONGODB_URL=mongodb://admin:password@mongodb:27017/tinyrag?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
+      - GEMINI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
+      - DEBUG=true
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./rag-memo-api:/app
+      - api_uploads:/app/uploads
+    networks:
+      - tinyrag-network
+
+  # Frontend UI
+  ui:
+    build:
+      context: ./rag-memo-ui
+      dockerfile: Dockerfile
+    container_name: tinyrag-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_API_VERSION=v1
+      - VITE_APP_NAME=TinyRAG
+      - VITE_APP_VERSION=1.2.0
+    depends_on:
+      - api
+    volumes:
+      - ./rag-memo-ui:/app
+      - /app/node_modules
+    networks:
+      - tinyrag-network
+
+  # MongoDB Express (Database Admin UI)
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: tinyrag-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    depends_on:
+      - mongodb
+    networks:
+      - tinyrag-network
+
+  # Redis Commander (Redis Admin UI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: tinyrag-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8082:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - tinyrag-network
+
 volumes:
   mongodb_data:
+    driver: local
   redis_data:
+    driver: local
+  api_uploads:
+    driver: local
 
 networks:
   tinyrag-network:
