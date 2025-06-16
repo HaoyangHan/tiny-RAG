@@ -16,42 +16,26 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <Header 
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-        sidebarOpen={sidebarOpen}
+    <div className="min-h-screen bg-gray-50">
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-
-      <div className="flex h-[calc(100vh-4rem)]">
-        {/* Sidebar */}
-        <Sidebar 
-          open={sidebarOpen}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-
-        {/* Main Content */}
-        <main 
-          className={cn(
-            "flex-1 overflow-hidden transition-all duration-300",
-            sidebarOpen && !sidebarCollapsed ? "ml-64" : sidebarOpen ? "ml-16" : "ml-0"
-          )}
-        >
-          <div className="h-full flex flex-col">
-            {/* Content Area */}
-            <div className="flex-1 overflow-auto p-6">
-              {children}
-            </div>
-
-            {/* Status Bar */}
-            <StatusBar />
-          </div>
+      
+      <div className={cn(
+        'flex flex-col min-h-screen transition-all duration-300',
+        sidebarOpen ? 'ml-64' : 'ml-0'
+      )}>
+        <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        
+        <main className="flex-1 container mx-auto px-4 py-8">
+          {children}
         </main>
+        
+        <StatusBar />
       </div>
     </div>
   );

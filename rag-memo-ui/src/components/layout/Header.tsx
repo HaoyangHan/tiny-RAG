@@ -5,11 +5,11 @@
  */
 
 import React from 'react';
+import { Bars3Icon } from '@heroicons/react/24/outline';
 import Button from '../ui/Button';
 
 interface HeaderProps {
-  onToggleSidebar: () => void;
-  sidebarOpen: boolean;
+  onMenuClick: () => void;
 }
 
 // Simple icon components
@@ -44,60 +44,30 @@ const UserIcon = () => (
   </svg>
 );
 
-export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
+export function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
-      {/* Left Section */}
-      <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleSidebar}
-          className="p-2"
+    <header className="bg-white shadow-sm">
+      <div className="flex items-center justify-between h-16 px-4">
+        <button
+          onClick={onMenuClick}
+          className="p-2 rounded-md hover:bg-gray-100"
         >
-          <MenuIcon />
-        </Button>
+          <Bars3Icon className="h-6 w-6" />
+        </button>
         
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">T</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">T</span>
+            </div>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+              TinyRAG
+            </h1>
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              v1.2
+            </span>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            TinyRAG
-          </h1>
-          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-            v1.2
-          </span>
         </div>
-      </div>
-
-      {/* Center Section - Search */}
-      <div className="flex-1 max-w-md mx-8">
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <SearchIcon />
-          </div>
-          <input
-            type="text"
-            placeholder="Search documents, memos..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-          />
-        </div>
-      </div>
-
-      {/* Right Section */}
-      <div className="flex items-center space-x-2">
-        <Button variant="ghost" size="sm" className="p-2">
-          <BellIcon />
-        </Button>
-        
-        <Button variant="ghost" size="sm" className="p-2">
-          <SettingsIcon />
-        </Button>
-        
-        <Button variant="ghost" size="sm" className="p-2">
-          <UserIcon />
-        </Button>
       </div>
     </header>
   );
