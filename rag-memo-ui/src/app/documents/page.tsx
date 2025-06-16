@@ -1,3 +1,8 @@
+/**
+ * Documents page for uploading and listing documents.
+ *
+ * @returns {JSX.Element}
+ */
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +16,7 @@ interface Document {
 }
 
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

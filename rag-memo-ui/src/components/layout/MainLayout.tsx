@@ -3,6 +3,10 @@
  * 
  * Provides the overall application layout with navigation, sidebar, and main content area.
  * Supports the new multi-format document processing and RAG framework features.
+ *
+ * @param {Object} props
+ * @param {React.ReactNode} props.children - The main content to render.
+ * @returns {JSX.Element}
  */
 
 import React, { useState } from 'react';

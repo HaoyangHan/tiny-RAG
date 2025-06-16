@@ -2,11 +2,14 @@
  * Header Component for TinyRAG v1.2
  * 
  * Provides the top navigation bar with branding, user menu, and global actions.
+ *
+ * @param {Object} props
+ * @param {() => void} props.onMenuClick - Callback for menu button click.
+ * @returns {JSX.Element}
  */
 
 import React from 'react';
 import { Bars3Icon } from '@heroicons/react/24/outline';
-import Button from '../ui/Button';
 
 interface HeaderProps {
   onMenuClick: () => void;

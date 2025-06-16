@@ -1,13 +1,19 @@
+/**
+ * Sidebar navigation for TinyRAG.
+ *
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Whether the sidebar is open.
+ * @returns {JSX.Element}
+ */
 import React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   isOpen: boolean;
-  onClose: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen }: SidebarProps) {
   return (
     <div
       className={cn(

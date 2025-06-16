@@ -1,3 +1,10 @@
+/**
+ * Status bar for TinyRAG.
+ *
+ * Displays global status and indicators.
+ *
+ * @returns {JSX.Element}
+ */
 import React from 'react';
 
 export function StatusBar() {
