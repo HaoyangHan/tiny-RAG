@@ -247,3 +247,66 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+.yarn/
+.npm
+
+# Testing
+coverage/
+.nyc_output/
+htmlcov/
+.coverage
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Production
+build/
+dist/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.python-version
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Cache
+.cache/
+.eslintcache
+.parcel-cache/
+
+# Misc
+*.pem
+.DS_Store
+*.pid
+*.seed
+*.pid.lock

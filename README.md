@@ -264,6 +264,100 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 🐛 Report issues on GitHub
 - 💬 Join our community discussions
 
+## 🐳 Docker Setup & Deployment
+
+### Prerequisites
+- Docker Desktop 24.0.0 or later
+- Docker Compose v2.24.0 or later
+- At least 4GB of available RAM
+- Available ports: 3000, 8000, 8081, 8082
+
+### Quick Start with Docker
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/tiny-RAG.git
+   cd tiny-RAG
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Start the services:**
+   ```bash
+   # Start all services in development mode
+   docker-compose up -d
+
+   # Or start with production configuration
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+4. **Access the services:**
+   - Frontend UI: http://localhost:3000
+   - API Documentation: http://localhost:8000/docs
+   - MongoDB Express: http://localhost:8081 (admin/admin)
+   - Redis Commander: http://localhost:8082
+
+### Service Health Checks
+```bash
+# Check all containers are running
+docker-compose ps
+
+# Check API health
+curl http://localhost:8000/health
+
+# Check MongoDB connection
+curl http://localhost:8000/health/db
+
+# Check Redis connection
+curl http://localhost:8000/health/redis
+```
+
+### Container Management
+```bash
+# Stop all services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# View logs for specific service
+docker-compose logs -f api
+
+# Rebuild specific service
+docker-compose build api
+
+# Restart specific service
+docker-compose restart api
+```
+
+### Development with Docker
+- **Live reload** is enabled for both frontend and backend in development mode
+- Frontend code changes will automatically trigger rebuilds
+- Backend code changes will reload the API server
+- Core library changes require rebuilding the API container
+
+### Troubleshooting
+1. **Container fails to start:**
+   ```bash
+   # Check container logs
+   docker-compose logs [service_name]
+   ```
+
+2. **Port conflicts:**
+   ```bash
+   # Check if ports are in use
+   lsof -i :3000,8000,8081,8082
+   ```
+
+3. **Memory issues:**
+   ```bash
+   # Check container resource usage
+   docker stats
+   ```
+
 ---
 
 **Built with ❤️ using FastAPI, React, MongoDB, and modern AI technologies.**

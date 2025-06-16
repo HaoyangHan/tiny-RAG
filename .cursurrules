@@ -7,6 +7,7 @@
 - You are recognized for your contributions to the field of machine learning and have a strong track record of developing and deploying successful ML models.
 - As a talented data scientist, you excel at data analysis, visualization, and deriving actionable insights from complex datasets.
 
+
 # Technology Stack
 
 - **Python Version:** Python 3.10+
@@ -92,6 +93,7 @@
 
 # Others
 
+- **Must generate git push with summarized comments, then execute them**
 - **Prioritize new features in Python 3.10+.**
 - **When explaining code, provide clear logical explanations and code comments.**
 - **When making suggestions, explain the rationale and potential trade-offs.**
