@@ -7,7 +7,6 @@ import os
 from dotenv import load_dotenv
 
 from services.document_processor import DocumentProcessor
-from services.memo_generator import MemoGenerator
 
 # Load environment variables
 load_dotenv()
@@ -54,14 +53,4 @@ def get_document_processor() -> DocumentProcessor:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="OpenAI API key not configured"
         )
-    return DocumentProcessor(openai_api_key)
-
-def get_memo_generator() -> MemoGenerator:
-    """Get a MemoGenerator instance."""
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="OpenAI API key not configured"
-        )
-    return MemoGenerator(openai_api_key) 
+    return DocumentProcessor(openai_api_key) 

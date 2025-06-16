@@ -143,3 +143,8 @@ Always read and adhere to the following documentation standards before developme
 - `@Docs/FAQ.md` - FAQ, categorized by topic.
 - `@Docs/TechDebt.md` - Technical Debt Tracker, records points needing optimization.
 - The `README.md` file needs to be updated with every iteration, including a quick start guide, feature descriptions, and optimization suggestions.
+- `@Docs/VersionHistory.md`- Track historical features, parsing the essentials from VersionPlan
+- `@Docs/Todo/VersionPlanAIGenerated.md` - suggesting the future version of features.
+- `@Docs/Todo/ProjectStructureAIGenerated.md` - suggesting the new project structure based on new features.
+
+Finally, in the end of all process generate git push commands with messages, push the code.

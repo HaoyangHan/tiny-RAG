@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from models.memo import Memo
 from models.document import Document
 from services.memo_generator import MemoGenerator
-from dependencies import get_current_user, get_memo_generator
+from services.llm_factory import llm_factory, LLMModel
+from dependencies import get_current_user
 
 router = APIRouter(prefix="/memos", tags=["memos"])
 
@@ -14,12 +15,12 @@ class MemoCreate(BaseModel):
     title: str
     document_ids: List[str]
     sections: Optional[List[str]] = None
+    model: Optional[str] = None  # LLM model to use
 
 @router.post("/", response_model=Memo)
 async def create_memo(
     memo_data: MemoCreate,
-    current_user: str = Depends(get_current_user),
-    memo_generator: MemoGenerator = Depends(get_memo_generator)
+    current_user: str = Depends(get_current_user)
 ) -> Memo:
     """Create a new memo from selected documents."""
     try:
@@ -39,12 +40,16 @@ async def create_memo(
                 )
             documents.append(document)
 
+        # Create memo generator
+        memo_generator = MemoGenerator()
+
         # Generate memo
         memo = await memo_generator.generate_memo(
             title=memo_data.title,
             documents=documents,
             user_id=current_user,
-            sections=memo_data.sections
+            sections=memo_data.sections,
+            model=memo_data.model
         )
         return memo
 
@@ -54,6 +59,34 @@ async def create_memo(
         raise HTTPException(
             status_code=500,
             detail=f"Error creating memo: {str(e)}"
+        )
+
+@router.get("/models")
+async def get_available_models():
+    """Get list of available LLM models."""
+    try:
+        models = llm_factory.get_available_models()
+        default_model = llm_factory.get_default_model()
+        
+        return {
+            "models": models,
+            "default_model": default_model,
+            "model_info": {
+                "openai": {
+                    LLMModel.GPT_4_MINI: "GPT-4 Mini - Fast and cost-effective",
+                    LLMModel.GPT_4_NANO: "GPT-4.1 Nano - Ultra-fast responses"
+                },
+                "gemini": {
+                    LLMModel.GEMINI_2_0_FLASH_LITE: "Gemini 2.0 Flash Lite - Default, balanced performance",
+                    LLMModel.GEMINI_2_5_PRO_PREVIEW: "Gemini 2.5 Pro Preview - Advanced reasoning",
+                    LLMModel.GEMINI_2_5_FLASH_PREVIEW: "Gemini 2.5 Flash Preview - Fast with thinking"
+                }
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving models: {str(e)}"
         )
 
 @router.get("/", response_model=List[Memo])

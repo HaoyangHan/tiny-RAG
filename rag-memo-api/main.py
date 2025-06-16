@@ -6,6 +6,9 @@ from typing import Dict, Any
 import logging
 import uvicorn
 
+from database import Database
+from routes import documents, memos
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -28,8 +31,12 @@ class Settings(BaseSettings):
     # Redis settings
     REDIS_URL: str = "redis://localhost:6379"
     
-    # OpenAI settings
+    # LLM API settings
     OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    
+    # JWT settings
+    JWT_SECRET_KEY: str = "your-secret-key"
     
     class Config:
         env_file = ".env"
@@ -50,13 +57,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(documents.router, prefix=settings.API_V1_STR)
+app.include_router(memos.router, prefix=settings.API_V1_STR)
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database connection on startup."""
+    await Database.connect_to_database(
+        settings.MONGODB_URL,
+        settings.MONGODB_DB_NAME
+    )
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connection on shutdown."""
+    await Database.close_database_connection()
+
 @app.get("/")
 async def root() -> Dict[str, Any]:
     """Root endpoint returning API information."""
     return {
         "name": settings.APP_NAME,
-        "version": "1.0.0",
-        "status": "operational"
+        "version": "1.1.0",
+        "status": "operational",
+        "features": [
+            "Document processing",
+            "Memo generation",
+            "Multi-LLM support (OpenAI, Gemini)",
+            "Citation system"
+        ]
     }
 
 @app.get("/health")
