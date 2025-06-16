@@ -1,0 +1,4 @@
+dramatiq==1.16.0
+redis==5.0.1
+pydantic==2.6.1
+pydantic-settings==2.1.0 
