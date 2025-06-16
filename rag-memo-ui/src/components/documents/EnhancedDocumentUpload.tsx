@@ -22,14 +22,12 @@ interface EnhancedDocumentUploadProps {
   onUpload: (files: File[]) => Promise<void>;
   maxFiles?: number;
   maxSize?: number;
-  supportedFormats?: string[];
 }
 
 export function EnhancedDocumentUpload({
   onUpload,
   maxFiles = 10,
   maxSize = 50 * 1024 * 1024, // 50MB
-  supportedFormats = ['pdf', 'docx', 'png', 'jpg', 'jpeg', 'tiff']
 }: EnhancedDocumentUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
