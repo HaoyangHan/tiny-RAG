@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB Database
   mongodb:
@@ -43,8 +41,8 @@ services:
     environment:
       - MONGODB_URL=mongodb://admin:password@mongodb:27017/tinyrag?authSource=admin
       - REDIS_URL=redis://redis:6379
-      - OPENAI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
-      - GEMINI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - DEBUG=true
       - API_V1_STR=/api/v1
       - PROJECT_NAME=TinyRAG
@@ -65,23 +63,23 @@ services:
   # Dramatiq Worker
   worker:
     build:
-      context: ./rag-memo-api
+      context: ./rag-memo-worker
       dockerfile: Dockerfile
     container_name: tinyrag-worker
     restart: unless-stopped
-    command: dramatiq workers.tasks
     environment:
       - MONGODB_URL=mongodb://admin:password@mongodb:27017/tinyrag?authSource=admin
       - REDIS_URL=redis://redis:6379
-      - OPENAI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
-      - GEMINI_API_KEY=sk-28B9sTozC3sX2aQWfZ7F4teA9xerCGusWMJTuZrmRtU7ku2a
+      - DRAMATIQ_BROKER=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - DEBUG=true
     depends_on:
       - mongodb
       - redis
     volumes:
-      - ./rag-memo-api:/app
-      - api_uploads:/app/uploads
+      - ./rag-memo-worker:/app
+      - worker_uploads:/app/uploads
     networks:
       - tinyrag-network
 
@@ -95,15 +93,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
-      - VITE_API_VERSION=v1
-      - VITE_APP_NAME=TinyRAG
-      - VITE_APP_VERSION=1.2.0
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_VERSION=v1
+      - NEXT_PUBLIC_APP_NAME=TinyRAG
+      - NEXT_PUBLIC_APP_VERSION=1.2.0
     depends_on:
       - api
-    volumes:
-      - ./rag-memo-ui:/app
-      - /app/node_modules
     networks:
       - tinyrag-network
 
@@ -145,6 +140,8 @@ volumes:
   redis_data:
     driver: local
   api_uploads:
+    driver: local
+  worker_uploads:
     driver: local
 
 networks:

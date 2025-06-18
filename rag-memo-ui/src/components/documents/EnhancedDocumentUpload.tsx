@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import Image from 'next/image';
 import Button from '../ui/Button';
 
 interface UploadedFile {
@@ -209,9 +210,11 @@ export function EnhancedDocumentUpload({
                 {/* File Icon/Preview */}
                 <div className="flex-shrink-0">
                   {fileObj.preview ? (
-                    <img
+                    <Image
                       src={fileObj.preview}
                       alt={fileObj.file.name}
+                      width={48}
+                      height={48}
                       className="w-12 h-12 object-cover rounded"
                     />
                   ) : (

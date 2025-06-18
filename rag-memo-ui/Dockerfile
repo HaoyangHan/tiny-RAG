@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy source code
+# Copy source code and config files
 COPY . .
 
 # Build the application
@@ -18,17 +18,26 @@ FROM node:18-alpine AS runner
 
 WORKDIR /app
 
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
 # Copy package files and install production dependencies
 COPY package*.json ./
-RUN npm install --only=production
+RUN npm install --only=production && npm cache clean --force
 
-# Copy built assets from builder
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
+# Copy built assets and necessary files from builder
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts
 
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Switch to non-root user
+USER nextjs
 
 # Expose port
 EXPOSE 3000
