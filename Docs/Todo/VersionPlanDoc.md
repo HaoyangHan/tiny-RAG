@@ -1,98 +1,129 @@
-# Version 1.0 - TinyRAG MVP (COMPLETED ✅)
+# TinyRAG Version Plan Document
 
-## Overview
-Version 1.0 focused on delivering the core value proposition: generating memos from PDFs with basic functionality and essential features. This version has been successfully completed and deployed.
+## Version 1.2 - ✅ COMPLETED
+**Status:** Successfully deployed with all services running
+- ✅ Docker containerization and orchestration
+- ✅ UI service with modern RAG workflow interface
+- ✅ API service with FastAPI backend
+- ✅ Worker service with Dramatiq task processing
+- ✅ Database services (MongoDB, Redis)
+- ✅ Security improvements (secrets management)
 
-## Core Components
+## Version 1.3 - 🚧 IN PROGRESS
+**Focus:** Advanced RAG capabilities, authentication, and core library development
 
-### 1. Frontend (`rag-memo-ui`)
-- **Technology Stack:**
-  - React/Vue.js with TypeScript
-  - Vite for build tooling
-  - TailwindCSS for styling
-- **Key Features:**
-  - User authentication
-  - Single PDF upload interface
-  - Basic prompt selection
-  - Memo display with text citations
-  - Simple status polling for generation
+### Core Objectives
 
-### 2. Backend API (`rag-memo-api`)
-- **Technology Stack:**
-  - FastAPI with Python 3.11+
-  - Pydantic for data validation
-  - Dramatiq with Redis for async processing
-- **Core Endpoints:**
-  - `/documents/upload` - PDF upload endpoint
-  - `/generate` - Memo generation endpoint
-  - `/generations/{generation_id}` - Status and result retrieval
-  - Basic CRUD for projects and elements
+#### 1. **Authentication & Authorization System** 🔐
+- **API Security:**
+  - JWT-based authentication
+  - Role-based access control (RBAC)
+  - API key management for different access levels
+  - Rate limiting and usage quotas
+- **User Management:**
+  - User registration and login endpoints
+  - Session management
+  - Password security (hashing, validation)
+  - User profile management
 
-### 3. Core Services
-- **Document Parsing Service:**
-  - PDF text extraction
-  - Basic metadata extraction
-- **RAG Engine:**
-  - Text chunking
-  - Vector embeddings
-  - Basic retrieval
-  - Memo generation with citations
-- **Storage:**
-  - MongoDB Atlas for document metadata
-  - Vector DB (Mongo Atlas Vector Search) for embeddings
+#### 2. **UI-API Integration** 🔗
+- **Frontend Authentication:**
+  - Login/logout functionality
+  - Token management and refresh
+  - Protected routes and components
+- **RAG Workflow Integration:**
+  - Document upload with real API calls
+  - Embedding generation and storage
+  - Advanced retrieval with metadata filtering
+  - Generation with streaming responses
+  - Real-time status updates
 
-### 4. Infrastructure
-- Docker containers for all services
-- Local development environment with docker-compose
-- Basic CI/CD pipeline
-- Environment configuration management
+#### 3. **Advanced RAG Core Library (`rag-memo-core-lib`)** 🧠
+- **Metadata Extraction Framework:**
+  - Date extractor for temporal information
+  - Keyword extractor for topic identification
+  - Summarization extractor for content overview
+  - Entity extractor for named entities
+  - Custom metadata schema definitions
+- **Advanced Retrieval Strategies:**
+  - Metadata-enhanced retrieval
+  - Hybrid search (semantic + keyword)
+  - Custom reranking algorithms
+  - Context-aware chunk selection
+- **Reranking & Generation:**
+  - Customizable reranker with metadata scoring
+  - Multi-stage retrieval pipeline
+  - Citation-aware generation
+  - Quality assessment metrics
 
-## Development Phases
+### Technical Architecture
 
-### Phase 1: Foundation (Week 1-2)
-- Set up project repositories
-- Configure development environment
-- Implement basic API structure
-- Create initial database schemas
+#### Authentication Flow
+```
+User → Frontend → API Gateway → JWT Validation → Protected Resources
+     ←          ←             ← Token Response ←
+```
 
-### Phase 2: Core Features (Week 3-4)
-- Implement PDF parsing
-- Set up RAG pipeline
-- Create basic frontend UI
-- Implement document upload flow
+#### RAG Pipeline Enhancement
+```
+Document → Parsing → Metadata Extraction → Chunking → Embedding → Storage
+                                     ↓
+Query → Retrieval → Metadata Filtering → Reranking → Generation → Response
+```
 
-### Phase 3: Integration (Week 5-6)
-- Connect frontend and backend
-- Implement generation flow
-- Add citation system
-- Basic error handling
+### Implementation Plan
 
-### Phase 4: Testing & Refinement (Week 7-8)
-- Unit testing
-- Integration testing
-- Performance optimization
-- Documentation
-- Security review
+#### Phase 1: Authentication Foundation (Week 1)
+- Implement JWT authentication in `rag-memo-api`
+- Create user management endpoints
+- Add authentication middleware
+- Set up rate limiting
 
-## Success Metrics
-1. **Functionality:**
-   - Successful PDF processing
-   - Accurate memo generation
-   - Working citation system
+#### Phase 2: Core Library Development (Week 2)
+- Build metadata extraction framework in `rag-memo-core-lib`
+- Implement date, keyword, and summarization extractors
+- Create custom reranker with metadata scoring
+- Add comprehensive unit tests
 
-2. **Performance:**
-   - Document processing time < 30 seconds
-   - Memo generation time < 60 seconds
-   - API response time < 200ms
+#### Phase 3: UI Integration (Week 3)
+- Implement authentication UI components
+- Connect document upload to real API
+- Add real-time RAG workflow visualization
+- Implement streaming response handling
 
-3. **Quality:**
-   - 90% of generated memos require only minor edits
-   - Citations accurately link to source material
-   - System uptime > 99%
+#### Phase 4: Advanced Features (Week 4)
+- Deploy hybrid search capabilities
+- Add metadata-based filtering in UI
+- Implement custom reranking strategies
+- Performance optimization and monitoring
 
-## Next Steps
-After successful deployment of Version 1.0, we will plan for Version 1.1 which will include:
-- Support for additional document formats (DOCX, images)
-- Enhanced prompt customization
-- Multi-document analysis
-- User feedback system 
+### Development Standards
+Following `.cursorrules` requirements:
+- **Code Quality:** Type annotations, comprehensive docstrings, 90% test coverage
+- **Architecture:** SOLID principles, modular design, clean interfaces
+- **Security:** Input validation, authentication, authorization
+- **Performance:** Async operations, caching, efficient algorithms
+- **Documentation:** API docs, user guides, development setup
+
+### Success Metrics
+1. **Authentication:**
+   - Secure user registration/login flow
+   - Proper JWT token management
+   - Role-based access control working
+
+2. **RAG Enhancement:**
+   - Metadata extraction accuracy > 85%
+   - Retrieval relevance improvement > 20%
+   - Generation quality with proper citations
+
+3. **Integration:**
+   - End-to-end RAG workflow functional
+   - Real-time updates and status tracking
+   - Error handling and user feedback
+
+### Next Steps: Version 1.4
+- Multi-document analysis capabilities
+- Advanced prompt engineering
+- Vector database optimization
+- Production deployment strategy
+- Monitoring and analytics dashboard 

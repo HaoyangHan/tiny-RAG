@@ -1,14 +1,14 @@
 # Core Dependencies
-fastapi==0.109.2
-uvicorn==0.27.1
+fastapi==0.115.6
+uvicorn==0.34.0
 pydantic==2.6.1
 pydantic-settings==2.1.0
-python-multipart==0.0.9
+python-multipart==0.0.12
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 dramatiq==1.16.0
 redis==5.0.1
-motor==3.3.2
+motor==3.6.0
 beanie==1.25.0
 langchain==0.1.9
 langchain-openai==0.0.5
@@ -37,4 +37,16 @@ pytest-cov==4.1.0
 ruff==0.2.1
 black==24.1.1
 mypy==1.8.0
-pre-commit==3.6.0 
+pre-commit==3.6.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.12
+
+# Rate limiting
+slowapi==0.1.9
+
+# Additional utilities
+python-dateutil==2.9.0
+typing-extensions==4.9.0 
