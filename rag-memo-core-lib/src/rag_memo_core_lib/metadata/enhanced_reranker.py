@@ -571,4 +571,4 @@ def create_enhanced_reranker(
         **config_kwargs
     )
     
-    return EnhancedMetadataReranker(config)
+    return EnhancedMetadataReranker(config) 
