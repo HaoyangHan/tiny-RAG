@@ -37,6 +37,7 @@ from services.generation_service import GenerationService
 
 # Import route modules
 from routes.documents import router as documents_router
+from routes.memos import router as memos_router
 
 # Import enhanced metadata components (temporarily disabled for v1.3 testing)
 # from rag_memo_core_lib.metadata.llm_extractors import create_llm_extractor
@@ -173,9 +174,10 @@ async def lifespan(app_instance: FastAPI):
             from routes.documents import set_auth_service as set_docs_auth_service
             set_docs_auth_service(auth_service)
         
-        # Include documents router
+        # Include documents router and memos router
         app_instance.include_router(documents_router)
-        logger.info("Documents routes initialized")
+        app_instance.include_router(memos_router)
+        logger.info("Documents and memos routes initialized")
         
         # Create default admin user if none exists
         await create_default_admin_user()
