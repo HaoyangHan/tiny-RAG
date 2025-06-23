@@ -69,13 +69,14 @@ class User(Document):
 
     class Settings:
         name = "users"
-        indexes = [
-            "email",
-            "username",
-            "role",
-            "status",
-            "created_at"
-        ]
+        # Indexes are created by mongo-init.js to avoid conflicts
+        # indexes = [
+        #     [("email", 1), {"unique": True, "name": "users_email_unique"}],
+        #     [("username", 1), {"unique": True, "name": "users_username_unique"}],
+        #     "role",
+        #     "status",
+        #     "created_at"
+        # ]
 
 
 class UserCreate(BaseModel):

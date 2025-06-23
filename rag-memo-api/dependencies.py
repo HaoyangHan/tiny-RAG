@@ -34,9 +34,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     try:
-        print("🔄 DEBUG: Calling auth_service.get_user_from_token()")
-        # Use AuthService to get user from token
-        user = await auth_service.get_user_from_token(credentials.credentials)
+        print("🔄 DEBUG: Calling auth_service.get_current_user()")
+        # Use AuthService's get_current_user method which expects HTTPAuthorizationCredentials
+        user = await auth_service.get_current_user(credentials)
         print(f"👤 DEBUG: User returned: {user is not None}")
         if not user:
             print("❌ DEBUG: No user returned from auth service")
@@ -46,6 +46,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             )
         print(f"✅ DEBUG: User authenticated: {user.username}")
         return user
+    except HTTPException:
+        # Re-raise HTTPExceptions as-is
+        raise
     except Exception as e:
         print(f"💥 DEBUG: Exception in get_current_user: {str(e)}")
         raise HTTPException(

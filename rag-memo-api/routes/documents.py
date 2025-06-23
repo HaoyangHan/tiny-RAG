@@ -1,14 +1,50 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import List
 import tempfile
 from pathlib import Path
 
 from models.document import Document
 from services.document_processor import DocumentProcessor
-from dependencies import get_current_user, get_document_processor
 from auth.models import User
+from auth.service import AuthService
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+# Global auth service reference - will be set by main.py
+auth_service: AuthService = None
+
+def set_auth_service(service: AuthService):
+    """Set the auth service instance from main.py"""
+    global auth_service
+    auth_service = service
+
+def get_auth_service() -> AuthService:
+    """Get the authentication service instance."""
+    if auth_service is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Authentication service not initialized"
+        )
+    return auth_service
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+) -> User:
+    """Dependency to get current authenticated user."""
+    service = get_auth_service()
+    return await service.get_current_user(credentials)
+
+def get_document_processor() -> DocumentProcessor:
+    """Get a DocumentProcessor instance."""
+    import os
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="OpenAI API key not configured"
+        )
+    return DocumentProcessor(openai_api_key)
 
 @router.post("/upload", response_model=Document)
 async def upload_document(

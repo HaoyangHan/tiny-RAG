@@ -29,17 +29,22 @@ class DocumentProcessor:
             # Read file metadata
             content_type = magic.from_file(str(file_path), mime=True)
             file_size = file_path.stat().st_size
+            filename = file_path.name
             
             # Create document metadata
             metadata = DocumentMetadata(
-                filename=file_path.name,
+                filename=filename,
                 content_type=content_type,
                 size=file_size
             )
             
-            # Create document instance
+            # Create document instance with required fields
             document = Document(
                 user_id=user_id,
+                filename=filename,
+                content_type=content_type,
+                file_size=file_size,
+                status="processing",
                 metadata=metadata,
                 chunks=[]
             )
@@ -50,15 +55,20 @@ class DocumentProcessor:
             else:
                 raise ValueError(f"Unsupported content type: {content_type}")
             
+            # Update status to completed
+            document.status = "completed"
+            document.metadata.processed = True
+            
             # Save document
             await document.save()
             return document
             
         except Exception as e:
             logger.error(f"Error processing document: {str(e)}")
-            if document:
+            if 'document' in locals():
                 document.metadata.error = str(e)
                 document.metadata.processed = False
+                document.status = "failed"
                 await document.save()
             raise
 

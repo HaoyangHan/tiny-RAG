@@ -168,6 +168,10 @@ async def lifespan(app_instance: FastAPI):
             # Set auth service in dependencies for proper authentication
             from dependencies import set_auth_service
             set_auth_service(auth_service)
+            
+            # Set auth service in documents router
+            from routes.documents import set_auth_service as set_docs_auth_service
+            set_docs_auth_service(auth_service)
         
         # Include documents router
         app_instance.include_router(documents_router)

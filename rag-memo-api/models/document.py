@@ -22,24 +22,36 @@ class DocumentChunk(BaseModel):
 class Document(Document):
     """Document model for storing uploaded documents and their chunks."""
     user_id: Indexed(str)
+    
+    # Required fields for MongoDB validation
+    filename: str
+    content_type: str
+    file_size: int
+    status: str = "processing"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Additional fields
     metadata: DocumentMetadata
     chunks: List[DocumentChunk] = []
-    created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "documents"
         indexes = [
             "user_id",
-            "metadata.filename",
-            "metadata.upload_date",
-            "metadata.processed"
+            "filename",
+            "status",
+            "created_at"
         ]
 
     class Config:
         schema_extra = {
             "example": {
                 "user_id": "user123",
+                "filename": "example.pdf",
+                "content_type": "application/pdf", 
+                "file_size": 1024,
+                "status": "completed",
                 "metadata": {
                     "filename": "example.pdf",
                     "content_type": "application/pdf",
