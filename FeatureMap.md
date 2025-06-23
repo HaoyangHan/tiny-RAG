@@ -66,36 +66,36 @@ graph TD
 ```mermaid
 gantt
     title Version 1.3.0 Infrastructure & Auth
-    dateFormat  2025-01-01
+    dateFormat  2025-06-01
     section Foundation
-    Docker Integration    :done, 2025-01-01, 7d
-    Authentication System :done, 2025-01-08, 7d
-    API Framework        :done, 2025-01-15, 7d
-    Service Integration  :done, 2025-01-20, 2d
+    Docker Integration    :done, 2025-06-01, 7d
+    Authentication System :done, 2025-06-08, 7d
+    API Framework        :done, 2025-06-15, 7d
+    Service Integration  :done, 2025-06-20, 3d
 ```
 
-### Version 1.3.1 (Current 🔄)
+### Version 1.3.1 (Current 🔄 - Real LLM Focus)
 ```mermaid
 gantt
-    title Version 1.3.1 Testing & Integration
-    dateFormat  2025-01-22
-    section Testing
-    API Testing          :active, 2025-01-22, 7d
-    UI Component Tests   :2025-01-29, 7d
-    Integration Testing  :2025-02-05, 7d
-    Documentation       :2025-02-12, 7d
+    title Version 1.3.1 LLM Integration & Testing
+    dateFormat  2025-06-23
+    section LLM Testing
+    LLM Setup & Doc Processing    :active, 2025-06-23, 7d
+    RAG Generation & Responses    :2025-06-30, 7d
+    UI Integration & E2E Testing :2025-07-07, 7d
+    Production & Documentation   :2025-07-14, 7d
 ```
 
 ### Version 1.3.2 (Planned 📅)
 ```mermaid
 gantt
-    title Version 1.3.2 LLM & Advanced RAG
-    dateFormat  2025-02-19
-    section Core Features
-    LLM Integration      :2025-02-19, 14d
-    Metadata Extraction  :2025-03-05, 14d
-    Enhanced Reranking   :2025-03-19, 14d
-    Vector Search       :2025-04-02, 14d
+    title Version 1.3.2 Advanced Features
+    dateFormat  2025-07-21
+    section Advanced Features
+    Multi-document RAG   :2025-07-21, 14d
+    Enhanced Analytics   :2025-08-04, 14d
+    Performance Optimization :2025-08-18, 14d
+    Mobile App          :2025-09-01, 21d
 ```
 
 ## Feature Relationships
