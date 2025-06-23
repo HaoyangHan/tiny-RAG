@@ -17,7 +17,7 @@ beanie==1.23.6
 redis==5.0.1
 
 # Background tasks
-dramatiq==1.16.0
+dramatiq[redis,watch]==1.16.0
 
 # LLM providers
 openai==1.51.0
@@ -59,4 +59,10 @@ pillow==10.2.0
 
 # Vector Database
 pymongo==4.6.1
-faiss-cpu==1.7.4 
+faiss-cpu==1.7.4
+
+# Added from the code block
+celery==5.3.4
+PyJWT==2.8.0
+
+# Updated from the code block 

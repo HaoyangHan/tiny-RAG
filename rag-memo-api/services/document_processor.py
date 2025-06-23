@@ -5,7 +5,7 @@ import tempfile
 import magic
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from openai import OpenAI
 
 from models.document import Document, DocumentChunk, DocumentMetadata
 
@@ -16,7 +16,11 @@ class DocumentProcessor:
     
     def __init__(self, openai_api_key: str):
         """Initialize the document processor."""
-        self.embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        self.openai_client = OpenAI(
+            base_url='https://api.openai-proxy.org/v1',
+            api_key=openai_api_key,
+        )
+        self.embedding_model = "text-embedding-ada-002"
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
@@ -96,7 +100,7 @@ class DocumentProcessor:
             
             # Generate embeddings for chunks
             for chunk in document.chunks:
-                chunk.embedding = await self.embeddings.aembed_query(chunk.text)
+                chunk.embedding = await self._generate_embedding(chunk.text)
             
             document.metadata.processed = True
             
@@ -104,11 +108,23 @@ class DocumentProcessor:
             logger.error(f"Error processing PDF: {str(e)}")
             raise
 
+    async def _generate_embedding(self, text: str) -> List[float]:
+        """Generate embedding for text using OpenAI."""
+        try:
+            response = self.openai_client.embeddings.create(
+                input=text,
+                model=self.embedding_model
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            logger.error(f"Error generating embedding: {str(e)}")
+            raise
+
     async def get_similar_chunks(self, query: str, document: Document, top_k: int = 3) -> List[DocumentChunk]:
         """Find similar chunks in a document based on a query."""
         try:
             # Generate query embedding
-            query_embedding = await self.embeddings.aembed_query(query)
+            query_embedding = await self._generate_embedding(query)
             
             # Calculate similarity scores
             chunks_with_scores = []
