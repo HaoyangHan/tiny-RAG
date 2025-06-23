@@ -51,7 +51,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     if (error) setError(null);
     if (validationErrors[name]) {
       setValidationErrors(prev => {
-        const { [name]: _, ...rest } = prev;
+        const { [name]: _unused, ...rest } = prev;
         return rest;
       });
     }
@@ -109,7 +109,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     setError(null);
 
     try {
-      const { confirmPassword, ...registrationData } = formData;
+      const { confirmPassword: _confirmPassword, ...registrationData } = formData;
       
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -124,7 +124,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
         throw new Error(errorData.detail || 'Registration failed');
       }
 
-      const data: UserResponse = await response.json();
+      const _data: UserResponse = await response.json();
       
       // Registration successful
       if (onSuccess) {

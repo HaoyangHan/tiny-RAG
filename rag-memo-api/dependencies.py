@@ -1,49 +1,57 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from typing import Optional
 import os
 from dotenv import load_dotenv
 
 from services.document_processor import DocumentProcessor
+from auth.models import User
 
 # Load environment variables
 load_dotenv()
 
-# JWT settings
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# Global auth service reference - will be set by main.py
+auth_service = None
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# HTTP Bearer for JWT tokens
+security = HTTPBearer()
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Create a new JWT access token."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+def set_auth_service(service):
+    """Set the auth service instance from main.py"""
+    global auth_service
+    auth_service = service
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
-    """Get the current user from the JWT token."""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+    """Get the current authenticated user."""
+    print(f"🔍 DEBUG: auth_service is None: {auth_service is None}")
+    print(f"🔍 DEBUG: token: {credentials.credentials[:50]}...")
+    
+    if not auth_service:
+        print("❌ DEBUG: AuthService not available")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication service not available"
+        )
+    
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-        return user_id
-    except JWTError:
-        raise credentials_exception
+        print("🔄 DEBUG: Calling auth_service.get_user_from_token()")
+        # Use AuthService to get user from token
+        user = await auth_service.get_user_from_token(credentials.credentials)
+        print(f"👤 DEBUG: User returned: {user is not None}")
+        if not user:
+            print("❌ DEBUG: No user returned from auth service")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials"
+            )
+        print(f"✅ DEBUG: User authenticated: {user.username}")
+        return user
+    except Exception as e:
+        print(f"💥 DEBUG: Exception in get_current_user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
 
 def get_document_processor() -> DocumentProcessor:
     """Get a DocumentProcessor instance."""

@@ -6,13 +6,14 @@ from pathlib import Path
 from models.document import Document
 from services.document_processor import DocumentProcessor
 from dependencies import get_current_user, get_document_processor
+from auth.models import User
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 @router.post("/upload", response_model=Document)
 async def upload_document(
     file: UploadFile = File(...),
-    current_user: str = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     document_processor: DocumentProcessor = Depends(get_document_processor)
 ) -> Document:
     """Upload and process a document."""
@@ -23,10 +24,10 @@ async def upload_document(
             temp_file.write(content)
             temp_path = Path(temp_file.name)
 
-        # Process document
+        # Process document with user ID
         document = await document_processor.process_document(
             temp_path,
-            current_user
+            str(current_user.id)  # Convert User object to string ID
         )
 
         # Clean up temporary file
@@ -42,12 +43,12 @@ async def upload_document(
 
 @router.get("/", response_model=List[Document])
 async def list_documents(
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> List[Document]:
     """List all documents for the current user."""
     try:
         documents = await Document.find(
-            Document.user_id == current_user
+            Document.user_id == str(current_user.id)
         ).to_list()
         return documents
 
@@ -60,7 +61,7 @@ async def list_documents(
 @router.get("/{document_id}", response_model=Document)
 async def get_document(
     document_id: str,
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ) -> Document:
     """Get a specific document by ID."""
     try:
@@ -70,7 +71,7 @@ async def get_document(
                 status_code=404,
                 detail="Document not found"
             )
-        if document.user_id != current_user:
+        if document.user_id != str(current_user.id):
             raise HTTPException(
                 status_code=403,
                 detail="Not authorized to access this document"
@@ -88,7 +89,7 @@ async def get_document(
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: str,
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """Delete a document."""
     try:
@@ -98,7 +99,7 @@ async def delete_document(
                 status_code=404,
                 detail="Document not found"
             )
-        if document.user_id != current_user:
+        if document.user_id != str(current_user.id):
             raise HTTPException(
                 status_code=403,
                 detail="Not authorized to delete this document"

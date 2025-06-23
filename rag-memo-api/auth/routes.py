@@ -2,8 +2,9 @@
 Authentication routes for TinyRAG API.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials
+from typing import Dict, List, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -35,7 +36,7 @@ def get_auth_service() -> AuthService:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(auth_service.security)
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
 ) -> User:
     """Dependency to get current authenticated user."""
     service = get_auth_service()
@@ -46,7 +47,7 @@ async def get_current_user(
 @limiter.limit("5/minute")
 async def register_user(
     user_data: UserCreate,
-    request
+    request: Request
 ) -> UserResponse:
     """
     Register a new user account.
@@ -83,7 +84,7 @@ async def register_user(
 @limiter.limit("10/minute")
 async def login(
     login_data: LoginRequest,
-    request
+    request: Request
 ) -> Token:
     """
     Authenticate user and return access token.
@@ -317,12 +318,7 @@ async def update_user_admin(
     )
 
 
-# Rate limit error handler
-@router.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request, exc):
-    """Handle rate limit exceeded errors."""
-    response = _rate_limit_exceeded_handler(request, exc)
-    return response
+# Rate limit error handler - will be registered in main app
 
 
 def init_auth_routes(service: AuthService) -> APIRouter:

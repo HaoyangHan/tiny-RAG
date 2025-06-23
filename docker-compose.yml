@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB Database
   tinyrag-mongodb:
@@ -36,7 +34,7 @@ services:
     networks:
       - tinyrag-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis123}", "--raw", "incr", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -57,10 +55,11 @@ services:
     networks:
       - tinyrag-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD-SHELL", "timeout 5s bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
 
   # RAG Core Library Worker
   tinyrag-worker:
@@ -77,8 +76,11 @@ services:
       
       # LLM Configuration
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://api.openai-proxy.org/google}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       
       # Worker settings
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
@@ -103,8 +105,8 @@ services:
   # API Backend
   tinyrag-api:
     build:
-      context: ./rag-memo-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./rag-memo-api/Dockerfile
     container_name: tinyrag-api
     restart: unless-stopped
     ports:
@@ -127,8 +129,11 @@ services:
       
       # LLM Configuration
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://api.openai-proxy.org/google}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       
       # CORS and security
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
@@ -156,10 +161,11 @@ services:
       - ./data/uploads:/app/uploads
       - ./logs:/app/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
 
   # Frontend UI
   tinyrag-ui:
@@ -192,10 +198,11 @@ services:
     networks:
       - tinyrag-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 90s
 
   # Nginx Reverse Proxy (Production)
   tinyrag-nginx:

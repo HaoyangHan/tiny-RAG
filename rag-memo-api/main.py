@@ -3,7 +3,7 @@ TinyRAG API - Main FastAPI Application with Authentication and Enhanced Metadata
 
 This is the main entry point for the TinyRAG API service, integrating:
 - JWT-based authentication and authorization
-- LLM-powered metadata extraction
+- LLM-powered metadata extraction (OpenAI/Gemini)
 - Enhanced reranking capabilities
 - Document processing and RAG workflows
 """
@@ -13,9 +13,10 @@ import logging
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, Request
+from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Request
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -34,9 +35,20 @@ from models.generation import Generation
 from services.document_service import DocumentService
 from services.generation_service import GenerationService
 
-# Import enhanced metadata components
-from rag_memo_core_lib.metadata.llm_extractors import create_llm_extractor
-from rag_memo_core_lib.metadata.enhanced_reranker import create_enhanced_reranker
+# Import route modules
+from routes.documents import router as documents_router
+
+# Import enhanced metadata components (temporarily disabled for v1.3 testing)
+# from rag_memo_core_lib.metadata.llm_extractors import create_llm_extractor
+# from rag_memo_core_lib.metadata.enhanced_reranker import create_enhanced_reranker
+
+# Request/Response models
+class GenerationRequest(BaseModel):
+    """Request model for generation endpoint."""
+    query: str
+    document_ids: Optional[List[str]] = None
+    max_tokens: Optional[int] = 1000
+    temperature: Optional[float] = 0.7
 
 # Configure logging
 logging.basicConfig(
@@ -54,7 +66,7 @@ enhanced_reranker = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app_instance: FastAPI):
     """Application lifespan manager for startup and shutdown."""
     global auth_service, document_service, generation_service, llm_extractor, enhanced_reranker
     
@@ -91,42 +103,75 @@ async def lifespan(app: FastAPI):
         )
         logger.info("Authentication service initialized")
         
-        # Initialize LLM metadata extractor
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        if openai_api_key:
-            llm_extractor = create_llm_extractor(
-                provider="openai",
-                model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-                api_key=openai_api_key
-            )
-            logger.info("LLM metadata extractor initialized")
-        else:
-            logger.warning("OPENAI_API_KEY not found, LLM features disabled")
+        # Initialize LLM metadata extractor (temporarily disabled for v1.3 testing)
+        # llm_provider = os.getenv("LLM_PROVIDER", "openai")
+        # llm_model = os.getenv("LLM_MODEL", "gpt-4o-mini")
         
-        # Initialize enhanced reranker
-        if llm_extractor:
-            enhanced_reranker = create_enhanced_reranker(
-                llm_provider="openai",
-                llm_model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-                llm_api_key=openai_api_key
-            )
-            logger.info("Enhanced reranker initialized")
+        # if llm_provider == "openai":
+        #     api_key = os.getenv("OPENAI_API_KEY")
+        #     base_url = os.getenv("OPENAI_BASE_URL")
+        # elif llm_provider == "gemini":
+        #     api_key = os.getenv("GEMINI_API_KEY")
+        #     base_url = os.getenv("GEMINI_BASE_URL")
+        #     if llm_model == "gpt-4o-mini":  # Default model override for Gemini
+        #         llm_model = "gemini-2.0-flash-lite"
+        # else:
+        #     logger.warning(f"Unknown LLM provider: {llm_provider}, defaulting to OpenAI")
+        #     llm_provider = "openai"
+        #     api_key = os.getenv("OPENAI_API_KEY")
+        #     base_url = os.getenv("OPENAI_BASE_URL")
+        
+        # if api_key:
+        #     llm_extractor = create_llm_extractor(
+        #         provider=llm_provider,
+        #         model=llm_model,
+        #         api_key=api_key,
+        #         base_url=base_url
+        #     )
+        #     logger.info(f"LLM metadata extractor initialized with {llm_provider}")
+        # else:
+        #     logger.warning(f"{llm_provider.upper()}_API_KEY not found, LLM features disabled")
+        
+        # Initialize enhanced reranker (temporarily disabled for v1.3 testing)
+        # if llm_extractor:
+        #     enhanced_reranker = create_enhanced_reranker(
+        #         llm_provider=llm_provider,
+        #         llm_model=llm_model,
+        #         llm_api_key=api_key
+        #     )
+        #     logger.info("Enhanced reranker initialized")
+        
+        logger.info("LLM features temporarily disabled for v1.3 testing")
         
         # Initialize core services
         document_service = DocumentService(
             database=database,
             redis_client=redis_client,
-            llm_extractor=llm_extractor
+            llm_extractor=None  # Temporarily disabled
         )
         
         generation_service = GenerationService(
             database=database,
             redis_client=redis_client,
             document_service=document_service,
-            enhanced_reranker=enhanced_reranker
+            enhanced_reranker=None  # Temporarily disabled
         )
         
         logger.info("Core services initialized")
+        
+        # Initialize authentication routes
+        if auth_service:
+            auth_router = init_auth_routes(auth_service)
+            app_instance.include_router(auth_router)
+            logger.info("Authentication routes initialized")
+            
+            # Set auth service in dependencies for proper authentication
+            from dependencies import set_auth_service
+            set_auth_service(auth_service)
+        
+        # Include documents router
+        app_instance.include_router(documents_router)
+        logger.info("Documents routes initialized")
         
         # Create default admin user if none exists
         await create_default_admin_user()
@@ -141,7 +186,7 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down TinyRAG API...")
-    if redis_client:
+    if 'redis_client' in locals():
         await redis_client.close()
     logger.info("TinyRAG API shutdown completed")
 
@@ -153,7 +198,7 @@ async def create_default_admin_user():
         
         if admin_count == 0:
             default_admin = User(
-                email=os.getenv("DEFAULT_ADMIN_EMAIL", "admin@tinyrag.local"),
+                email=os.getenv("DEFAULT_ADMIN_EMAIL", "admin@example.com"),
                 username=os.getenv("DEFAULT_ADMIN_USERNAME", "admin"),
                 hashed_password=auth_service.get_password_hash(
                     os.getenv("DEFAULT_ADMIN_PASSWORD", "TinyRAG2024!")
@@ -196,18 +241,11 @@ app.add_middleware(
 )
 
 
-# Dependency functions
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(auth_service.security)
-) -> User:
-    """Get current authenticated user."""
-    if not auth_service:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Authentication service not available"
-        )
-    return await auth_service.get_current_user(credentials)
+# Dependency functions moved to dependencies.py
 
+
+# Import get_current_user from dependencies
+from dependencies import get_current_user
 
 async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """Get current user and verify admin role."""
@@ -232,121 +270,25 @@ async def health_check():
             "enhanced_reranker": enhanced_reranker is not None,
             "document_service": document_service is not None,
             "generation_service": generation_service is not None
-        }
+        },
+        "llm_provider": os.getenv("LLM_PROVIDER", "openai"),
+        "llm_model": os.getenv("LLM_MODEL", "gpt-4o-mini")
     }
 
 
 # Document endpoints
-@app.post("/documents/upload")
-@limiter.limit("10/minute")
-async def upload_document(
-    file: UploadFile = File(...),
-    request: Request,
-    current_user: User = Depends(get_current_user)
-):
-    """Upload and process a document with enhanced metadata extraction."""
-    if not document_service:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Document service not available"
-        )
-    
-    try:
-        # Process document with LLM-enhanced metadata extraction
-        document = await document_service.upload_and_process(
-            file=file,
-            user_id=str(current_user.id),
-            extract_metadata=True
-        )
-        
-        return {
-            "document_id": str(document.id),
-            "filename": document.filename,
-            "status": document.status,
-            "metadata_extracted": document.metadata is not None,
-            "message": "Document uploaded and processing started"
-        }
-        
-    except Exception as e:
-        logger.error(f"Document upload failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Document upload failed: {str(e)}"
-        )
+# Document upload endpoint moved to routes/documents.py
 
 
-@app.get("/documents")
-async def list_documents(
-    skip: int = 0,
-    limit: int = 20,
-    current_user: User = Depends(get_current_user)
-):
-    """List user's documents."""
-    if not document_service:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Document service not available"
-        )
-    
-    documents = await document_service.list_user_documents(
-        user_id=str(current_user.id),
-        skip=skip,
-        limit=limit
-    )
-    
-    return {
-        "documents": [
-            {
-                "id": str(doc.id),
-                "filename": doc.filename,
-                "status": doc.status,
-                "created_at": doc.created_at,
-                "metadata_available": doc.metadata is not None
-            }
-            for doc in documents
-        ]
-    }
-
-
-@app.get("/documents/{document_id}")
-async def get_document(
-    document_id: str,
-    current_user: User = Depends(get_current_user)
-):
-    """Get document details with metadata."""
-    if not document_service:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Document service not available"
-        )
-    
-    document = await document_service.get_user_document(
-        document_id=document_id,
-        user_id=str(current_user.id)
-    )
-    
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
-        )
-    
-    return {
-        "id": str(document.id),
-        "filename": document.filename,
-        "status": document.status,
-        "content": document.content,
-        "metadata": document.metadata,
-        "created_at": document.created_at,
-        "updated_at": document.updated_at
-    }
+# Document endpoints moved to routes/documents.py
 
 
 # Generation endpoints
 @app.post("/generate")
 @limiter.limit("5/minute")
 async def generate_response(
-    request: GenerationRequest,
+    request: Request,
+    generation_request: GenerationRequest,
     current_user: User = Depends(get_current_user)
 ):
     """Generate response using enhanced RAG with metadata-aware reranking."""
@@ -358,8 +300,8 @@ async def generate_response(
     
     try:
         generation = await generation_service.create_generation(
-            query=request.query,
-            document_ids=request.document_ids,
+            query=generation_request.query,
+            document_ids=generation_request.document_ids,
             user_id=str(current_user.id),
             use_enhanced_reranking=True
         )
@@ -458,6 +400,10 @@ async def admin_system_stats(
                 "auth_service": auth_service is not None,
                 "llm_extractor": llm_extractor is not None,
                 "enhanced_reranker": enhanced_reranker is not None
+            },
+            "llm_config": {
+                "provider": os.getenv("LLM_PROVIDER", "openai"),
+                "model": os.getenv("LLM_MODEL", "gpt-4o-mini")
             }
         }
         
@@ -469,25 +415,10 @@ async def admin_system_stats(
         )
 
 
-# Include authentication routes
-@app.on_event("startup")
-async def setup_auth_routes():
-    """Setup authentication routes after services are initialized."""
-    if auth_service:
-        auth_router = init_auth_routes(auth_service)
-        app.include_router(auth_router)
+# Authentication routes are now initialized in the lifespan startup
 
 
-# Request/Response models
-from pydantic import BaseModel
-from typing import List, Optional
-
-class GenerationRequest(BaseModel):
-    """Request model for generation endpoint."""
-    query: str
-    document_ids: Optional[List[str]] = None
-    max_tokens: Optional[int] = 1000
-    temperature: Optional[float] = 0.7
+# Moved to top of file - see line 50
 
 
 if __name__ == "__main__":

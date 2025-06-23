@@ -9,12 +9,15 @@ RUN apt-get update && apt-get install -y \
     libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy core library source
+COPY rag-memo-core-lib/src/rag_memo_core_lib /app/rag_memo_core_lib
+
+# Copy requirements and install API dependencies
+COPY rag-memo-api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
-COPY . .
+COPY rag-memo-api/ .
 
 # Production stage
 FROM python:3.11-slim-bullseye
@@ -30,8 +33,11 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
+# Copy core library
+COPY --from=builder /app/rag_memo_core_lib /app/rag_memo_core_lib
+
 # Copy application code
-COPY . .
+COPY rag-memo-api/ .
 
 # Create uploads directory
 RUN mkdir -p uploads

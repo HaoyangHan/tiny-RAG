@@ -1,5 +1,8 @@
 """
 LLM-based metadata extractors for TinyRAG framework.
+
+This module implements metadata extraction using Large Language Models
+with structured prompts to return JSON-formatted metadata.
 """
 
 import json
@@ -9,6 +12,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 from openai import AsyncOpenAI
+import google.generativeai as genai
 import logging
 
 from .schemas import (
@@ -24,15 +28,28 @@ class LLMConfig:
     
     def __init__(
         self,
-        provider: str = "openai",
+        provider: str = "openai",  # "openai" or "gemini"
         model: str = "gpt-4o-mini",
         api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
         temperature: float = 0.1,
         max_tokens: int = 2000
     ):
+        """
+        Initialize LLM configuration.
+        
+        Args:
+            provider: LLM provider ("openai" or "gemini")
+            model: Model name to use
+            api_key: API key for the provider
+            base_url: Base URL for API (optional, for proxies)
+            temperature: Sampling temperature (0.0-1.0)
+            max_tokens: Maximum tokens in response
+        """
         self.provider = provider
         self.model = model
         self.api_key = api_key
+        self.base_url = base_url
         self.temperature = temperature
         self.max_tokens = max_tokens
 
@@ -41,9 +58,27 @@ class BaseLLMExtractor(ABC):
     """Base class for LLM-based metadata extractors."""
     
     def __init__(self, config: LLMConfig):
+        """
+        Initialize the LLM extractor.
+        
+        Args:
+            config: LLM configuration
+        """
         self.config = config
         self.name = self.__class__.__name__
-        self.client = AsyncOpenAI(api_key=config.api_key)
+        
+        # Initialize LLM client based on provider
+        if config.provider == "openai":
+            client_kwargs = {"api_key": config.api_key}
+            if config.base_url:
+                client_kwargs["base_url"] = config.base_url
+            self.client = AsyncOpenAI(**client_kwargs)
+        elif config.provider == "gemini":
+            if config.api_key:
+                genai.configure(api_key=config.api_key)
+            self.client = genai.GenerativeModel(config.model)
+        else:
+            raise ValueError(f"Unsupported LLM provider: {config.provider}")
     
     @abstractmethod
     def get_system_prompt(self) -> str:
@@ -61,27 +96,62 @@ class BaseLLMExtractor(ABC):
         pass
     
     async def call_llm(self, text: str) -> str:
-        """Call the LLM with the given text."""
+        """
+        Call the LLM with the given text.
+        
+        Args:
+            text: Input text to process
+            
+        Returns:
+            LLM response string
+        """
         system_prompt = self.get_system_prompt()
         user_prompt = self.get_user_prompt(text)
         
         try:
-            response = await self.client.chat.completions.create(
-                model=self.config.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens
-            )
-            return response.choices[0].message.content
+            if self.config.provider == "openai":
+                response = await self.client.chat.completions.create(
+                    model=self.config.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens
+                )
+                return response.choices[0].message.content
+            
+            elif self.config.provider == "gemini":
+                # Combine system and user prompts for Gemini
+                combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+                
+                # Configure generation parameters
+                generation_config = genai.types.GenerationConfig(
+                    temperature=self.config.temperature,
+                    max_output_tokens=self.config.max_tokens,
+                )
+                
+                response = await self.client.generate_content_async(
+                    combined_prompt,
+                    generation_config=generation_config
+                )
+                return response.text
+                
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             raise
     
     async def extract(self, text: str, text_id: str) -> ExtractionResult:
-        """Extract metadata from text using LLM."""
+        """
+        Extract metadata from text using LLM.
+        
+        Args:
+            text: Input text to extract metadata from
+            text_id: Unique identifier for the text
+            
+        Returns:
+            ExtractionResult containing extracted metadata
+        """
         start_time = time.time()
         errors = []
         
@@ -115,6 +185,7 @@ class BaseLLMExtractor(ABC):
             
         except Exception as e:
             errors.append(f"LLM extraction failed: {str(e)}")
+            logger.error(f"LLM extraction error: {e}")
             
             empty_metadata = ChunkMetadata(
                 chunk_id=text_id,
@@ -142,6 +213,7 @@ class LLMComprehensiveExtractor(BaseLLMExtractor):
     """Comprehensive LLM-based extractor for all metadata types."""
     
     def get_system_prompt(self) -> str:
+        """Get the system prompt for comprehensive metadata extraction."""
         return """You are an expert metadata extraction system. Extract comprehensive metadata from text in JSON format.
 
 Return ONLY a valid JSON object with this structure:
@@ -172,9 +244,18 @@ Return ONLY a valid JSON object with this structure:
 
 Entity labels: person, organization, location, date, money, percent, product, event, misc
 Sentiment types: positive, negative, neutral, mixed
-All scores between 0.0-1.0"""
+All scores between 0.0-1.0
+
+Guidelines:
+- Extract 5-15 keywords based on text importance
+- Identify all named entities with high confidence
+- Parse dates in ISO format (YYYY-MM-DD)
+- Provide 2-5 main topics
+- Summary should be 1-3 sentences
+- Be precise and avoid hallucination"""
 
     def get_user_prompt(self, text: str) -> str:
+        """Get the user prompt for the given text."""
         return f"""Extract metadata from this text:
 
 {text}
@@ -182,6 +263,7 @@ All scores between 0.0-1.0"""
 JSON:"""
 
     def parse_llm_response(self, response: str) -> Dict[str, Any]:
+        """Parse the LLM response into structured metadata."""
         try:
             response = response.strip()
             if response.startswith('```json'):
@@ -263,6 +345,7 @@ JSON:"""
             
         except Exception as e:
             logger.error(f"Failed to parse LLM response: {e}")
+            logger.error(f"Response was: {response}")
             return {}
 
 
@@ -270,24 +353,56 @@ class LLMMetadataExtractionPipeline:
     """Pipeline for LLM-based metadata extraction."""
     
     def __init__(self, llm_config: LLMConfig):
+        """
+        Initialize the LLM extraction pipeline.
+        
+        Args:
+            llm_config: LLM configuration
+        """
         self.llm_config = llm_config
         self.extractor = LLMComprehensiveExtractor(llm_config)
     
     async def extract(self, text: str, text_id: str) -> ExtractionResult:
-        """Run LLM-based extraction."""
+        """
+        Run LLM-based extraction pipeline.
+        
+        Args:
+            text: Input text
+            text_id: Text identifier
+            
+        Returns:
+            Extraction result
+        """
         return await self.extractor.extract(text, text_id)
 
 
 def create_llm_extractor(
     provider: str = "openai",
     model: str = "gpt-4o-mini",
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None
 ) -> LLMMetadataExtractionPipeline:
-    """Create an LLM-based metadata extraction pipeline."""
+    """
+    Create an LLM-based metadata extraction pipeline.
+    
+    Args:
+        provider: LLM provider ("openai" or "gemini")
+        model: Model name
+        api_key: API key
+        base_url: Base URL for API (optional)
+        
+    Returns:
+        Configured LLM extraction pipeline
+    """
+    # Set default models based on provider
+    if provider == "gemini" and model == "gpt-4o-mini":
+        model = "gemini-2.0-flash-lite"
+    
     config = LLMConfig(
         provider=provider,
         model=model,
-        api_key=api_key
+        api_key=api_key,
+        base_url=base_url
     )
     
     return LLMMetadataExtractionPipeline(config)

@@ -10,34 +10,43 @@ RUN apt-get update && \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-
-# Copy Poetry files
-COPY pyproject.toml poetry.lock ./
-
-# Install dependencies
-RUN poetry config virtualenvs.create false && \
-    poetry install --no-interaction --no-ansi
+# Copy requirements and install dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy library code
 COPY . .
 
-# Build the package
-RUN poetry build
+# Install the package in development mode
+RUN pip install -e .
 
 # Production stage
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy built package from builder
-COPY --from=builder /app/dist/*.whl ./
+# Install system dependencies for runtime
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy library code
+COPY . .
 
 # Install the package
-RUN pip install *.whl && rm *.whl
+RUN pip install -e .
+
+# Create app user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
 # Set working directory for library usage
-WORKDIR /workspace
+WORKDIR /app
 
-CMD ["python3"] 
+# Default command for worker
+CMD ["python", "-m", "rag_memo_core_lib.workers.main"] 
