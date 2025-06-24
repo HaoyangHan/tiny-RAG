@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Union, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import ValidationError
 
@@ -20,6 +20,19 @@ from .models import (
     Token, TokenData, LoginRequest, APIKey, APIKeyCreate
 )
 
+# Global auth service instance - initialized in main.py
+_auth_service: Optional['AuthService'] = None
+
+def set_auth_service(auth_service: 'AuthService'):
+    """Set the global auth service instance."""
+    global _auth_service
+    _auth_service = auth_service
+
+def get_auth_service() -> 'AuthService':
+    """Get the global auth service instance."""
+    if _auth_service is None:
+        raise RuntimeError("Auth service not initialized")
+    return _auth_service
 
 class AuthService:
     """
@@ -361,3 +374,32 @@ class AuthService:
             
             return wrapper
         return decorator 
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> User:
+    """FastAPI dependency to get current authenticated user."""
+    auth_service = get_auth_service()
+    return await auth_service.get_current_user(credentials)
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+    """FastAPI dependency to get current active user."""
+    if current_user.status != UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
+    return current_user
+
+async def create_user(user_data: UserCreate) -> User:
+    """Create new user account."""
+    auth_service = get_auth_service()
+    return await auth_service.create_user(user_data)
+
+async def authenticate_user(identifier: str, password: str) -> Optional[User]:
+    """Authenticate user with email/username and password."""
+    auth_service = get_auth_service()
+    return await auth_service.authenticate_user(identifier, password)
+
+async def create_access_token(user: User, remember_me: bool = False) -> Token:
+    """Create JWT access token for user."""
+    auth_service = get_auth_service()
+    return auth_service.create_access_token(user, remember_me) 

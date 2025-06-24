@@ -15,7 +15,7 @@ from .generations.routes import router as generations_router
 from .evaluations.routes import router as evaluations_router
 
 # Create main API router
-api_router = APIRouter(prefix="/api/v1")
+api_router = APIRouter()
 
 # Include domain-specific routers
 api_router.include_router(

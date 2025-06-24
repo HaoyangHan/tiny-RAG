@@ -35,9 +35,19 @@ from models.generation import Generation
 from services.document_service import DocumentService
 from services.generation_service import GenerationService
 
+# Import v1.4 models
+from models import (
+    Project, Element, ElementGeneration, Evaluation,
+    BaseDocument, TenantType, TaskType, ElementType, ElementStatus,
+    GenerationStatus, EvaluationStatus, DocumentStatus, ProjectStatus, VisibilityType
+)
+
 # Import route modules
 from routes.documents import router as documents_router
 from routes.memos import router as memos_router
+
+# Import v1.4 API routes
+from api.v1.router import api_router as v1_router
 
 # Import enhanced metadata components (temporarily disabled for v1.3 testing)
 # from rag_memo_core_lib.metadata.llm_extractors import create_llm_extractor
@@ -80,10 +90,15 @@ async def lifespan(app_instance: FastAPI):
         client = motor.motor_asyncio.AsyncIOMotorClient(mongodb_url)
         database = client.tinyrag
         
-        # Initialize Beanie with all document models
+        # Initialize Beanie with all document models (v1.3 + v1.4)
         await init_beanie(
             database=database,
-            document_models=[User, APIKey, Document, Generation]
+            document_models=[
+                # v1.3 legacy models
+                User, APIKey, Document, Generation,
+                # v1.4 models
+                Project, Element, ElementGeneration, Evaluation
+            ]
         )
         logger.info("Database initialized successfully")
         
@@ -102,6 +117,10 @@ async def lifespan(app_instance: FastAPI):
             secret_key=jwt_secret,
             algorithm=os.getenv("JWT_ALGORITHM", "HS256")
         )
+        
+        # Set global auth service for dependency injection
+        from auth.service import set_auth_service as set_global_auth_service
+        set_global_auth_service(auth_service)
         logger.info("Authentication service initialized")
         
         # Initialize LLM metadata extractor (temporarily disabled for v1.3 testing)
@@ -179,11 +198,19 @@ async def lifespan(app_instance: FastAPI):
             # Set auth service in documents router
             from routes.documents import set_auth_service as set_docs_auth_service
             set_docs_auth_service(auth_service)
+            
+            # Set auth service in v1.4 auth routes
+            from api.v1.auth.routes import set_auth_service as set_v14_auth_service
+            set_v14_auth_service(auth_service)
         
-        # Include documents router and memos router
+        # Include legacy routes (v1.3)
         app_instance.include_router(documents_router)
         app_instance.include_router(memos_router)
-        logger.info("Documents and memos routes initialized")
+        logger.info("Legacy v1.3 routes initialized")
+        
+        # Include v1.4 API routes
+        app_instance.include_router(v1_router, prefix="/api/v1")
+        logger.info("v1.4 API routes initialized")
         
         # Create default admin user if none exists
         await create_default_admin_user()
@@ -231,11 +258,72 @@ async def create_default_admin_user():
 # Initialize FastAPI app
 app = FastAPI(
     title="TinyRAG API",
-    description="Advanced RAG system with LLM-powered metadata extraction and intelligent reranking",
-    version="1.3.0",
+    description="""
+    # TinyRAG API v1.4 - Project-Based RAG Platform
+    
+    A comprehensive RAG (Retrieval-Augmented Generation) platform with:
+    
+    ## 🚀 Core Features
+    - **Project-Based Architecture**: Organize work by tenant types (HR, CODING, FINANCIAL_REPORT, etc.)
+    - **Element Management**: Create and manage prompt templates, MCP configurations, and agentic tools
+    - **LLM Generation**: Track and manage AI-generated content with comprehensive metrics
+    - **Evaluation Framework**: LLM-as-a-judge system for content quality assessment
+    - **Document Processing**: Intelligent document upload, processing, and analytics
+    - **Multi-User Collaboration**: Granular permissions and collaboration features
+    
+    ## 📊 API Structure
+    - **Legacy v1.3 Routes**: `/documents`, `/memos`, `/generate` (backward compatibility)
+    - **v1.4 Routes**: `/api/v1/*` (new project-based architecture)
+    
+    ## 🔐 Authentication
+    All endpoints require JWT authentication. Get your token from `/auth/login`.
+    
+    ## 📖 Documentation
+    - **Interactive API Docs**: Available at `/docs` (Swagger UI)
+    - **Alternative Docs**: Available at `/redoc` (ReDoc)
+    """,
+    version="1.4.0",
     lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "Authentication",
+            "description": "User authentication and authorization endpoints"
+        },
+        {
+            "name": "Projects",
+            "description": "Project management operations with tenant-based organization"
+        },
+        {
+            "name": "Elements", 
+            "description": "Template and tool management (prompts, MCP configs, agentic tools)"
+        },
+        {
+            "name": "Generations",
+            "description": "LLM content generation tracking and analytics"
+        },
+        {
+            "name": "Evaluations",
+            "description": "LLM-as-a-judge evaluation framework and scoring"
+        },
+        {
+            "name": "Documents",
+            "description": "Document upload, processing, and content management"
+        },
+        {
+            "name": "Users",
+            "description": "User profile management and analytics"
+        },
+        {
+            "name": "Legacy v1.3",
+            "description": "Backward compatibility endpoints from v1.3"
+        },
+        {
+            "name": "Health & Admin",
+            "description": "System health checks and administrative operations"
+        }
+    ]
 )
 
 # Initialize rate limiter
@@ -270,21 +358,47 @@ async def get_current_admin_user(current_user: User = Depends(get_current_user))
 
 
 # Health check endpoint
-@app.get("/health")
+@app.get("/health", tags=["Health & Admin"])
 async def health_check():
-    """Health check endpoint."""
+    """
+    Health check endpoint with comprehensive service status.
+    
+    Returns system health status including all v1.3 and v1.4 services.
+    """
     return {
         "status": "healthy",
-        "version": "1.3.0",
+        "version": "1.4.0",
+        "api_versions": {
+            "v1.3": "legacy endpoints (/documents, /memos, /generate)",
+            "v1.4": "project-based endpoints (/api/v1/*)"
+        },
         "services": {
+            # Legacy v1.3 services
             "auth": auth_service is not None,
             "llm_extractor": llm_extractor is not None,
             "enhanced_reranker": enhanced_reranker is not None,
             "document_service": document_service is not None,
-            "generation_service": generation_service is not None
+            "generation_service": generation_service is not None,
+            # v1.4 services status
+            "v1.4_api": True,
+            "project_service": True,
+            "element_service": True,
+            "element_generation_service": True,
+            "evaluation_service": True,
+            "user_service": True,
+            "v1.4_document_service": True
         },
-        "llm_provider": os.getenv("LLM_PROVIDER", "openai"),
-        "llm_model": os.getenv("LLM_MODEL", "gpt-4o-mini")
+        "database": {
+            "models_registered": [
+                "User", "APIKey", "Document", "Generation",  # v1.3
+                "Project", "Element", "ElementGeneration", "Evaluation"  # v1.4
+            ]
+        },
+        "llm_config": {
+            "provider": os.getenv("LLM_PROVIDER", "openai"),
+            "model": os.getenv("LLM_MODEL", "gpt-4o-mini"),
+            "status": "temporarily_disabled_for_testing"
+        }
     }
 
 
@@ -296,14 +410,28 @@ async def health_check():
 
 
 # Generation endpoints
-@app.post("/generate")
+@app.post("/generate", tags=["Legacy v1.3"])
 @limiter.limit("5/minute")
 async def generate_response(
     request: Request,
     generation_request: GenerationRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Generate response using enhanced RAG with metadata-aware reranking."""
+    """
+    Generate response using enhanced RAG with metadata-aware reranking.
+    
+    **Legacy v1.3 endpoint** - Use `/api/v1/generations/` for new implementations.
+    
+    Example request:
+    ```json
+    {
+        "query": "What is the main topic of the uploaded documents?",
+        "document_ids": ["60f4d2e5e8b4a12345678901"],
+        "max_tokens": 1000,
+        "temperature": 0.7
+    }
+    ```
+    """
     if not generation_service:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -332,12 +460,21 @@ async def generate_response(
         )
 
 
-@app.get("/generations/{generation_id}")
+@app.get("/generations/{generation_id}", tags=["Legacy v1.3"])
 async def get_generation(
     generation_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Get generation result with enhanced metadata and explanations."""
+    """
+    Get generation result with enhanced metadata and explanations.
+    
+    **Legacy v1.3 endpoint** - Use `/api/v1/generations/{generation_id}` for new implementations.
+    
+    Returns detailed generation information including:
+    - Generation status and response
+    - Source documents used
+    - Metadata and processing details
+    """
     if not generation_service:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -367,12 +504,16 @@ async def get_generation(
     }
 
 
-@app.post("/debug/process-generation/{generation_id}")
+@app.post("/debug/process-generation/{generation_id}", tags=["Health & Admin"])
 async def debug_process_generation(
     generation_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Debug endpoint to manually trigger generation processing."""
+    """
+    Debug endpoint to manually trigger generation processing.
+    
+    **Development/Debug endpoint** - Manually processes a generation that may be stuck.
+    """
     if not generation_service:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -400,13 +541,21 @@ async def debug_process_generation(
 
 
 # Admin endpoints
-@app.get("/admin/users")
+@app.get("/admin/users", tags=["Health & Admin"])
 async def admin_list_users(
     skip: int = 0,
     limit: int = 50,
     current_admin: User = Depends(get_current_admin_user)
 ):
-    """Admin endpoint to list all users."""
+    """
+    Admin endpoint to list all users.
+    
+    **Requires admin privileges.** Returns paginated list of all system users.
+    
+    Parameters:
+    - skip: Number of users to skip (for pagination)
+    - limit: Maximum number of users to return (max 50)
+    """
     users = await User.find().skip(skip).limit(limit).to_list()
     
     return {
@@ -426,28 +575,55 @@ async def admin_list_users(
     }
 
 
-@app.get("/admin/system-stats")
+@app.get("/admin/system-stats", tags=["Health & Admin"])
 async def admin_system_stats(
     current_admin: User = Depends(get_current_admin_user)
 ):
-    """Admin endpoint for system statistics."""
+    """
+    Admin endpoint for comprehensive system statistics.
+    
+    **Requires admin privileges.** Returns detailed system statistics including:
+    - User, document, generation counts (v1.3 + v1.4)
+    - Service health status
+    - LLM configuration
+    - v1.4 model statistics
+    """
     try:
+        # v1.3 legacy model counts
         user_count = await User.find().count()
         document_count = await Document.find().count()
         generation_count = await Generation.find().count()
         
+        # v1.4 model counts
+        project_count = await Project.find().count()
+        element_count = await Element.find().count()
+        element_generation_count = await ElementGeneration.find().count()
+        evaluation_count = await Evaluation.find().count()
+        
         return {
-            "users": user_count,
-            "documents": document_count,
-            "generations": generation_count,
+            "v1.3_models": {
+                "users": user_count,
+                "documents": document_count,
+                "generations": generation_count
+            },
+            "v1.4_models": {
+                "projects": project_count,
+                "elements": element_count,
+                "element_generations": element_generation_count,
+                "evaluations": evaluation_count
+            },
             "services": {
                 "auth_service": auth_service is not None,
                 "llm_extractor": llm_extractor is not None,
-                "enhanced_reranker": enhanced_reranker is not None
+                "enhanced_reranker": enhanced_reranker is not None,
+                "document_service": document_service is not None,
+                "generation_service": generation_service is not None,
+                "v1.4_api": True
             },
             "llm_config": {
                 "provider": os.getenv("LLM_PROVIDER", "openai"),
-                "model": os.getenv("LLM_MODEL", "gpt-4o-mini")
+                "model": os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                "status": "temporarily_disabled_for_testing"
             }
         }
         

@@ -402,7 +402,7 @@ class Evaluation(BaseDocument):
             "task_type",
             "status",
             "evaluator_model",
-            ("created_at", -1),
-            ("updated_at", -1),
+            "created_at",
+            "updated_at",
             "is_deleted"
         ] 

@@ -6,14 +6,42 @@ maintaining compatibility with the existing auth system.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from auth.models import (
     User, UserCreate, UserResponse, LoginRequest, Token,
     PasswordReset, PasswordResetConfirm
 )
-from auth.service import (
-    create_user, authenticate_user, create_access_token,
-    get_current_user, get_current_active_user
-)
+from auth.service import AuthService
+
+# Global auth service reference (will be set by main app)
+auth_service: AuthService = None
+
+def get_auth_service() -> AuthService:
+    """Get the authentication service instance."""
+    if auth_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication service not initialized"
+        )
+    return auth_service
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+) -> User:
+    """Dependency to get current authenticated user."""
+    service = get_auth_service()
+    return await service.get_current_user(credentials)
+
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """Dependency to get current active user."""
+    if current_user.status.value != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is not active"
+        )
+    return current_user
 
 router = APIRouter()
 
@@ -28,12 +56,8 @@ router = APIRouter()
 async def register(user_data: UserCreate) -> UserResponse:
     """Register a new user."""
     try:
-        user = await create_user(
-            email=user_data.email,
-            username=user_data.username,
-            password=user_data.password,
-            full_name=user_data.full_name
-        )
+        service = get_auth_service()
+        user = await service.create_user(user_data)
         
         return UserResponse(
             id=str(user.id),
@@ -67,7 +91,8 @@ async def register(user_data: UserCreate) -> UserResponse:
 async def login(login_data: LoginRequest) -> Token:
     """Authenticate user and return access token."""
     try:
-        user = await authenticate_user(
+        service = get_auth_service()
+        user = await service.authenticate_user(
             identifier=login_data.identifier,
             password=login_data.password
         )
@@ -79,8 +104,8 @@ async def login(login_data: LoginRequest) -> Token:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        token = await create_access_token(
-            user_id=str(user.id),
+        token = service.create_access_token(
+            user=user,
             remember_me=login_data.remember_me
         )
         
@@ -173,4 +198,10 @@ async def verify_token(current_user: User = Depends(get_current_user)) -> UserRe
         status=current_user.status,
         created_at=current_user.created_at,
         last_login=current_user.last_login
-    ) 
+    )
+
+
+def set_auth_service(service: AuthService) -> None:
+    """Set the authentication service instance."""
+    global auth_service
+    auth_service = service
