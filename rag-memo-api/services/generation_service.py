@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 import motor.motor_asyncio
 import redis.asyncio as redis
+from openai import OpenAI
 
 from models.generation import Generation, GenerationMetadata
 from .document_service import DocumentService
@@ -21,12 +22,19 @@ class GenerationService:
         self.document_service = document_service
         self.enhanced_reranker = enhanced_reranker
         
+        # Initialize OpenAI client
+        import os
+        self.openai_client = OpenAI(
+            base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai-proxy.org/v1"),
+            api_key=os.getenv("OPENAI_API_KEY", "")
+        )
+        
     async def create_generation(self, query: str, user_id: str,
                               document_ids: Optional[List[str]] = None,
                               max_tokens: Optional[int] = 1000,
                               temperature: Optional[float] = 0.7,
                               use_enhanced_reranking: bool = False) -> Generation:
-        """Create a new generation request."""
+        """Create a new generation request and process it immediately."""
         try:
             generation = Generation(
                 user_id=user_id,
@@ -38,6 +46,14 @@ class GenerationService:
             )
             
             await generation.save()
+            
+            # Process the generation immediately for testing
+            try:
+                await self.process_generation(str(generation.id))
+            except Exception as e:
+                logger.error(f"Failed to process generation immediately: {e}")
+                # Don't fail the creation, let it remain in processing state
+            
             return generation
             
         except Exception as e:
@@ -52,6 +68,7 @@ class GenerationService:
                 raise ValueError("Generation not found")
             
             start_time = datetime.utcnow()
+            logger.info(f"Starting generation processing for ID: {generation_id}")
             
             # Step 1: Retrieve relevant documents
             retrieval_start = datetime.utcnow()
@@ -62,6 +79,7 @@ class GenerationService:
                 top_k=10
             )
             retrieval_time = (datetime.utcnow() - retrieval_start).total_seconds()
+            logger.info(f"Retrieved {len(sources)} relevant document chunks")
             
             # Step 2: Enhanced reranking if available
             if self.enhanced_reranker and sources:
@@ -80,6 +98,7 @@ class GenerationService:
             if sources:
                 # Build context from sources
                 context = self._build_context(sources)
+                logger.info(f"Built context from {len(sources)} sources")
                 
                 # Generate response using the sources
                 response = await self._generate_response(
@@ -102,9 +121,9 @@ class GenerationService:
             generation.metadata = GenerationMetadata(
                 retrieval_time=retrieval_time,
                 generation_time=generation_time,
-                total_documents_searched=len(sources),
-                documents_used=len([s for s in sources if s.get("chunk_text")]),
-                model_name="gpt-4o-mini",  # This should be configurable
+                total_documents_searched=len(sources) if sources else 0,
+                documents_used=len([s for s in sources if s.get("chunk_text")]) if sources else 0,
+                model_name="gpt-4o-mini",
                 temperature=generation.temperature,
                 max_tokens=generation.max_tokens
             )
@@ -113,16 +132,21 @@ class GenerationService:
             generation.completed_at = datetime.utcnow()
             
             await generation.save()
+            logger.info(f"Generation completed successfully in {total_time:.2f}s")
             return generation
             
         except Exception as e:
             logger.error(f"Error processing generation: {str(e)}")
             
             # Update generation with error
-            if 'generation' in locals():
-                generation.status = "failed"
-                generation.error = str(e)
-                await generation.save()
+            try:
+                generation = await Generation.get(generation_id)
+                if generation:
+                    generation.status = "failed"
+                    generation.error = str(e)
+                    await generation.save()
+            except:
+                pass
             
             raise
     
@@ -161,38 +185,51 @@ class GenerationService:
         context_parts = []
         
         for i, source in enumerate(sources):
+            chunk_text = source.get('chunk_text', source.get('text', ''))
+            doc_title = source.get('document_title', source.get('filename', 'Unknown'))
+            
             context_parts.append(
-                f"Source {i+1} ({source.get('document_title', 'Unknown')}):\n"
-                f"{source.get('chunk_text', '')}\n"
+                f"Source {i+1} ({doc_title}):\n"
+                f"{chunk_text}\n"
             )
         
         return "\n---\n".join(context_parts)
     
     async def _generate_response(self, query: str, context: str,
                                max_tokens: int, temperature: float) -> str:
-        """Generate response using LLM."""
+        """Generate response using OpenAI LLM."""
         try:
-            # This is a simplified implementation
-            # In a real system, you'd use the LLM factory to get the appropriate model
-            
-            prompt = f"""Based on the following context, please answer the question.
+            prompt = f"""Based on the following context from documents, please answer the question comprehensively.
 
 Context:
 {context}
 
 Question: {query}
 
-Please provide a comprehensive answer based only on the information provided in the context. If the context doesn't contain enough information to answer the question, please say so.
+Please provide a detailed answer based on the information in the context. If the context doesn't contain enough information to fully answer the question, please indicate what information is missing. Use specific details and examples from the context when possible.
 
 Answer:"""
 
-            # For now, return a placeholder response
-            # This should be replaced with actual LLM integration
-            return f"Based on the provided documents, here's what I found regarding '{query}': [This would be the actual LLM response based on the context]"
+            logger.info("Calling OpenAI API for response generation")
+            
+            # Call OpenAI API
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that answers questions based on provided document context. Always be accurate and cite specific information from the context."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            
+            answer = response.choices[0].message.content
+            logger.info("Successfully generated response from OpenAI")
+            return answer
             
         except Exception as e:
-            logger.error(f"Error generating response: {str(e)}")
-            return "I apologize, but I encountered an error while generating a response."
+            logger.error(f"Error generating response with OpenAI: {str(e)}")
+            return f"I apologize, but I encountered an error while generating a response: {str(e)}"
     
     async def get_generation_stats(self, user_id: str) -> Dict[str, Any]:
         """Get generation statistics for a user."""

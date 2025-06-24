@@ -151,6 +151,12 @@ async def lifespan(app_instance: FastAPI):
             llm_extractor=None  # Temporarily disabled
         )
         
+        # Initialize and set document processor
+        from dependencies import get_document_processor
+        document_processor = get_document_processor()
+        document_service.set_processor(document_processor)
+        logger.info("Document processor initialized and set")
+        
         generation_service = GenerationService(
             database=database,
             redis_client=redis_client,
@@ -359,6 +365,38 @@ async def get_generation(
         "created_at": generation.created_at,
         "completed_at": generation.completed_at
     }
+
+
+@app.post("/debug/process-generation/{generation_id}")
+async def debug_process_generation(
+    generation_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Debug endpoint to manually trigger generation processing."""
+    if not generation_service:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Generation service not available"
+        )
+    
+    try:
+        logger.info(f"🔧 DEBUG: Manually triggering processing for generation {generation_id}")
+        generation = await generation_service.process_generation(generation_id)
+        
+        return {
+            "message": "Processing completed successfully",
+            "generation_id": generation_id,
+            "status": generation.status,
+            "response": generation.response
+        }
+        
+    except Exception as e:
+        logger.error(f"🔥 DEBUG: Generation processing failed: {str(e)}")
+        return {
+            "error": str(e),
+            "generation_id": generation_id,
+            "message": "Processing failed"
+        }
 
 
 # Admin endpoints

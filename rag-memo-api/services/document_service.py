@@ -158,41 +158,67 @@ class DocumentService:
             # Build filter for user documents
             filter_query = {"user_id": user_id}
             if document_ids:
-                filter_query["_id"] = {"$in": document_ids}
+                # Convert string IDs to ObjectIds for MongoDB
+                from beanie import PydanticObjectId
+                try:
+                    object_ids = [PydanticObjectId(doc_id) for doc_id in document_ids]
+                    filter_query["_id"] = {"$in": object_ids}
+                except Exception as e:
+                    logger.error(f"🔍 Error converting document IDs to ObjectIds: {e}")
+                    # Fallback: try as strings
+                    filter_query["_id"] = {"$in": document_ids}
             
+            logger.info(f"🔍 Search filter: {filter_query}")
             documents = await Document.find(filter_query).to_list()
+            logger.info(f"🔍 Found {len(documents)} documents for user")
             
             if not documents:
+                logger.warning("🔍 No documents found for search")
                 return []
             
             # Search through all chunks
             all_results = []
             
             for document in documents:
+                logger.info(f"🔍 Processing document {document.id}: {len(document.chunks) if document.chunks else 0} chunks")
+                
                 if not document.chunks:
+                    logger.warning(f"🔍 Document {document.id} has no chunks")
                     continue
                     
                 # Use the processor to find similar chunks
                 if self.processor:
+                    logger.info(f"🔍 Using processor to find similar chunks for query: '{query}'")
                     similar_chunks = await self.processor.get_similar_chunks(
                         query, document, top_k
                     )
+                    logger.info(f"🔍 Found {len(similar_chunks)} similar chunks")
                     
-                    for chunk in similar_chunks:
-                        all_results.append({
+                    for i, chunk in enumerate(similar_chunks):
+                        result = {
                             "document_id": str(document.id),
                             "document_title": document.metadata.filename,
                             "chunk_text": chunk.text,
                             "page_number": chunk.page_number,
                             "chunk_index": chunk.chunk_index,
-                            "metadata": document.metadata.extracted_metadata or {}
-                        })
+                            "metadata": getattr(document.metadata, 'extracted_metadata', {}) or {}
+                        }
+                        all_results.append(result)
+                        logger.info(f"🔍 Added chunk {i+1}: {chunk.text[:100]}...")
+                else:
+                    logger.error(f"🔍 No processor available for document search!")
             
             # Sort by relevance and return top results
-            return all_results[:top_k]
+            logger.info(f"🔍 Total results before limiting: {len(all_results)}")
+            final_results = all_results[:top_k]
+            logger.info(f"🔍 Returning {len(final_results)} final results")
+            
+            return final_results
             
         except Exception as e:
             logger.error(f"Error searching documents: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return []
     
     async def get_document_stats(self, user_id: str) -> Dict[str, Any]:
