@@ -174,11 +174,28 @@ async def search_users(
     current_user: User = Depends(get_current_active_user)
 ) -> List[UserResponse]:
     """Search for users."""
-    # TODO: Implement user search functionality
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="User search functionality not implemented yet"
-    )
+    try:
+        user_service = UserService()
+        users = await user_service.search_users(query, limit, str(current_user.id))
+        
+        return [
+            UserResponse(
+                id=str(user.id),
+                email=user.email,
+                username=user.username,
+                full_name=user.full_name,
+                role=user.role,
+                status=user.status,
+                created_at=user.created_at
+            )
+            for user in users
+        ]
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to search users: {str(e)}"
+        )
 
 
 @router.get(

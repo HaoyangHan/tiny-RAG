@@ -89,7 +89,7 @@ class UserService:
             return await self.get_user_profile(user_id)
             
         except Exception as e:
-            logger.error(f"Failed to update user profile {user_id}: {str(e)}")
+            logger.error(f"Failed to update user profile for user {user_id}: {str(e)}")
             return None
     
     async def get_user_dashboard_stats(self, user_id: str) -> Dict[str, Any]:
@@ -384,4 +384,53 @@ class UserService:
             value = getattr(item, attribute, 'unknown')
             value_str = str(value) if value else 'unknown'
             counts[value_str] = counts.get(value_str, 0) + 1
-        return counts 
+        return counts
+    
+    async def search_users(
+        self,
+        query: str,
+        limit: int = 10,
+        current_user_id: str = None
+    ) -> List[User]:
+        """
+        Search for users by username or email.
+        
+        Args:
+            query: Search query (username or email)
+            limit: Maximum number of results
+            current_user_id: ID of the requesting user (to exclude from results)
+            
+        Returns:
+            List[User]: List of matching users
+        """
+        try:
+            # Build search query - search in username and email (case insensitive)
+            from beanie.operators import Or
+            
+            # Use case-insensitive string contains
+            query_filter = Or(
+                User.username.contains(query, case_insensitive=True),
+                User.email.contains(query, case_insensitive=True)
+            )
+            
+            # Build base query with filters
+            base_filters = [query_filter]
+            
+            # Only active users
+            base_filters.append(User.status == "active")
+            
+            # Exclude current user
+            if current_user_id:
+                base_filters.append(User.id != PydanticObjectId(current_user_id))
+            
+            # Find users matching query
+            users = await User.find(
+                And(*base_filters)
+            ).limit(limit).to_list()
+            
+            logger.info(f"User search for '{query}' returned {len(users)} results")
+            return users
+            
+        except Exception as e:
+            logger.error(f"Failed to search users with query '{query}': {str(e)}")
+            return [] 

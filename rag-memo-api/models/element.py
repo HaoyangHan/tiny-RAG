@@ -90,6 +90,9 @@ class ElementExecution(BaseDocument):
         default_factory=dict,
         description="Evaluation scores for the execution"
     )
+    
+    class Settings:
+        name = "element_executions"
 
 
 class Element(BaseDocument):

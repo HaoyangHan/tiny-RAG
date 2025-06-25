@@ -159,7 +159,7 @@ class DocumentsAPITester:
         
         return False
     
-    async def test_document_upload(self) -> None:
+    async def test_document_upload(self) -> str:
         """Test document upload functionality."""
         # Use existing working project instead of creating new one
         project_id = "685acca478e6041ad753a458"  # Known working project ID
@@ -174,15 +174,18 @@ class DocumentsAPITester:
         }
         
         upload_params = {"project_id": project_id} if project_id else {}
-        v14_response = await self.make_request("POST", f"/api/v1/documents/upload", data=upload_params, files=upload_files)
+        upload_url = f"/api/v1/documents/upload?project_id={project_id}" if project_id else "/api/v1/documents/upload"
+        v14_response = await self.make_request("POST", upload_url, files=upload_files)
         v14_success = v14_response["status"] == 201
         
         # Check if chunks are included in response
         chunks_included = False
         chunk_count = 0
+        uploaded_doc_id = None
         if v14_success and "chunks" in v14_response["data"]:
             chunks_included = True
             chunk_count = len(v14_response["data"]["chunks"])
+            uploaded_doc_id = v14_response["data"].get("id")
         
         # Add detailed error info for debugging
         error_details = ""
@@ -212,7 +215,7 @@ class DocumentsAPITester:
             f"Status: {legacy_response['status']}"
         )
         
-        return project_id  # Return for use in other tests
+        return uploaded_doc_id or project_id  # Return uploaded doc ID or project ID for other tests
     
     async def test_document_listing(self, project_id: str = None) -> None:
         """Test document listing functionality."""
@@ -322,17 +325,18 @@ class DocumentsAPITester:
                 print("❌ Authentication failed - cannot test documents")
                 return
             
-            # 2. Test document upload (returns project_id)
-            project_id = await self.test_document_upload()
+            # 2. Test document upload (returns uploaded document ID or project ID)
+            uploaded_doc_id = await self.test_document_upload()
             
             # 3. Test document listing (with project_id, returns documents)
-            documents = await self.test_document_listing(project_id)
+            documents = await self.test_document_listing("685acca478e6041ad753a458")
             
             # 4. Test document details (with documents list, returns document_id)
             document_id = await self.test_document_details(documents)
             
-            # 5. Test document content (with document_id)
-            await self.test_document_content(document_id)
+            # 5. Test document content (with uploaded document ID if available)
+            content_test_id = uploaded_doc_id if uploaded_doc_id and uploaded_doc_id != "685acca478e6041ad753a458" else document_id
+            await self.test_document_content(content_test_id)
             
         except Exception as e:
             await self.log_test(

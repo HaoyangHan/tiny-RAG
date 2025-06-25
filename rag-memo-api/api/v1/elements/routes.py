@@ -241,4 +241,92 @@ async def execute_element(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to execute element: {str(e)}"
+        )
+
+
+@router.put(
+    "/{element_id}",
+    response_model=ElementResponse,
+    summary="Update element",
+    description="Update an existing element"
+)
+async def update_element(
+    element_id: str,
+    updates: Dict[str, Any],
+    current_user: User = Depends(get_current_active_user),
+    element_service: ElementService = Depends(get_element_service)
+) -> ElementResponse:
+    """Update an existing element."""
+    try:
+        element = await element_service.update_element(
+            element_id=element_id,
+            user_id=str(current_user.id),
+            updates=updates
+        )
+        
+        if not element:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Element not found or access denied"
+            )
+        
+        return ElementResponse(
+            id=str(element.id),
+            name=element.name,
+            description=element.description,
+            project_id=element.project_id,
+            element_type=element.element_type,
+            status=element.status,
+            template_version=element.template.version,
+            tags=element.tags,
+            execution_count=element.get_execution_count(),
+            created_at=element.created_at.isoformat(),
+            updated_at=element.updated_at.isoformat()
+        )
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update element: {str(e)}"
+        )
+
+
+@router.delete(
+    "/{element_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete element",
+    description="Delete an element"
+)
+async def delete_element(
+    element_id: str,
+    current_user: User = Depends(get_current_active_user),
+    element_service: ElementService = Depends(get_element_service)
+) -> None:
+    """Delete an element."""
+    try:
+        success = await element_service.delete_element(
+            element_id=element_id,
+            user_id=str(current_user.id)
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Element not found or access denied"
+            )
+            
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete element: {str(e)}"
         ) 

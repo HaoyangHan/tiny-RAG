@@ -333,6 +333,23 @@ class ElementsAPITester:
             )
             return
         
+        # First, activate the element for execution testing
+        activation_data = {"status": "active"}
+        activation_response = await self.make_request("PUT", f"/api/v1/elements/{element_id}", activation_data)
+        
+        if activation_response["status"] != 200:
+            await self.log_test(
+                "Execute Element with Parameters",
+                False,
+                f"Failed to activate element: Status {activation_response['status']}"
+            )
+            await self.log_test(
+                "Execute Element without Parameters",
+                False,
+                f"Failed to activate element: Status {activation_response['status']}"
+            )
+            return
+        
         # Test element execution with parameters
         execution_data = {
             "domain": "software development",
