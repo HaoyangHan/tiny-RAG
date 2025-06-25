@@ -1,0 +1,38 @@
+[
+  {
+    "timestamp": "2025-06-24 23:48:56",
+    "test_name": "Update User Profile",
+    "endpoint": "http://localhost:8000/api/v1/users/profile",
+    "status_code": 405,
+    "success": false,
+    "response_data": null,
+    "error": "Method Not Allowed"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:56",
+    "test_name": "Get User Profile",
+    "endpoint": "http://localhost:8000/api/v1/users/profile",
+    "status_code": 501,
+    "success": false,
+    "response_data": null,
+    "error": "Get user by ID functionality not implemented yet"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:56",
+    "test_name": "Search Users",
+    "endpoint": "http://localhost:8000/api/v1/users/search",
+    "status_code": 501,
+    "success": false,
+    "response_data": null,
+    "error": "User search functionality not implemented yet"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:56",
+    "test_name": "Get User Analytics",
+    "endpoint": "http://localhost:8000/api/v1/users/analytics",
+    "status_code": 501,
+    "success": false,
+    "response_data": null,
+    "error": "Get user by ID functionality not implemented yet"
+  }
+]

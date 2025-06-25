@@ -1,0 +1,37 @@
+[
+  {
+    "timestamp": "2025-06-24 23:48:41",
+    "test": "v1.4 Document Upload",
+    "status": "\u274c FAIL",
+    "success": false,
+    "details": "Status: 501"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:41",
+    "test": "v1.3 Legacy Document Upload",
+    "status": "\u274c FAIL",
+    "success": false,
+    "details": "Status: 500"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:41",
+    "test": "v1.4 List Documents",
+    "status": "\u274c FAIL",
+    "success": false,
+    "details": "Status: 500"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:41",
+    "test": "v1.3 Legacy List Documents",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  },
+  {
+    "timestamp": "2025-06-24 23:48:41",
+    "test": "Get Document Details",
+    "status": "\u274c FAIL",
+    "success": false,
+    "details": "No document ID found"
+  }
+]

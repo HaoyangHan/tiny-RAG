@@ -22,6 +22,7 @@ class DocumentChunk(BaseModel):
 class Document(Document):
     """Document model for storing uploaded documents and their chunks."""
     user_id: Indexed(str)
+    project_id: Indexed(str)
     
     # Required fields for MongoDB validation
     filename: str
@@ -34,11 +35,13 @@ class Document(Document):
     metadata: DocumentMetadata
     chunks: List[DocumentChunk] = []
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    is_deleted: bool = False
 
     class Settings:
         name = "documents"
         indexes = [
             "user_id",
+            "project_id",
             "filename",
             "status",
             "created_at"
@@ -48,6 +51,7 @@ class Document(Document):
         schema_extra = {
             "example": {
                 "user_id": "user123",
+                "project_id": "project123",
                 "filename": "example.pdf",
                 "content_type": "application/pdf", 
                 "file_size": 1024,

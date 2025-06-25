@@ -1,0 +1,72 @@
+[
+  {
+    "timestamp": "2025-06-24 23:49:19",
+    "test_name": "Run Batch Evaluation",
+    "endpoint": "http://localhost:8000/api/v1/evaluations/batch",
+    "status_code": 405,
+    "success": false,
+    "response_data": null,
+    "error": "Method Not Allowed"
+  },
+  {
+    "timestamp": "2025-06-24 23:49:19",
+    "test_name": "Create Evaluation",
+    "endpoint": "http://localhost:8000/api/v1/evaluations",
+    "status_code": 422,
+    "success": false,
+    "response_data": null,
+    "error": [
+      {
+        "type": "missing",
+        "loc": [
+          "body",
+          "generation_id"
+        ],
+        "msg": "Field required",
+        "input": {
+          "type": "quality",
+          "target_type": "generation",
+          "target_id": "test_generation_id_123",
+          "criteria": {
+            "accuracy": {
+              "weight": 0.4,
+              "description": "Factual correctness"
+            },
+            "clarity": {
+              "weight": 0.3,
+              "description": "Clear and understandable"
+            },
+            "relevance": {
+              "weight": 0.3,
+              "description": "Relevant to the request"
+            }
+          },
+          "inputs": {
+            "content": "This is a test generation to evaluate",
+            "prompt": "Generate a summary about AI",
+            "expected_output": "AI summary"
+          }
+        },
+        "url": "https://errors.pydantic.dev/2.5/v/missing"
+      }
+    ]
+  },
+  {
+    "timestamp": "2025-06-24 23:49:19",
+    "test_name": "Get Evaluation Analytics",
+    "endpoint": "http://localhost:8000/api/v1/evaluations/analytics",
+    "status_code": 501,
+    "success": false,
+    "response_data": null,
+    "error": "Evaluation retrieval not implemented yet"
+  },
+  {
+    "timestamp": "2025-06-24 23:49:19",
+    "test_name": "Get Evaluations",
+    "endpoint": "http://localhost:8000/api/v1/evaluations",
+    "status_code": 0,
+    "success": false,
+    "response_data": null,
+    "error": "500, message='Attempt to decode JSON with unexpected mimetype: text/plain; charset=utf-8', url='http://localhost:8000/api/v1/evaluations/?limit=10&offset=0&type=quality'"
+  }
+]

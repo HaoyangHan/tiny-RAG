@@ -1,0 +1,1 @@
+This is a test document for TinyRAG v1.4. It contains multiple sentences that should be processed into chunks. Each chunk will have text content and vector embeddings. This helps verify that the document processing pipeline is working correctly with chunking and embedding generation.

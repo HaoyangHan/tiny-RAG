@@ -1,0 +1,43 @@
+# TinyRAG Document Processing Test
+
+This is a comprehensive test document to verify that the TinyRAG v1.4 document upload functionality properly processes documents into chunks with embeddings. The document should be split into multiple meaningful chunks based on the content.
+
+## Introduction
+
+TinyRAG is a powerful Retrieval-Augmented Generation system that enables intelligent document processing and querying. The system is designed to handle various document types including PDFs, text files, and other formats commonly used in enterprise environments.
+
+## Core Features
+
+The system provides several key capabilities:
+
+1. **Document Upload and Processing**: Users can upload documents which are automatically processed, chunked, and embedded for efficient retrieval.
+
+2. **Intelligent Chunking**: The system uses advanced text splitting algorithms to break documents into semantically meaningful chunks while maintaining context.
+
+3. **Vector Embeddings**: Each chunk is converted into high-dimensional vector embeddings using state-of-the-art language models.
+
+4. **Project-Based Organization**: Documents are organized within projects, enabling team collaboration and access control.
+
+5. **Semantic Search**: Users can perform semantic searches across their document collections to find relevant information quickly.
+
+## Technical Architecture
+
+The v1.4 architecture introduces a project-centric approach where all resources (documents, elements, generations) are organized within project contexts. This enables better collaboration, access control, and resource management.
+
+### Document Processing Pipeline
+
+1. File Upload: Documents are uploaded via REST API endpoints
+2. Content Extraction: Text content is extracted from various file formats
+3. Text Chunking: Content is split into overlapping chunks for optimal retrieval
+4. Embedding Generation: Each chunk is converted to vector embeddings
+5. Storage: Chunks and embeddings are stored in the database for retrieval
+
+### Access Control
+
+The system implements role-based access control with project-level permissions. Users can own projects, collaborate on shared projects, and access public projects based on their roles and permissions.
+
+## Conclusion
+
+This test document demonstrates the document processing capabilities of TinyRAG v1.4. When uploaded, it should be processed into multiple chunks, each with associated embeddings, enabling powerful semantic search and retrieval capabilities.
+
+The successful processing of this document confirms that the upload, chunking, and embedding pipeline is functioning correctly and ready for production use.
