@@ -1,37 +1,44 @@
 [
   {
-    "timestamp": "2025-06-24 23:48:41",
+    "timestamp": "2025-06-25 10:39:29",
     "test": "v1.4 Document Upload",
     "status": "\u274c FAIL",
     "success": false,
-    "details": "Status: 501"
+    "details": "Status: 500, Project: True, Chunks: 0 | Error: {'detail': 'Failed to upload document: '}"
   },
   {
-    "timestamp": "2025-06-24 23:48:41",
+    "timestamp": "2025-06-25 10:39:29",
     "test": "v1.3 Legacy Document Upload",
     "status": "\u274c FAIL",
     "success": false,
     "details": "Status: 500"
   },
   {
-    "timestamp": "2025-06-24 23:48:41",
+    "timestamp": "2025-06-25 10:39:29",
     "test": "v1.4 List Documents",
-    "status": "\u274c FAIL",
-    "success": false,
-    "details": "Status: 500"
-  },
-  {
-    "timestamp": "2025-06-24 23:48:41",
-    "test": "v1.3 Legacy List Documents",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-24 23:48:41",
-    "test": "Get Document Details",
+    "timestamp": "2025-06-25 10:39:29",
+    "test": "v1.3 Legacy List Documents",
     "status": "\u274c FAIL",
     "success": false,
-    "details": "No document ID found"
+    "details": "Status: 500"
+  },
+  {
+    "timestamp": "2025-06-25 10:39:29",
+    "test": "v1.4 Get Document Details",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  },
+  {
+    "timestamp": "2025-06-25 10:39:29",
+    "test": "v1.4 Get Document Content",
+    "status": "\u274c FAIL",
+    "success": false,
+    "details": "Status: 200, Found 0 chunks"
   }
 ]

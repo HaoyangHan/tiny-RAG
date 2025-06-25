@@ -46,9 +46,9 @@ class UserService:
                 "email": user.email,
                 "username": user.username,
                 "full_name": user.full_name,
-                "is_active": user.is_active,
-                "created_at": user.created_at.isoformat() if hasattr(user, 'created_at') else None,
-                "last_login": user.last_login.isoformat() if hasattr(user, 'last_login') and user.last_login else None
+                "is_active": user.status.value == "active",
+                "created_at": user.created_at.isoformat(),
+                "last_login": user.last_login.isoformat() if user.last_login else None
             }
             
         except Exception as e:

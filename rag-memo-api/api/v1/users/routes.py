@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from auth.models import User, UserResponse, UserUpdate
 from auth.service import get_current_user, get_current_active_user
+from .service import UserService
 
 router = APIRouter()
 
@@ -30,7 +31,7 @@ class UserProfileResponse(BaseModel):
 
 
 @router.get(
-    "/me/profile",
+    "/profile",
     response_model=UserProfileResponse,
     summary="Get user profile",
     description="Get detailed profile information for the current user"
@@ -39,26 +40,76 @@ async def get_user_profile(
     current_user: User = Depends(get_current_active_user)
 ) -> UserProfileResponse:
     """Get detailed user profile."""
-    # TODO: Get project counts from ProjectService
-    project_count = 0
-    collaboration_count = 0
-    
-    return UserProfileResponse(
-        id=str(current_user.id),
-        email=current_user.email,
-        username=current_user.username,
-        full_name=current_user.full_name,
-        role=current_user.role.value,
-        status=current_user.status.value,
-        created_at=current_user.created_at.isoformat(),
-        last_login=current_user.last_login.isoformat() if current_user.last_login else None,
-        project_count=project_count,
-        collaboration_count=collaboration_count
-    )
+    try:
+        user_service = UserService()
+        
+        # Get basic profile
+        profile = await user_service.get_user_profile(str(current_user.id))
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found"
+            )
+        
+        # Get dashboard stats for project counts
+        stats = await user_service.get_user_dashboard_stats(str(current_user.id))
+        project_count = stats.get("projects", {}).get("owned", 0)
+        collaboration_count = stats.get("projects", {}).get("collaborated", 0)
+        
+        return UserProfileResponse(
+            id=profile["id"],
+            email=profile["email"],
+            username=profile["username"],
+            full_name=profile["full_name"],
+            role=current_user.role.value,
+            status=current_user.status.value,
+            created_at=profile["created_at"] or "",
+            last_login=profile["last_login"],
+            project_count=project_count,
+            collaboration_count=collaboration_count
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user profile: {str(e)}"
+        )
+
+
+@router.get(
+    "/analytics",
+    summary="Get user analytics",
+    description="Get analytics and statistics for the current user"
+)
+async def get_user_analytics(
+    current_user: User = Depends(get_current_active_user)
+) -> dict:
+    """Get user analytics and statistics."""
+    try:
+        user_service = UserService()
+        stats = await user_service.get_user_dashboard_stats(str(current_user.id))
+        
+        if not stats:
+            return {
+                "projects": {"total": 0, "owned": 0, "collaborated": 0, "recent": 0},
+                "elements": {"total": 0, "recent": 0, "by_type": {}},
+                "generations": {"total": 0, "recent": 0, "total_tokens": 0, "total_cost_usd": 0.0},
+                "evaluations": {"total": 0, "recent": 0, "completed": 0, "average_score": 0.0}
+            }
+        
+        return stats
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user analytics: {str(e)}"
+        )
 
 
 @router.put(
-    "/me/profile",
+    "/profile",
     response_model=UserResponse,
     summary="Update user profile",
     description="Update current user's profile information"
@@ -68,11 +119,47 @@ async def update_user_profile(
     current_user: User = Depends(get_current_active_user)
 ) -> UserResponse:
     """Update user profile."""
-    # TODO: Implement user profile update logic
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Profile update functionality not implemented yet"
-    )
+    try:
+        user_service = UserService()
+        
+        # Convert UserUpdate to dict
+        update_data = {}
+        if updates.username is not None:
+            update_data["username"] = updates.username
+        if updates.full_name is not None:
+            update_data["full_name"] = updates.full_name
+        
+        # Update profile
+        updated_profile = await user_service.update_user_profile(
+            str(current_user.id),
+            update_data
+        )
+        
+        if not updated_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found or update failed"
+            )
+        
+        # Return updated user
+        updated_user = await User.get(current_user.id)
+        return UserResponse(
+            id=str(updated_user.id),
+            email=updated_user.email,
+            username=updated_user.username,
+            full_name=updated_user.full_name,
+            role=updated_user.role,
+            status=updated_user.status,
+            created_at=updated_user.created_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update user profile: {str(e)}"
+        )
 
 
 @router.get(

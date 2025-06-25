@@ -1,0 +1,121 @@
+{
+  "timestamp": "2025-06-25T10:39:30.526757",
+  "total_duration": 2.4107699394226074,
+  "summary": {
+    "total_suites": 9,
+    "passed_suites": 7,
+    "partial_suites": 0,
+    "failed_suites": 0,
+    "skipped_suites": 2,
+    "total_tests": 0,
+    "total_passed": 0,
+    "total_failed": 0,
+    "success_rate": 0
+  },
+  "suites": {
+    "auth": {
+      "suite": "auth",
+      "name": "Authentication Tests",
+      "status": "PASSED",
+      "duration": 0.3734321594238281,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "Rules for AI loaded successfully!\n\ud83d\udd10 Starting TinyRAG Authentication API Tests\n==================================================\n[2025-06-25 10:39:28] \u2705 PASS - User Registration\n    Details: Status: 400\n[2025-06-25 10:39:28] \u2705 PASS - User Login\n    Details: Status: 200, Token: Yes\n[2025-06-25 10:39:28] \u2705 PASS - v1.4 Token Verification\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - v1.4 Auth Me Endpoint\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - v1.3 Legacy Auth Me\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - Password Reset Request\n    Details: Status: 501\n[2025-06-25 10:39:28] \u2705 PASS - Password Reset Confirmation\n    Details: Status: 501\n[2025-06-25 10:39:28] \u2705 PASS - User Logout\n    Details: Status: 200\n[2025-06-25 10:39:28] \u274c FAIL - Create API Key\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - List API Keys\n    Details: Status: 200\n\n==================================================\n\ud83d\udcca AUTHENTICATION TEST SUMMARY\n==================================================\nTotal Tests: 10\n\u2705 Passed: 9\n\u274c Failed: 1\nSuccess Rate: 90.0%\n\n\ud83d\udd0d FAILED TESTS:\n  - Create API Key: Status: 200\n\n\ud83d\udcbe Results saved to: test_logs/auth_test_results.json\n",
+      "stderr": ""
+    },
+    "projects": {
+      "suite": "projects",
+      "name": "Projects Tests",
+      "status": "PASSED",
+      "duration": 0.34986114501953125,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "Rules for AI loaded successfully!\n\ud83c\udfd7\ufe0f Starting TinyRAG Projects API Tests\n==================================================\n[2025-06-25 10:39:28] \u2705 PASS - Create Basic Project\n    Details: Status: 201, ID: 685b6160ddcdac9fbd3b7eb1\n[2025-06-25 10:39:28] \u274c FAIL - Create Detailed Project\n    Details: Status: 422, ID: None\n[2025-06-25 10:39:28] \u2705 PASS - List All Projects\n    Details: Status: 200, Count: 1\n[2025-06-25 10:39:28] \u2705 PASS - List Projects by Tenant Type\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - Search Projects\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - Paginated Project List\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - List Public Projects\n    Details: Status: 200\n[2025-06-25 10:39:28] \u274c FAIL - List Filtered Public Projects\n    Details: Status: 422\n[2025-06-25 10:39:28] \u2705 PASS - Get Project Details\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - Get Non-existent Project\n    Details: Status: 404 (should be 404)\n[2025-06-25 10:39:28] \u2705 PASS - Update Project Details\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - Update Project Status\n    Details: Status: 200\n[2025-06-25 10:39:28] \u2705 PASS - Add Project Collaborator\n    Details: Status: 201\n[2025-06-25 10:39:28] \u2705 PASS - Remove Project Collaborator\n    Details: Status: 204\n[2025-06-25 10:39:28] \u2705 PASS - Delete Project\n    Details: Status: 204\n\n==================================================\n\ud83d\udcca PROJECTS TEST SUMMARY\n==================================================\nTotal Tests: 15\n\u2705 Passed: 13\n\u274c Failed: 2\nSuccess Rate: 86.7%\n\n\ud83d\udd0d FAILED TESTS:\n  - Create Detailed Project: Status: 422, ID: None\n  - List Filtered Public Projects: Status: 422\n\n\ud83d\udcbe Results saved to: test_logs/projects_test_results.json\n",
+      "stderr": ""
+    },
+    "elements": {
+      "suite": "elements",
+      "name": "Elements Tests",
+      "status": "PASSED",
+      "duration": 0.33820581436157227,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "Rules for AI loaded successfully!\n\ud83e\udde9 Starting TinyRAG Elements API Tests\n==================================================\n[2025-06-25 10:39:29] \u2705 PASS - Create Prompt Template Element\n    Details: Status: 201, ID: 685b6161ddcdac9fbd3b7eb3\n[2025-06-25 10:39:29] \u2705 PASS - Create MCP Configuration Element\n    Details: Status: 201, ID: 685b6161ddcdac9fbd3b7eb4\n[2025-06-25 10:39:29] \u2705 PASS - Create Agentic Tool Element\n    Details: Status: 201, ID: 685b6161ddcdac9fbd3b7eb5\n[2025-06-25 10:39:29] \u2705 PASS - List Elements by Project\n    Details: Status: 200\n[2025-06-25 10:39:29] \u2705 PASS - List Elements by Type\n    Details: Status: 200\n[2025-06-25 10:39:29] \u2705 PASS - List All Elements\n    Details: Status: 200\n[2025-06-25 10:39:29] \u2705 PASS - Get Element Details\n    Details: Status: 200\n[2025-06-25 10:39:29] \u2705 PASS - Get Non-existent Element\n    Details: Status: 404 (should be 404)\n[2025-06-25 10:39:29] \u274c FAIL - Execute Element with Parameters\n    Details: Status: 500\n[2025-06-25 10:39:29] \u274c FAIL - Execute Element without Parameters\n    Details: Status: 500 (validation error expected)\n[2025-06-25 10:39:29] \u274c FAIL - Update Element Details\n    Details: Status: 405\n[2025-06-25 10:39:29] \u274c FAIL - Update Element Template\n    Details: Status: 405\n[2025-06-25 10:39:29] \u274c FAIL - Delete Element\n    Details: Status: 405\n\n==================================================\n\ud83d\udcca ELEMENTS TEST SUMMARY\n==================================================\nTotal Tests: 13\n\u2705 Passed: 8\n\u274c Failed: 5\nSuccess Rate: 61.5%\n\n\ud83d\udd0d FAILED TESTS:\n  - Execute Element with Parameters: Status: 500\n  - Execute Element without Parameters: Status: 500 (validation error expected)\n  - Update Element Details: Status: 405\n  - Update Element Template: Status: 405\n  - Delete Element: Status: 405\n\n\ud83d\udcbe Results saved to: test_logs/elements_test_results.json\n",
+      "stderr": ""
+    },
+    "documents": {
+      "suite": "documents",
+      "name": "Documents Tests",
+      "status": "PASSED",
+      "duration": 0.3974456787109375,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "Rules for AI loaded successfully!\n\ud83d\udcc4 Starting TinyRAG Documents API Tests\n==================================================\n[2025-06-25 10:39:29] \u274c FAIL - v1.4 Document Upload\n    Details: Status: 500, Project: True, Chunks: 0 | Error: {'detail': 'Failed to upload document: '}\n[2025-06-25 10:39:29] \u274c FAIL - v1.3 Legacy Document Upload\n    Details: Status: 500\n[2025-06-25 10:39:29] \u2705 PASS - v1.4 List Documents\n    Details: Status: 200\n[2025-06-25 10:39:29] \u274c FAIL - v1.3 Legacy List Documents\n    Details: Status: 500\n[2025-06-25 10:39:29] \u2705 PASS - v1.4 Get Document Details\n    Details: Status: 200\n[2025-06-25 10:39:29] \u274c FAIL - v1.4 Get Document Content\n    Details: Status: 200, Found 0 chunks\n\n==================================================\n\ud83d\udcca DOCUMENTS TEST SUMMARY\n==================================================\nTotal Tests: 6\n\u2705 Passed: 2\n\u274c Failed: 4\nSuccess Rate: 33.3%\n\n\ud83d\udd0d FAILED TESTS:\n  - v1.4 Document Upload: Status: 500, Project: True, Chunks: 0 | Error: {'detail': 'Failed to upload document: '}\n  - v1.3 Legacy Document Upload: Status: 500\n  - v1.3 Legacy List Documents: Status: 500\n  - v1.4 Get Document Content: Status: 200, Found 0 chunks\n\n\ud83d\udcbe Results saved to: test_logs/documents_test_results.json\n",
+      "stderr": ""
+    },
+    "users": {
+      "suite": "users",
+      "name": "Users Tests",
+      "status": "PASSED",
+      "duration": 0.32395386695861816,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "\ud83d\ude80 Starting TinyRAG v1.4 Users API Test Suite\n============================================================\n\ud83d\udd27 Session initialized for User API testing\n\ud83d\udd11 Login successful. Token acquired for user: 6859036f0cfc8f1bb0f21c76\n[2025-06-25 10:39:29] \u274c FAIL Search Users\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/users/search\n    \ud83d\udcca Status: 501\n    \u274c Error: User search functionality not implemented yet\n\n[2025-06-25 10:39:29] \u2705 PASS Update User Profile\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/users/profile\n    \ud83d\udcca Status: 200\n    \ud83d\udcc4 Response: {'id': '68596ccc11c25c10e96685f0', 'email': 'tester3@example.com', 'username': 'tester3', 'full_name...\n\n[2025-06-25 10:39:29] \u2705 PASS Get User Analytics\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/users/analytics\n    \ud83d\udcca Status: 200\n    \ud83d\udcc4 Response: {'projects': {'total': 4, 'owned': 4, 'collaborated': 0, 'recent': 4}, 'elements': {'total': 0, 'rec...\n\n[2025-06-25 10:39:29] \u2705 PASS Get User Profile\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/users/profile\n    \ud83d\udcca Status: 200\n    \ud83d\udcc4 Response: {'id': '68596ccc11c25c10e96685f0', 'email': 'tester3@example.com', 'username': 'tester3', 'full_name...\n\n============================================================\n\ud83d\udcca Users API Test Summary:\n   \u2705 Passed: 3\n   \u274c Failed: 1\n   \ud83d\udcc8 Success Rate: 75.0%\n\n\ud83d\udcbe Results saved to: test_logs/users_test_results.json\n\ud83d\udd27 Session cleaned up\n",
+      "stderr": ""
+    },
+    "generations": {
+      "suite": "generations",
+      "name": "Generations Tests",
+      "status": "PASSED",
+      "duration": 0.3110530376434326,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "\ud83d\ude80 Starting TinyRAG v1.4 Generations API Test Suite\n============================================================\n\ud83d\udd27 Session initialized for Generation API testing\n\ud83d\udd11 Login successful. Token acquired.\n\u274c Failed to create test element: 422\n\u274c Cannot proceed without test element\n\ud83d\udd27 Session cleaned up\n",
+      "stderr": ""
+    },
+    "evaluations": {
+      "suite": "evaluations",
+      "name": "Evaluations Tests",
+      "status": "PASSED",
+      "duration": 0.30350327491760254,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0,
+      "return_code": 0,
+      "stdout": "\ud83d\ude80 Starting TinyRAG v1.4 Evaluations API Test Suite\n============================================================\n\ud83d\udd27 Session initialized for Evaluation API testing\n\ud83d\udd11 Login successful. Token acquired.\n\u26a0\ufe0f Skipping evaluation details test - no test evaluation available\n\u26a0\ufe0f Skipping evaluation update test - no test evaluation available\n\u26a0\ufe0f Skipping evaluation deletion test - no test evaluation available\n[2025-06-25 10:39:30] \u274c FAIL Run Batch Evaluation\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/evaluations/batch\n    \ud83d\udcca Status: 405\n    \u274c Error: Method Not Allowed\n\n[2025-06-25 10:39:30] \u274c FAIL Create Evaluation\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/evaluations\n    \ud83d\udcca Status: 422\n    \u274c Error: [{'type': 'missing', 'loc': ['body', 'generation_id'], 'msg': 'Field required', 'input': {'type': 'quality', 'target_type': 'generation', 'target_id': 'test_generation_id_123', 'criteria': {'accuracy': {'weight': 0.4, 'description': 'Factual correctness'}, 'clarity': {'weight': 0.3, 'description': 'Clear and understandable'}, 'relevance': {'weight': 0.3, 'description': 'Relevant to the request'}}, 'inputs': {'content': 'This is a test generation to evaluate', 'prompt': 'Generate a summary about AI', 'expected_output': 'AI summary'}}, 'url': 'https://errors.pydantic.dev/2.5/v/missing'}]\n\n[2025-06-25 10:39:30] \u274c FAIL Get Evaluation Analytics\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/evaluations/analytics\n    \ud83d\udcca Status: 501\n    \u274c Error: Evaluation retrieval not implemented yet\n\n[2025-06-25 10:39:30] \u274c FAIL Get Evaluations\n    \ud83d\udccd Endpoint: http://localhost:8000/api/v1/evaluations\n    \ud83d\udcca Status: 0\n    \u274c Error: 500, message='Attempt to decode JSON with unexpected mimetype: text/plain; charset=utf-8', url='http://localhost:8000/api/v1/evaluations/?limit=10&offset=0&type=quality'\n\n============================================================\n\ud83d\udcca Evaluations API Test Summary:\n   \u2705 Passed: 0\n   \u274c Failed: 4\n   \ud83d\udcc8 Success Rate: 0.0%\n\n\ud83d\udcbe Results saved to: test_logs/evaluations_test_results.json\n\ud83d\udd27 Session cleaned up\n",
+      "stderr": ""
+    },
+    "admin": {
+      "suite": "admin",
+      "name": "Admin Tests",
+      "status": "SKIPPED",
+      "reason": "Script not found",
+      "duration": 0,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0
+    },
+    "legacy": {
+      "suite": "legacy",
+      "name": "Legacy Tests",
+      "status": "SKIPPED",
+      "reason": "Script not found",
+      "duration": 0,
+      "tests_run": 0,
+      "tests_passed": 0,
+      "tests_failed": 0
+    }
+  }
+}
