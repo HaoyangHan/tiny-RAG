@@ -164,7 +164,7 @@ async def update_current_user(
     )
 
 
-@router.post("/api-keys", response_model=Dict[str, Any])
+@router.post("/api-keys", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     key_data: APIKeyCreate,
     current_user: User = Depends(get_current_user)

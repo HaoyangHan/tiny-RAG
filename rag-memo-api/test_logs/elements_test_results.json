@@ -1,90 +1,90 @@
 [
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Create Prompt Template Element",
     "status": "\u2705 PASS",
     "success": true,
-    "details": "Status: 201, ID: 685ba4e5ff6739d5b62bc949"
+    "details": "Status: 201, ID: 685ba8a8fa52d16cb267c7f6"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Create MCP Configuration Element",
     "status": "\u2705 PASS",
     "success": true,
-    "details": "Status: 201, ID: 685ba4e5ff6739d5b62bc94a"
+    "details": "Status: 201, ID: 685ba8a8fa52d16cb267c7f7"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Create Agentic Tool Element",
     "status": "\u2705 PASS",
     "success": true,
-    "details": "Status: 201, ID: 685ba4e5ff6739d5b62bc94b"
+    "details": "Status: 201, ID: 685ba8a8fa52d16cb267c7f8"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "List Elements by Project",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "List Elements by Type",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "List All Elements",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Get Element Details",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Get Non-existent Element",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 404 (should be 404)"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Execute Element with Parameters",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Execute Element without Parameters",
-    "status": "\u274c FAIL",
-    "success": false,
-    "details": "Status: 200 (validation error expected)"
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 500 (validation/execution error expected)"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Update Element Details",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Update Element Template",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:27:33",
+    "timestamp": "2025-06-25 15:43:36",
     "test": "Delete Element",
     "status": "\u2705 PASS",
     "success": true,

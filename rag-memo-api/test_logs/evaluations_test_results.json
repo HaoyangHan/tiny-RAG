@@ -1,6 +1,6 @@
 [
   {
-    "timestamp": "2025-06-25 15:27:37",
+    "timestamp": "2025-06-25 15:43:38",
     "test_name": "Run Batch Evaluation",
     "endpoint": "http://localhost:8000/api/v1/evaluations/batch",
     "status_code": 405,
@@ -9,7 +9,16 @@
     "error": "Method Not Allowed"
   },
   {
-    "timestamp": "2025-06-25 15:27:37",
+    "timestamp": "2025-06-25 15:43:38",
+    "test_name": "Get Evaluation Analytics",
+    "endpoint": "http://localhost:8000/api/v1/evaluations/analytics",
+    "status_code": 501,
+    "success": false,
+    "response_data": null,
+    "error": "Evaluation retrieval not implemented yet"
+  },
+  {
+    "timestamp": "2025-06-25 15:43:38",
     "test_name": "Create Evaluation",
     "endpoint": "http://localhost:8000/api/v1/evaluations",
     "status_code": 422,
@@ -52,16 +61,7 @@
     ]
   },
   {
-    "timestamp": "2025-06-25 15:27:37",
-    "test_name": "Get Evaluation Analytics",
-    "endpoint": "http://localhost:8000/api/v1/evaluations/analytics",
-    "status_code": 501,
-    "success": false,
-    "response_data": null,
-    "error": "Evaluation retrieval not implemented yet"
-  },
-  {
-    "timestamp": "2025-06-25 15:27:37",
+    "timestamp": "2025-06-25 15:43:38",
     "test_name": "Get Evaluations",
     "endpoint": "http://localhost:8000/api/v1/evaluations",
     "status_code": 0,

@@ -175,11 +175,11 @@ class ProjectsAPITester:
             f"Status: {response['status']}, ID: {project_id or 'None'}"
         )
         
-        # Test project creation with all optional fields
+        # Test detailed project creation
         detailed_project_data = {
             "name": "Test Project - Detailed",
             "description": "A detailed test project with all fields",
-            "tenant_type": "research", 
+            "tenant_type": "deep_research",
             "visibility": "public",
             "keywords": ["testing", "api", "detailed", "research", "comprehensive"]
         }
@@ -256,7 +256,7 @@ class ProjectsAPITester:
         )
         
         # Test public projects with filters
-        filtered_public_response = await self.make_request("GET", "/api/v1/projects/public", {"tenant_type": "research"})
+        filtered_public_response = await self.make_request("GET", "/api/v1/projects/public", {"tenant_type": "deep_research"})
         filtered_public_success = filtered_public_response["status"] == 200
         
         await self.log_test(

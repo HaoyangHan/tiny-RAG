@@ -338,6 +338,13 @@ class ElementService:
             if not element.is_ready_for_execution():
                 raise ValueError("Element is not ready for execution")
             
+            # Validate required variables
+            template_variables = element.template.variables or []
+            missing_variables = [var for var in template_variables if var not in input_variables]
+            
+            if missing_variables:
+                raise ValueError(f"Missing required variables: {', '.join(missing_variables)}")
+            
             # Create execution record
             execution = ElementExecution(
                 input_variables=input_variables,
@@ -353,8 +360,12 @@ class ElementService:
                 # 2. Call appropriate LLM or execution engine
                 # 3. Process results
                 
-                # For now, simulate execution
-                execution.output_content = f"Simulated execution of {element.name}"
+                # For now, simulate execution with variable substitution
+                template_content = element.template.content
+                for var, value in input_variables.items():
+                    template_content = template_content.replace(f"{{{var}}}", str(value))
+                
+                execution.output_content = f"Simulated execution of {element.name}: {template_content}"
                 execution.status = "completed"
                 execution.execution_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
                 
