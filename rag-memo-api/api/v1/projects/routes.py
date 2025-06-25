@@ -73,6 +73,26 @@ class CollaboratorRequest(BaseModel):
     user_id: str = Field(description="User ID to add/remove as collaborator")
 
 
+class BulkExecutionStatusResponse(BaseModel):
+    """Response schema for bulk element execution status."""
+    
+    execution_id: str = Field(description="Execution ID")
+    status: str = Field(description="Overall status: PENDING|PROCESSING|COMPLETED|FAILED")
+    total_elements: int = Field(description="Total number of elements to execute")
+    completed_elements: int = Field(description="Number of completed elements")
+    failed_elements: int = Field(description="Number of failed elements")
+    progress_percentage: float = Field(description="Completion percentage")
+    estimated_completion: Optional[str] = Field(description="Estimated completion time")
+    element_statuses: List[Dict[str, Any]] = Field(description="Individual element statuses")
+
+
+class BulkExecutionRequest(BaseModel):
+    """Request schema for bulk element execution."""
+    
+    element_ids: Optional[List[str]] = Field(None, description="Specific element IDs to execute (if None, execute all)")
+    execution_config: Dict[str, Any] = Field(default_factory=dict, description="Execution configuration")
+
+
 # Project CRUD Operations
 @router.post(
     "/",
@@ -444,4 +464,82 @@ async def remove_collaborator(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to remove collaborator: {str(e)}"
+        )
+
+
+# Bulk Element Execution
+@router.post(
+    "/{project_id}/elements/execute-all",
+    response_model=Dict[str, str],
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Execute all project elements",
+    description="Trigger execution of all elements in the project"
+)
+async def execute_all_elements(
+    project_id: str,
+    request: BulkExecutionRequest = BulkExecutionRequest(),
+    current_user: User = Depends(get_current_user),
+    project_service: ProjectService = Depends(get_project_service)
+) -> Dict[str, str]:
+    """Execute all elements in a project."""
+    try:
+        execution_id = await project_service.execute_all_elements(
+            project_id=project_id,
+            user_id=str(current_user.id),
+            element_ids=request.element_ids,
+            execution_config=request.execution_config
+        )
+        
+        return {
+            "execution_id": execution_id,
+            "message": "Bulk element execution started",
+            "status": "PENDING"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute elements: {str(e)}"
+        )
+
+
+@router.get(
+    "/{project_id}/elements/execute-all-status",
+    response_model=BulkExecutionStatusResponse,
+    summary="Get bulk execution status",
+    description="Get the status of bulk element execution"
+)
+async def get_bulk_execution_status(
+    project_id: str,
+    execution_id: str = Query(description="Execution ID to check status for"),
+    current_user: User = Depends(get_current_user),
+    project_service: ProjectService = Depends(get_project_service)
+) -> BulkExecutionStatusResponse:
+    """Get the status of bulk element execution."""
+    try:
+        status_data = await project_service.get_bulk_execution_status(
+            project_id=project_id,
+            execution_id=execution_id,
+            user_id=str(current_user.id)
+        )
+        
+        if not status_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Execution not found"
+            )
+        
+        return BulkExecutionStatusResponse(**status_data)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get execution status: {str(e)}"
         ) 

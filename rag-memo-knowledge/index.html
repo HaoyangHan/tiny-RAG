@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyRAG Knowledge Base | Technical Documentation</title>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="assets/css/styles.css" rel="stylesheet">
+    <meta name="description" content="Comprehensive technical documentation for TinyRAG - RAG platform implementation guides, API references, and best practices.">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="logo">📚</span>
+                <h1>TinyRAG Knowledge Base</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="#guides">Guides</a>
+                <a href="#examples">Examples</a>
+                <a href="#troubleshooting">Troubleshooting</a>
+                <a href="https://tinyrag.com" target="_blank" class="btn-primary">Back to App</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2>Technical Documentation Hub</h2>
+                <p>Deep dive into TinyRAG's architecture, implementation details, and best practices. Everything you need to understand and optimize your RAG workflows.</p>
+                <div class="search-box">
+                    <input type="text" placeholder="Search documentation..." id="searchInput">
+                    <button class="search-btn">🔍</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Navigation -->
+    <section class="quick-nav">
+        <div class="container">
+            <div class="nav-grid">
+                <div class="nav-card" onclick="navigateTo('guides/rag-pipeline.html')">
+                    <div class="nav-icon">🔄</div>
+                    <h3>RAG Pipeline</h3>
+                    <p>Understanding the complete RAG workflow from document ingestion to generation</p>
+                </div>
+                <div class="nav-card" onclick="navigateTo('guides/metadata-extraction.html')">
+                    <div class="nav-icon">🏷️</div>
+                    <h3>Metadata Extraction</h3>
+                    <p>How document processing and metadata extraction work under the hood</p>
+                </div>
+                <div class="nav-card" onclick="navigateTo('guides/element-types.html')">
+                    <div class="nav-icon">⚡</div>
+                    <h3>Element Types</h3>
+                    <p>Deep dive into prompt templates, MCP configs, and agentic tools</p>
+                </div>
+                <div class="nav-card" onclick="navigateTo('guides/evaluation-framework.html')">
+                    <div class="nav-icon">📊</div>
+                    <h3>Evaluation Framework</h3>
+                    <p>Quality assessment methodologies and hallucination detection</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Sections -->
+    <main class="main-content">
+        <div class="container">
+            <section id="guides" class="content-section">
+                <h2>📖 Technical Guides</h2>
+                <div class="content-grid">
+                    <div class="content-item">
+                        <h3><a href="guides/rag-pipeline.html">RAG Pipeline Architecture</a></h3>
+                        <p>Complete end-to-end RAG workflow implementation</p>
+                        <div class="tags">
+                            <span class="tag">Architecture</span>
+                            <span class="tag">Embeddings</span>
+                            <span class="tag">Vector DB</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="guides/metadata-extraction.html">Metadata Extraction Process</a></h3>
+                        <p>Document processing, chunking, and metadata generation</p>
+                        <div class="tags">
+                            <span class="tag">Processing</span>
+                            <span class="tag">Chunking</span>
+                            <span class="tag">NLP</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="guides/element-types.html">Element Types & Templates</a></h3>
+                        <p>Understanding prompt templates, MCP configs, and agentic tools</p>
+                        <div class="tags">
+                            <span class="tag">Templates</span>
+                            <span class="tag">MCP</span>
+                            <span class="tag">Agents</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="guides/evaluation-framework.html">Evaluation & Quality Control</a></h3>
+                        <p>LLM-as-a-judge evaluation and quality assessment</p>
+                        <div class="tags">
+                            <span class="tag">Evaluation</span>
+                            <span class="tag">Quality</span>
+                            <span class="tag">Metrics</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="guides/api-reference.html">Complete API Reference</a></h3>
+                        <p>Detailed API documentation with examples and use cases</p>
+                        <div class="tags">
+                            <span class="tag">API</span>
+                            <span class="tag">REST</span>
+                            <span class="tag">Integration</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="examples" class="content-section">
+                <h2>💡 Examples & Templates</h2>
+                <div class="content-grid">
+                    <div class="content-item">
+                        <h3><a href="examples/prompt-templates/">Prompt Template Library</a></h3>
+                        <p>Industry-specific templates and best practices</p>
+                        <div class="tags">
+                            <span class="tag">Templates</span>
+                            <span class="tag">Examples</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="examples/mcp-configurations/">MCP Configuration Examples</a></h3>
+                        <p>Tool integration patterns and server configurations</p>
+                        <div class="tags">
+                            <span class="tag">MCP</span>
+                            <span class="tag">Tools</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="examples/use-cases/">Common Use Cases</a></h3>
+                        <p>Real-world implementation patterns and workflows</p>
+                        <div class="tags">
+                            <span class="tag">Use Cases</span>
+                            <span class="tag">Workflows</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="troubleshooting" class="content-section">
+                <h2>🔧 Troubleshooting & Support</h2>
+                <div class="content-grid">
+                    <div class="content-item">
+                        <h3><a href="troubleshooting/common-issues.html">Common Issues & Solutions</a></h3>
+                        <p>FAQ and troubleshooting guide for common problems</p>
+                        <div class="tags">
+                            <span class="tag">FAQ</span>
+                            <span class="tag">Debugging</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="troubleshooting/performance-tips.html">Performance Optimization</a></h3>
+                        <p>Tips for optimizing RAG performance and reducing costs</p>
+                        <div class="tags">
+                            <span class="tag">Performance</span>
+                            <span class="tag">Optimization</span>
+                        </div>
+                    </div>
+                    <div class="content-item">
+                        <h3><a href="troubleshooting/debugging-guide.html">Debugging Workflows</a></h3>
+                        <p>Step-by-step debugging guide for RAG workflows</p>
+                        <div class="tags">
+                            <span class="tag">Debugging</span>
+                            <span class="tag">Workflows</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>TinyRAG v1.4.1</h4>
+                    <p>Complete RAG platform with comprehensive documentation</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="guides/api-reference.html">API Reference</a></li>
+                        <li><a href="examples/">Examples</a></li>
+                        <li><a href="troubleshooting/">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/tinyrag/tinyrag" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://tinyrag.com/docs" target="_blank">Official Docs</a></li>
+                        <li><a href="https://tinyrag.com/community" target="_blank">Community</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 TinyRAG. Built with ❤️ for the AI community.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html> 

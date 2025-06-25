@@ -383,3 +383,5 @@ docker-compose.override.yml
 *.pid.lock
 
 *resume*
+
+*version_planning.PNG*

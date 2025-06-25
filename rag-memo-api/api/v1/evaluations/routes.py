@@ -24,6 +24,23 @@ class EvaluationCreateRequest(BaseModel):
     custom_criteria: Dict[str, float] = Field(default_factory=dict, description="Custom evaluation criteria")
 
 
+class BatchEvaluationRequest(BaseModel):
+    """Request schema for batch evaluation creation."""
+    
+    generation_ids: List[str] = Field(description="List of generation IDs to evaluate")
+    evaluator_model: Optional[str] = Field(None, description="LLM model to use for evaluation")
+    evaluation_criteria: Dict[str, float] = Field(default_factory=dict, description="Evaluation criteria weights")
+
+
+class BatchEvaluationResponse(BaseModel):
+    """Response schema for batch evaluation creation."""
+    
+    batch_id: str = Field(description="Batch evaluation ID")
+    total_evaluations: int = Field(description="Total number of evaluations in batch")
+    status: str = Field(description="Batch status")
+    evaluation_ids: List[str] = Field(description="List of created evaluation IDs")
+
+
 class EvaluationResponse(BaseModel):
     """Response schema for evaluation data."""
     

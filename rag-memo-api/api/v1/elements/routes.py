@@ -56,6 +56,24 @@ class ElementDetailResponse(ElementResponse):
     usage_statistics: Dict[str, Any] = Field(description="Usage statistics")
 
 
+class TemplateValidationRequest(BaseModel):
+    """Request schema for template validation."""
+    
+    template_content: str = Field(description="Template content to validate")
+    variables: List[str] = Field(default_factory=list, description="Expected variables")
+    element_type: ElementType = Field(description="Type of element")
+
+
+class TemplateValidationResponse(BaseModel):
+    """Response schema for template validation."""
+    
+    is_valid: bool = Field(description="Whether the template is valid")
+    errors: List[str] = Field(description="List of validation errors")
+    warnings: List[str] = Field(description="List of validation warnings")
+    extracted_variables: List[str] = Field(description="Variables found in template")
+    suggestions: List[str] = Field(description="Improvement suggestions")
+
+
 @router.post(
     "/",
     response_model=ElementResponse,
@@ -329,4 +347,39 @@ async def delete_element(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete element: {str(e)}"
+        )
+
+
+# Template Validation
+@router.post(
+    "/validate-template",
+    response_model=TemplateValidationResponse,
+    summary="Validate template",
+    description="Validate template syntax and structure before creating element"
+)
+async def validate_template(
+    request: TemplateValidationRequest,
+    current_user: User = Depends(get_current_active_user),
+    element_service: ElementService = Depends(get_element_service)
+) -> TemplateValidationResponse:
+    """Validate template syntax and structure."""
+    try:
+        validation_result = await element_service.validate_template(
+            template_content=request.template_content,
+            variables=request.variables,
+            element_type=request.element_type
+        )
+        
+        return TemplateValidationResponse(
+            is_valid=validation_result["is_valid"],
+            errors=validation_result.get("errors", []),
+            warnings=validation_result.get("warnings", []),
+            extracted_variables=validation_result.get("extracted_variables", []),
+            suggestions=validation_result.get("suggestions", [])
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate template: {str(e)}"
         ) 
