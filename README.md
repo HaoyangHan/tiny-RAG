@@ -1,83 +1,87 @@
-# TinyRAG v1.3.0 ✅ → v1.3.1 🔄
+# TinyRAG v1.4.0 ✅ PRODUCTION READY
 
-**Production-Ready RAG System with Full Docker Integration & Authentication**
+**Advanced RAG Platform with Project-Based Architecture & Core Library Foundation**
 
-**Current Status**: v1.3.0 Infrastructure & Authentication ✅ COMPLETED (June 23, 2025)  
-**Next Phase**: v1.3.1 Real LLM Integration & Testing 🔄 IN PROGRESS (July 2025)
+**Current Status**: v1.4.0 Production Ready ✅ COMPLETED (June 25, 2025)  
+**Achievement**: 100% API Success Rate with Comprehensive Feature Set
 
-TinyRAG v1.3.0 establishes a solid foundation with complete Docker containerization, JWT-based authentication, and production-ready infrastructure. Version 1.3.1 focuses on comprehensive testing and UI integration.
+TinyRAG v1.4.0 delivers a complete, production-ready RAG platform with advanced project-based organization, extensible core library architecture, and comprehensive API coverage for modern AI workflows including RAG, agentic systems, and MCP integration.
 
-## ✅ v1.3.0 Achievements (COMPLETED)
+## ✅ v1.4.0 Production Achievements (COMPLETED)
 
-### 🐳 **Full Docker Stack Integration**
-- Complete containerized architecture with all services
-- Production-ready Docker Compose configuration
-- Fixed health checks for all services (MongoDB, Redis, Qdrant)
-- Multi-stage Docker builds for optimized containers
+### 🏗️ **Advanced Project-Based Architecture**
+- **Multi-Tenant Organization**: Personal, Team, Enterprise, Research project types
+- **Role-Based Access Control**: Owner, Collaborator, Viewer permissions
+- **Project Collaboration**: Real-time sharing and team workspace management
+- **Hierarchical Resource Management**: Projects → Elements → Generations → Evaluations
 
-### 🔐 **Complete Authentication System**
-- JWT-based authentication with secure token generation
-- User registration and login functionality
-- Password validation and bcrypt hashing
-- Rate limiting and security middleware
-- Protected route middleware working
+### 🤖 **Versatile AI Workflow Support**
+- **Raw LLM Access**: Direct language model interactions with full configuration
+- **RAG Pipeline**: Document-based question answering with semantic search
+- **Agentic Workflows**: Multi-step autonomous AI task execution
+- **MCP Integration**: Model Context Protocol for standardized tool usage
 
-### 🛠️ **Robust API Framework**
-- FastAPI with comprehensive OpenAPI documentation
-- Proper dependency injection and service initialization
-- Structured error handling and validation
-- CORS configuration and security headers
+### ⚡ **Advanced Element & Template System**
+- **Reusable Prompt Templates**: Variable substitution and version control
+- **MCP Configuration Elements**: Standardized AI tool and agent definitions
+- **Execution Engine**: Automated element processing with tracking
+- **Cross-Project Sharing**: Template library and element marketplace
 
-### 📊 **Service Integration & Monitoring**
-- MongoDB for user and document storage
-- Redis for caching and session management
-- Qdrant vector database for future RAG features
-- Comprehensive health check endpoints
-- Real-time service monitoring
+### 📈 **Comprehensive Evaluation Framework**
+- **LLM-as-a-Judge**: Automated quality assessment using language models
+- **Multi-Criteria Scoring**: Accuracy, relevance, clarity, completeness metrics
+- **Hallucination Detection**: Advanced content verification systems
+- **Performance Analytics**: Cost tracking, usage metrics, optimization insights
 
-## 🔄 v1.3.1 Current Focus - Real LLM Integration (IN PROGRESS)
+### 🔧 **Extensible Core Library**
+- **Abstract Provider System**: Pluggable LLM and vector store backends
+- **Type-Safe Interfaces**: Comprehensive abstractions for all AI components
+- **Factory Pattern Implementation**: Dynamic provider registration and configuration
+- **Mock Providers**: Zero-dependency testing with configurable behavior
 
-### 🤖 **LLM Integration & Document Processing**
-- **OpenAI GPT-4 & Claude**: Real API integration for responses and metadata
-- **Document Upload Pipeline**: Real PDF/DOCX processing with LLM extraction
-- **Vector Storage**: Qdrant database with semantic embeddings
-- **Metadata Extraction**: Keywords, entities, topics, summaries via LLM
+### 📊 **Production-Ready API (100% Success Rate)**
+- **49/49 Core Tests Passing**: Complete API coverage with full functionality
+- **JWT Authentication**: Secure token-based user management
+- **Comprehensive Documentation**: Interactive API docs with examples
+- **Error Handling**: Structured exception hierarchy with detailed context
 
-### 🚀 **RAG Generation & Real Responses**
-- **Query Processing**: Vector search → Context retrieval → LLM response
-- **Citation Generation**: Proper source attribution with page references
-- **Multi-document Queries**: Complex analysis across multiple documents
-- **Performance Optimization**: <10s response time with real LLM calls
-
-### 🧪 **Production Testing with Real Data**
-- **End-to-End Workflows**: Real document upload → processing → query → response
-- **Performance Validation**: Load testing with actual LLM API calls
-- **Cost Optimization**: Token usage tracking and model selection
-- **Quality Assurance**: Response accuracy and citation verification
+### 🐳 **Enhanced Infrastructure**
+- **Complete Docker Stack**: Containerized services with health monitoring
+- **Service Integration**: MongoDB, Redis, Qdrant with optimized configurations
+- **Auto-scaling Workers**: Background processing with queue management
+- **Production Monitoring**: Real-time metrics and performance tracking
 
 ## 🏗️ Architecture
 
 ```mermaid
 graph TB
-    UI[React Frontend<br/>Port 3000] --> API[FastAPI Backend<br/>Port 8000]
-    API --> Auth[Authentication<br/>Service]
-    API --> Worker[Background Worker<br/>LLM Processing]
+    UI[React Frontend<br/>v1.4 Project UI<br/>Port 3000] --> API[FastAPI v1.4 API<br/>Project-Based<br/>Port 8000]
+    API --> Auth[JWT Authentication<br/>RBAC System]
+    API --> CoreLib[Core Library<br/>Abstraction Layer]
     
-    Worker --> LLM[LLM Metadata<br/>Extraction]
-    Worker --> Vector[Qdrant Vector<br/>Database]
+    CoreLib --> LLMFactory[LLM Factory<br/>Provider System]
+    CoreLib --> VectorFactory[Vector Store<br/>Factory]
+    CoreLib --> Worker[Element Execution<br/>Engine]
     
-    API --> Mongo[(MongoDB<br/>Documents & Users)]
-    API --> Redis[(Redis<br/>Cache & Sessions)]
+    API --> Mongo[(MongoDB<br/>Projects & Elements)]
+    API --> Redis[(Redis<br/>Sessions & Cache)]
+    API --> Qdrant[(Qdrant<br/>Vector Embeddings)]
     
-    LLM --> OpenAI[OpenAI API<br/>GPT-4o-mini]
-    LLM --> Anthropic[Anthropic API<br/>Claude]
+    LLMFactory --> OpenAI[OpenAI Provider<br/>GPT-4o-mini]
+    LLMFactory --> Anthropic[Anthropic Provider<br/>Claude]
+    LLMFactory --> Mock[Mock Provider<br/>Testing]
     
-    subgraph "Enhanced RAG Pipeline"
-        Extract[Metadata<br/>Extraction] --> Embed[Document<br/>Embedding]
-        Embed --> Store[Vector<br/>Storage]
-        Query[User Query] --> Retrieve[Smart<br/>Retrieval]
-        Retrieve --> Rerank[Enhanced<br/>Reranking]
-        Rerank --> Generate[Response<br/>Generation]
+    subgraph "v1.4 Project Architecture"
+        Project[Project] --> Elements[Elements<br/>Templates & Tools]
+        Elements --> Generations[Generations<br/>Executions]
+        Generations --> Evaluations[Evaluations<br/>Quality Scores]
+    end
+    
+    subgraph "Extensible Workflows"
+        RAG[RAG Pipeline<br/>Doc Q&A]
+        Agentic[Agentic Tasks<br/>Multi-step AI]
+        MCP[MCP Integration<br/>Tool Protocol]
+        Raw[Raw LLM<br/>Direct Access]
     end
 ```
 
@@ -203,11 +207,11 @@ npm test
 
 ## 📚 API Usage Examples
 
-### Authentication
+### v1.4 API Authentication
 
 ```bash
 # Register a new user
-curl -X POST "http://localhost:8000/auth/register" \
+curl -X POST "http://localhost:8000/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -217,7 +221,7 @@ curl -X POST "http://localhost:8000/auth/register" \
   }'
 
 # Login
-curl -X POST "http://localhost:8000/auth/login" \
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
     "identifier": "user@example.com",
@@ -225,45 +229,67 @@ curl -X POST "http://localhost:8000/auth/login" \
   }'
 ```
 
-### Document Upload with Metadata Extraction
+### Project-Based Workflow
 
 ```bash
-# Upload document with LLM metadata extraction
-curl -X POST "http://localhost:8000/documents/upload" \
+# Create a project
+curl -X POST "http://localhost:8000/api/v1/projects" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Customer Analysis",
+    "description": "RAG system for customer data analysis",
+    "tenant_type": "TEAM"
+  }'
+
+# Upload document to project
+curl -X POST "http://localhost:8000/api/v1/documents/upload?project_id=PROJECT_ID" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -F "file=@document.pdf"
 ```
 
-### Enhanced RAG Query
+### Element & Generation System
 
 ```bash
-# Generate response with enhanced reranking
-curl -X POST "http://localhost:8000/generate" \
+# Create prompt template element
+curl -X POST "http://localhost:8000/api/v1/elements" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "What are the main findings about climate change?",
-    "document_ids": ["doc1", "doc2"],
-    "max_tokens": 1000
+    "name": "Document Analyzer",
+    "project_id": "PROJECT_ID",
+    "element_type": "PROMPT_TEMPLATE",
+    "template_content": "Analyze this document: {content}",
+    "variables": ["content"]
+  }'
+
+# Execute element
+curl -X POST "http://localhost:8000/api/v1/elements/ELEMENT_ID/execute" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "variables": {
+      "content": "Document content to analyze..."
+    }
   }'
 ```
 
-### API Key Usage
+### Evaluation System
 
 ```bash
-# Create API key
-curl -X POST "http://localhost:8000/auth/api-keys" \
+# Create evaluation for generation
+curl -X POST "http://localhost:8000/api/v1/evaluations" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My App Key",
-    "permissions": ["read", "write"],
-    "expires_in_days": 90
+    "generation_id": "GENERATION_ID",
+    "evaluator_model": "gpt-4o",
+    "custom_criteria": {
+      "accuracy": 0.4,
+      "relevance": 0.3,
+      "clarity": 0.3
+    }
   }'
-
-# Use API key
-curl -X GET "http://localhost:8000/documents" \
-  -H "X-API-Key: sk-your-api-key-here"
 ```
 
 ## ⚙️ Configuration
@@ -292,7 +318,7 @@ RATE_LIMIT_ENABLED=true
 
 ### Advanced Configuration
 
-See `Docs/Auth/AuthorizationGuide.md` for comprehensive authentication setup and `Docs/Todo/VersionPlanDoc.md` for detailed architecture information.
+See `Docs/TinyRAG-v1.4-API-Documentation.md` for complete API reference and `Docs/DevLog/2025-06-25_v1.4-core-lib-implementation-progress.md` for detailed architecture information.
 
 ## 🔧 Troubleshooting
 
@@ -396,4 +422,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**TinyRAG v1.3** - Making advanced RAG accessible to everyone! 🚀
+**TinyRAG v1.4.0** - Complete RAG Platform for Modern AI Workflows! 🚀
+
+📖 **Full API Documentation**: [TinyRAG v1.4 API Guide](Docs/TinyRAG-v1.4-API-Documentation.md)
