@@ -1,241 +1,394 @@
 /**
- * TinyRAG v1.4.1 API Service Layer
- * 
- * Centralized API client with authentication, error handling,
- * and typed responses for all backend endpoints.
+ * Enhanced API client for TinyRAG v1.4.1
+ * Provides comprehensive API integration with error handling, retry logic, and authentication
  */
 
-import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import {
-  User,
-  LoginCredentials,
-  RegisterData,
-  AuthResponse,
-  Project,
-  ProjectCreateRequest,
-  Element,
-  ElementCreateRequest,
-  Generation,
-  Document,
-  BulkExecutionStatus,
-  TemplateValidationRequest,
-  TemplateValidationResponse,
-  PaginatedResponse,
-  APIError
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { 
+  LoginCredentials, 
+  RegisterData, 
+  AuthResponse, 
+  User, 
+  Project, 
+  Document, 
+  Element, 
+  Generation, 
+  Evaluation,
+  PaginatedResponse 
 } from '@/types';
 
-// ============================================================================
-// API Client Configuration
-// ============================================================================
+export class APIError extends Error {
+  public status: number;
+  public details?: Record<string, any>;
 
-class APIClient {
-  private client: AxiosInstance;
-  private baseURL: string;
+  constructor(status: number, message: string, details?: Record<string, any>) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+    this.details = details;
+  }
+}
 
-  constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    
-    this.client = axios.create({
-      baseURL: this.baseURL,
+export interface APIConfig {
+  baseURL: string;
+  timeout: number;
+  retryAttempts: number;
+  retryDelay: number;
+}
+
+export class APIClient {
+  private axiosInstance: AxiosInstance;
+  private config: APIConfig;
+  private token: string | null = null;
+  
+  constructor(config?: Partial<APIConfig>) {
+    this.config = {
+      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
       timeout: 30000,
+      retryAttempts: 3,
+      retryDelay: 1000,
+      ...config
+    };
+
+    this.axiosInstance = axios.create({
+      baseURL: this.config.baseURL,
+      timeout: this.config.timeout,
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'
+      }
     });
 
     this.setupInterceptors();
+    this.loadTokenFromStorage();
   }
 
   private setupInterceptors(): void {
-    // Request interceptor for auth token
-    this.client.interceptors.request.use(
+    // Request interceptor for adding auth token
+    this.axiosInstance.interceptors.request.use(
       (config) => {
-        const token = this.getAuthToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        if (this.token) {
+          config.headers.Authorization = `Bearer ${this.token}`;
         }
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => {
+        return Promise.reject(error);
+      }
     );
 
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response: AxiosResponse) => response,
-      (error: AxiosError) => {
-        const apiError: APIError = {
-          status: error.response?.status || 500,
-          message: error.response?.data?.detail || error.message || 'Unknown error',
-          details: error.response?.data
-        };
-        return Promise.reject(apiError);
+    // Response interceptor for handling errors and retries
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      async (error: AxiosError) => {
+        if (error.response?.status === 401) {
+          // Token expired or invalid
+          this.clearToken();
+          window.location.href = '/';
+          return Promise.reject(new APIError(401, 'Authentication required'));
+        }
+
+        // Retry logic for network errors
+        if (this.shouldRetry(error)) {
+          return this.retryRequest(error);
+        }
+
+        return Promise.reject(this.handleError(error));
       }
     );
   }
 
-  private getAuthToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('auth_token');
+  private shouldRetry(error: AxiosError): boolean {
+    if (!error.config || (error.config as any).__retryCount >= this.config.retryAttempts) {
+      return false;
+    }
+
+    // Retry on network errors or 5xx status codes
+    return !error.response || (error.response.status >= 500 && error.response.status < 600);
   }
 
-  public setAuthToken(token: string): void {
+  private async retryRequest(error: AxiosError): Promise<AxiosResponse> {
+    const config = error.config as any;
+    config.__retryCount = (config.__retryCount || 0) + 1;
+
+    await new Promise(resolve => setTimeout(resolve, this.config.retryDelay * config.__retryCount));
+
+    return this.axiosInstance.request(config);
+  }
+
+  private handleError(error: AxiosError): APIError {
+    if (error.response) {
+      const responseData = error.response.data as any;
+      const message = responseData?.detail || responseData?.message || 'Request failed';
+      return new APIError(error.response.status, message, responseData);
+    } else if (error.request) {
+      return new APIError(0, 'Network error - please check your connection');
+    } else {
+      return new APIError(0, 'Request configuration error');
+    }
+  }
+
+  private loadTokenFromStorage(): void {
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('auth_token');
+    }
+  }
+
+  private saveTokenToStorage(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token);
     }
   }
 
-  public clearAuthToken(): void {
+  private clearToken(): void {
+    this.token = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
     }
   }
 
-  // ============================================================================
-  // Authentication API
-  // ============================================================================
-
+  // Authentication endpoints
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await this.client.post('/api/v1/auth/login', credentials);
-    const authResponse = response.data;
-    this.setAuthToken(authResponse.access_token);
-    return authResponse;
+    try {
+      const response = await this.axiosInstance.post<AuthResponse>('/api/v1/auth/login', {
+        identifier: credentials.email, // API uses 'identifier' field
+        password: credentials.password
+      });
+      
+      this.token = response.data.access_token;
+      this.saveTokenToStorage(this.token);
+      
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async register(userData: RegisterData): Promise<AuthResponse> {
-    const response = await this.client.post('/api/v1/auth/register', userData);
-    const authResponse = response.data;
-    this.setAuthToken(authResponse.access_token);
-    return authResponse;
+  async register(userData: RegisterData): Promise<User> {
+    try {
+      const response = await this.axiosInstance.post<User>('/api/v1/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await this.client.get('/api/v1/auth/me');
-    return response.data;
+    try {
+      const response = await this.axiosInstance.get<User>('/api/v1/auth/me');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
   async logout(): Promise<void> {
     try {
-      await this.client.post('/api/v1/auth/logout');
+      await this.axiosInstance.post('/api/v1/auth/logout');
+    } catch (error) {
+      console.warn('Logout request failed:', error);
     } finally {
-      this.clearAuthToken();
+      this.clearToken();
     }
   }
 
-  // ============================================================================
-  // Projects API
-  // ============================================================================
+  // Health check endpoint
+  async checkHealth(): Promise<{ status: string; llm_provider?: string }> {
+    try {
+      const response = await this.axiosInstance.get('/health');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
 
+  // Project endpoints
   async getProjects(params?: {
     page?: number;
     page_size?: number;
     tenant_type?: string;
     status?: string;
+    visibility?: string;
     search?: string;
   }): Promise<PaginatedResponse<Project>> {
-    const response = await this.client.get('/api/v1/projects', { params });
-    return response.data;
+    try {
+      const response = await this.axiosInstance.get<PaginatedResponse<Project>>('/api/v1/projects', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async getProject(id: string): Promise<Project> {
-    const response = await this.client.get(`/api/v1/projects/${id}`);
-    return response.data;
+  async getProject(projectId: string): Promise<Project> {
+    try {
+      const response = await this.axiosInstance.get<Project>(`/api/v1/projects/${projectId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async createProject(data: ProjectCreateRequest): Promise<Project> {
-    const response = await this.client.post('/api/v1/projects', data);
-    return response.data;
+  async createProject(projectData: Partial<Project>): Promise<Project> {
+    try {
+      const response = await this.axiosInstance.post<Project>('/api/v1/projects', projectData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async updateProject(id: string, data: Partial<ProjectCreateRequest>): Promise<Project> {
-    const response = await this.client.put(`/api/v1/projects/${id}`, data);
-    return response.data;
+  async updateProject(projectId: string, updates: Partial<Project>): Promise<Project> {
+    try {
+      const response = await this.axiosInstance.put<Project>(`/api/v1/projects/${projectId}`, updates);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async deleteProject(id: string): Promise<void> {
-    await this.client.delete(`/api/v1/projects/${id}`);
+  async deleteProject(projectId: string): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`/api/v1/projects/${projectId}`);
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  // ============================================================================
-  // Bulk Element Execution API (NEW)
-  // ============================================================================
-
-  async executeAllElements(
-    projectId: string,
-    elementIds?: string[]
-  ): Promise<{ execution_id: string; message: string; status: string }> {
-    const response = await this.client.post(
-      `/api/v1/projects/${projectId}/elements/execute-all`,
-      { element_ids: elementIds }
-    );
-    return response.data;
+  // Bulk element execution
+  async executeAllElements(projectId: string, options?: { element_ids?: string[] }): Promise<{ execution_id: string }> {
+    try {
+      const response = await this.axiosInstance.post(`/api/v1/projects/${projectId}/elements/execute-all`, options);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async getBulkExecutionStatus(
-    projectId: string,
-    executionId: string
-  ): Promise<BulkExecutionStatus> {
-    const response = await this.client.get(
-      `/api/v1/projects/${projectId}/elements/execute-all-status`,
-      { params: { execution_id: executionId } }
-    );
-    return response.data;
+  async getBulkExecutionStatus(projectId: string, executionId: string): Promise<{
+    execution_id: string;
+    status: string;
+    total_elements: number;
+    completed_elements: number;
+    failed_elements: number;
+    progress_percentage: number;
+    estimated_completion?: string;
+    element_statuses: Array<{ element_id: string; status: string; error?: string }>;
+  }> {
+    try {
+      const response = await this.axiosInstance.get(
+        `/api/v1/projects/${projectId}/elements/execute-all-status`,
+        { params: { execution_id: executionId } }
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  // ============================================================================
-  // Elements API
-  // ============================================================================
+  // Document endpoints
+  async uploadDocument(file: File, projectId?: string): Promise<Document> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const params = projectId ? { project_id: projectId } : {};
+      
+      const response = await this.axiosInstance.post<Document>('/api/v1/documents/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        params
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
 
+  async getDocuments(params?: {
+    project_id?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<Document>> {
+    try {
+      const response = await this.axiosInstance.get<PaginatedResponse<Document>>('/api/v1/documents', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
+
+  async getDocument(documentId: string): Promise<Document> {
+    try {
+      const response = await this.axiosInstance.get<Document>(`/api/v1/documents/${documentId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
+
+  // Element endpoints
   async getElements(params?: {
     project_id?: string;
     element_type?: string;
     status?: string;
     page?: number;
     page_size?: number;
-  }): Promise<Element[]> {
-    const response = await this.client.get('/api/v1/elements', { params });
-    return response.data;
+  }): Promise<PaginatedResponse<Element>> {
+    try {
+      const response = await this.axiosInstance.get<PaginatedResponse<Element>>('/api/v1/elements', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async getElement(id: string): Promise<Element> {
-    const response = await this.client.get(`/api/v1/elements/${id}`);
-    return response.data;
+  async createElement(elementData: Partial<Element>): Promise<Element> {
+    try {
+      const response = await this.axiosInstance.post<Element>('/api/v1/elements', elementData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async createElement(data: ElementCreateRequest): Promise<Element> {
-    const response = await this.client.post('/api/v1/elements', data);
-    return response.data;
+  async getElement(elementId: string): Promise<Element> {
+    try {
+      const response = await this.axiosInstance.get<Element>(`/api/v1/elements/${elementId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async updateElement(id: string, data: Partial<ElementCreateRequest>): Promise<Element> {
-    const response = await this.client.put(`/api/v1/elements/${id}`, data);
-    return response.data;
+  async executeElement(elementId: string, variables: Record<string, any>): Promise<Generation> {
+    try {
+      const response = await this.axiosInstance.post<Generation>(`/api/v1/elements/${elementId}/execute`, variables);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async deleteElement(id: string): Promise<void> {
-    await this.client.delete(`/api/v1/elements/${id}`);
+  async validateTemplate(templateData: {
+    template_content: string;
+    variables?: string[];
+    element_type: string;
+  }): Promise<{
+    is_valid: boolean;
+    errors: string[];
+    warnings: string[];
+    extracted_variables: string[];
+    suggestions: string[];
+  }> {
+    try {
+      const response = await this.axiosInstance.post('/api/v1/elements/validate-template', templateData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async executeElement(
-    id: string,
-    variables: Record<string, any>
-  ): Promise<Generation> {
-    const response = await this.client.post(`/api/v1/elements/${id}/execute`, variables);
-    return response.data;
-  }
-
-  // ============================================================================
-  // Template Validation API (NEW)
-  // ============================================================================
-
-  async validateTemplate(data: TemplateValidationRequest): Promise<TemplateValidationResponse> {
-    const response = await this.client.post('/api/v1/elements/validate-template', data);
-    return response.data;
-  }
-
-  // ============================================================================
-  // Generations API
-  // ============================================================================
-
+  // Generation endpoints
   async getGenerations(params?: {
     project_id?: string;
     element_id?: string;
@@ -243,89 +396,68 @@ class APIClient {
     page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<Generation>> {
-    const response = await this.client.get('/api/v1/generations', { params });
-    return response.data;
+    try {
+      const response = await this.axiosInstance.get<PaginatedResponse<Generation>>('/api/v1/generations', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async getGeneration(id: string): Promise<Generation> {
-    const response = await this.client.get(`/api/v1/generations/${id}`);
-    return response.data;
+  async getGeneration(generationId: string): Promise<Generation> {
+    try {
+      const response = await this.axiosInstance.get<Generation>(`/api/v1/generations/${generationId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  // ============================================================================
-  // Documents API
-  // ============================================================================
-
-  async getDocuments(params?: {
+  // Evaluation endpoints
+  async getEvaluations(params?: {
     project_id?: string;
-    status?: string;
+    generation_id?: string;
     page?: number;
     page_size?: number;
-  }): Promise<PaginatedResponse<Document>> {
-    const response = await this.client.get('/api/v1/documents', { params });
-    return response.data;
+  }): Promise<PaginatedResponse<Evaluation>> {
+    try {
+      const response = await this.axiosInstance.get<PaginatedResponse<Evaluation>>('/api/v1/evaluations', { params });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async uploadDocument(
-    projectId: string,
-    file: File,
-    onProgress?: (progress: number) => void
-  ): Promise<Document> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await this.client.post(
-      `/api/v1/documents/upload?project_id=${projectId}`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const progress = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            onProgress(progress);
-          }
-        },
-      }
-    );
-    return response.data;
+  async createEvaluation(evaluationData: Partial<Evaluation>): Promise<Evaluation> {
+    try {
+      const response = await this.axiosInstance.post<Evaluation>('/api/v1/evaluations', evaluationData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 
-  async deleteDocument(id: string): Promise<void> {
-    await this.client.delete(`/api/v1/documents/${id}`);
-  }
-
-  // ============================================================================
-  // Analytics API
-  // ============================================================================
-
-  async getUserAnalytics(): Promise<any> {
-    const response = await this.client.get('/api/v1/users/analytics');
-    return response.data;
-  }
-
-  // ============================================================================
-  // WebSocket Connection (NEW)
-  // ============================================================================
-
-  createWebSocketConnection(projectId: string): WebSocket | null {
-    if (typeof window === 'undefined') return null;
-    
-    const wsURL = this.baseURL.replace('http', 'ws');
-    const token = this.getAuthToken();
-    
-    if (!token) return null;
-    
-    return new WebSocket(`${wsURL}/ws/projects/${projectId}?token=${token}`);
+  // User analytics
+  async getUserAnalytics(): Promise<{
+    total_projects: number;
+    total_documents: number;
+    total_elements: number;
+    total_generations: number;
+    total_cost: number;
+    recent_activity: Array<{
+      type: string;
+      description: string;
+      timestamp: string;
+    }>;
+  }> {
+    try {
+      const response = await this.axiosInstance.get('/api/v1/users/analytics');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
   }
 }
 
-// ============================================================================
 // Export singleton instance
-// ============================================================================
-
-export const apiClient = new APIClient();
-export default apiClient; 
+export const api = new APIClient(); 

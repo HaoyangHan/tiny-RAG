@@ -174,14 +174,15 @@ export enum GenerationStatus {
 export interface Generation {
   id: string;
   element_id: string;
+  element_name?: string;
   project_id: string;
   status: GenerationStatus;
-  input_variables: Record<string, any>;
-  output_content?: string;
+  input_data: Record<string, any>;
+  output_text?: string;
   model_used?: string;
-  token_usage?: TokenUsage;
-  cost_usd?: number;
-  execution_time_ms?: number;
+  tokens_used: number;
+  execution_time: number;
+  cost: number;
   error_message?: string;
   created_at: string;
   updated_at: string;

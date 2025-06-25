@@ -5,10 +5,12 @@
  * user data, and auth-related actions.
  */
 
+'use client';
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, LoginCredentials, RegisterData } from '@/types';
-import { apiClient } from '@/services/api';
+import { api, APIError } from '@/services/api';
 
 interface AuthState {
   // State
@@ -21,9 +23,10 @@ interface AuthState {
   // Actions
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
   initializeAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,26 +44,28 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          // Mock implementation - replace with actual API call
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          const mockUser: User = {
-            id: '1',
-            email: credentials.email,
-            username: credentials.email.split('@')[0],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
+          const authResponse = await api.login(credentials);
+          
           set({
-            user: mockUser,
-            token: 'mock-token',
+            user: authResponse.user,
+            token: authResponse.access_token,
             isAuthenticated: true,
             isLoading: false,
+            error: null
           });
-        } catch (error: any) {
+        } catch (error) {
+          const errorMessage = error instanceof APIError 
+            ? error.message 
+            : 'Login failed. Please try again.';
+            
           set({
-            error: error.message || 'Login failed',
+            user: null,
+            token: null,
+            isAuthenticated: false,
             isLoading: false,
+            error: errorMessage
           });
+          
           throw error;
         }
       },
@@ -70,35 +75,44 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         
         try {
-          const authResponse = await apiClient.register(userData);
+          const user = await api.register(userData);
           
-          set({
-            user: authResponse.user,
-            token: authResponse.access_token,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
+          // After successful registration, automatically log in
+          await get().login({
+            email: userData.email,
+            password: userData.password
           });
-        } catch (error: any) {
+        } catch (error) {
+          const errorMessage = error instanceof APIError 
+            ? error.message 
+            : 'Registration failed. Please try again.';
+            
           set({
-            user: null,
-            token: null,
-            isAuthenticated: false,
             isLoading: false,
-            error: error.message || 'Registration failed',
+            error: errorMessage
           });
+          
           throw error;
         }
       },
 
       // Logout action
-      logout: () => {
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          error: null,
-        });
+      logout: async () => {
+        set({ isLoading: true, error: null });
+        
+        try {
+          await api.logout();
+        } catch (error) {
+          console.warn('Logout API call failed:', error);
+        } finally {
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null
+          });
+        }
       },
 
       // Clear error action
@@ -108,19 +122,108 @@ export const useAuthStore = create<AuthState>()(
 
       // Initialize authentication from stored token
       initializeAuth: async () => {
-        const token = get().token;
-        if (token) {
-          set({ isAuthenticated: true });
+        const { token } = get();
+        
+        if (!token) {
+          return;
+        }
+
+        set({ isLoading: true, error: null });
+        
+        try {
+          const user = await api.getCurrentUser();
+          
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null
+          });
+        } catch (error) {
+          // Token is invalid or expired
+          console.warn('Auth initialization failed:', error);
+          
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error: null
+          });
         }
       },
+
+      refreshUser: async () => {
+        const { isAuthenticated } = get();
+        
+        if (!isAuthenticated) {
+          return;
+        }
+
+        try {
+          const user = await api.getCurrentUser();
+          set({ user });
+        } catch (error) {
+          console.warn('Failed to refresh user data:', error);
+          // Don't log out on refresh failure, just log the error
+        }
+      }
     }),
     {
-      name: 'tinyrag-auth',
-      partialize: (state) => ({
-        user: state.user,
+      name: 'tinyrag-auth-store',
+      partialize: (state) => ({ 
         token: state.token,
-        isAuthenticated: state.isAuthenticated,
+        user: state.user 
       }),
     }
   )
-); 
+);
+
+// Helper hook for checking specific permissions
+export const useAuthPermissions = () => {
+  const { user, isAuthenticated } = useAuthStore();
+  
+  return {
+    canCreateProject: isAuthenticated,
+    canUploadDocument: isAuthenticated,
+    canCreateElement: isAuthenticated,
+    canDeleteProject: (projectOwnerId: string) => 
+      isAuthenticated && user?.id === projectOwnerId,
+    canEditProject: (projectOwnerId: string, collaborators: string[]) => 
+      isAuthenticated && (
+        user?.id === projectOwnerId || 
+        collaborators.includes(user?.id || '')
+      ),
+    isProjectOwner: (projectOwnerId: string) => 
+      isAuthenticated && user?.id === projectOwnerId
+  };
+};
+
+// Helper hook for auth actions without exposing the entire store
+export const useAuth = () => {
+  const { 
+    user, 
+    isAuthenticated, 
+    isLoading, 
+    error, 
+    login, 
+    register, 
+    logout, 
+    clearError,
+    initializeAuth,
+    refreshUser
+  } = useAuthStore();
+
+  return {
+    user,
+    isAuthenticated,
+    isLoading,
+    error,
+    login,
+    register,
+    logout,
+    clearError,
+    initializeAuth,
+    refreshUser
+  };
+}; 
