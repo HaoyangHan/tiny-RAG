@@ -1,112 +1,116 @@
 /**
- * Documents page for uploading and listing documents.
- *
- * @returns {JSX.Element}
+ * Documents page for uploading and listing documents with real API integration.
+ * TinyRAG v1.4.1 - Enhanced with individual document status tracking
  */
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import {
   DocumentArrowUpIcon,
-  DocumentTextIcon,
-  TrashIcon,
   PlayIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
+  FolderPlusIcon,
   InformationCircleIcon,
-  CloudArrowUpIcon,
+  DocumentIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { EnhancedDocumentUpload, DocumentUploadStatus } from '@/components/documents/EnhancedDocumentUpload';
+import { api } from '@/services/api';
+import { useAuthStore } from '@/stores/authStore';
 
-interface UploadedFile {
-  id: string;
-  file: File;
-  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
-  progress: number;
-  error?: string;
+// Simple DocumentList component
+function DocumentList({ documents }: { documents: any[] }) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusStyles: Record<string, string> = {
+      'completed': 'bg-green-100 text-green-800',
+      'processing': 'bg-yellow-100 text-yellow-800',
+      'failed': 'bg-red-100 text-red-800',
+      'pending': 'bg-gray-100 text-gray-800',
+    };
+
+    return (
+      <span className={`px-2 py-1 text-xs rounded-full ${statusStyles[status] || statusStyles.pending}`}>
+        {status}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {documents.map((doc) => (
+        <div
+          key={doc.id}
+          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+        >
+          <div className="flex items-center space-x-3">
+            <DocumentIcon className="h-5 w-5 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-900">{doc.filename || doc.name}</p>
+              <div className="flex items-center space-x-2 text-xs text-gray-500">
+                <CalendarIcon className="h-3 w-3" />
+                <span>{formatDate(doc.created_at || doc.createdAt)}</span>
+                {doc.file_size && (
+                  <span>• {Math.round(doc.file_size / 1024)} KB</span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {getStatusBadge(doc.status || 'completed')}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function DocumentsPage() {
   const router = useRouter();
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
+  const { isAuthenticated } = useAuthStore();
   const [selectedProject, setSelectedProject] = useState('');
   const [isProcessingAll, setIsProcessingAll] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState<DocumentUploadStatus[]>([]);
 
-  // Mock projects - replace with actual API call
-  const projects = [
-    { id: '1', name: 'Customer Support Knowledge Base' },
-    { id: '2', name: 'Product Documentation Assistant' },
-  ];
-
-  const supportedFormats = [
-    { format: 'PDF', description: 'Adobe PDF documents', icon: '📄' },
-    { format: 'DOCX', description: 'Microsoft Word documents', icon: '📝' },
-    { format: 'TXT', description: 'Plain text files', icon: '📃' },
-    { format: 'MD', description: 'Markdown files', icon: '📋' },
-    { format: 'HTML', description: 'Web pages and HTML files', icon: '🌐' },
-  ];
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const files = Array.from(e.dataTransfer.files);
-    handleFileSelection(files);
-  }, []);
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    handleFileSelection(files);
-  };
-
-  const handleFileSelection = (files: File[]) => {
-    const newFiles: UploadedFile[] = files.map((file, index) => ({
-      id: `${Date.now()}-${index}`,
-      file,
-      status: 'pending',
-      progress: 0,
-    }));
-
-    setUploadedFiles(prev => [...prev, ...newFiles]);
-
-    // Auto-upload files
-    newFiles.forEach(uploadedFile => {
-      uploadFile(uploadedFile.id);
-    });
-  };
-
-  const uploadFile = async (fileId: string) => {
-    setUploadedFiles(prev => prev.map(f => 
-      f.id === fileId ? { ...f, status: 'uploading' } : f
-    ));
-
-    // Simulate upload progress
-    for (let progress = 0; progress <= 100; progress += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadedFiles(prev => prev.map(f => 
-        f.id === fileId ? { ...f, progress } : f
-      ));
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/');
     }
+  }, [isAuthenticated, router]);
 
-    setUploadedFiles(prev => prev.map(f => 
-      f.id === fileId ? { ...f, status: 'completed', progress: 100 } : f
-    ));
+  // Fetch projects for selection
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => api.getProjects({ page_size: 50 }),
+    enabled: isAuthenticated,
+  });
+
+  // Fetch documents for selected project
+  const { data: documentsData, isLoading: documentsLoading, refetch: refetchDocuments } = useQuery({
+    queryKey: ['documents', selectedProject],
+    queryFn: () => api.getDocuments({ project_id: selectedProject, page_size: 50 }),
+    enabled: !!selectedProject,
+  });
+
+  const projects = projectsData?.items || [];
+  const documents = documentsData?.items || [];
+
+  const handleUploadComplete = (documents: DocumentUploadStatus[]) => {
+    setUploadedDocuments(documents);
+    // Refetch documents list to show newly uploaded documents
+    if (selectedProject) {
+      refetchDocuments();
+    }
   };
 
-  const removeFile = (fileId: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+  const handleUploadStart = (document: DocumentUploadStatus) => {
+    console.log('Upload started for:', document.name);
   };
 
   const processAllDocuments = async () => {
@@ -115,55 +119,51 @@ export default function DocumentsPage() {
       return;
     }
 
+    const completedUploads = uploadedDocuments.filter(doc => doc.status === 'completed');
+    if (completedUploads.length === 0) {
+      alert('No completed uploads to process');
+      return;
+    }
+
     setIsProcessingAll(true);
     
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    setIsProcessingAll(false);
-    
-    // Navigate to project elements page to trigger generation
-    router.push(`/projects/${selectedProject}/elements`);
-  };
-
-  const getStatusIcon = (status: UploadedFile['status']) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case 'error':
-        return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
-      case 'uploading':
-      case 'processing':
-        return (
-          <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-        );
-      default:
-        return <DocumentTextIcon className="h-5 w-5 text-gray-400" />;
+    try {
+      // Trigger all element execution for the project
+      const result = await api.executeAllElements(selectedProject);
+      
+      // Navigate to project elements page to monitor progress
+      router.push(`/projects/${selectedProject}/elements?execution_id=${result.execution_id}`);
+    } catch (error: any) {
+      console.error('Failed to process documents:', error);
+      alert('Failed to start document processing. Please try again.');
+    } finally {
+      setIsProcessingAll(false);
     }
   };
 
-  const getStatusText = (status: UploadedFile['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'uploading':
-        return 'Uploading...';
-      case 'processing':
-        return 'Processing...';
-      case 'completed':
-        return 'Completed';
-      case 'error':
-        return 'Error';
-      default:
-        return 'Unknown';
-    }
-  };
+  const supportedFormats = [
+    { format: 'PDF', description: 'Adobe PDF documents', icon: '📄' },
+    { format: 'DOCX', description: 'Microsoft Word documents', icon: '📝' },
+    { format: 'TXT', description: 'Plain text files', icon: '📃' },
+    { format: 'DOC', description: 'Microsoft Word legacy documents', icon: '📝' },
+  ];
 
-  const completedFiles = uploadedFiles.filter(f => f.status === 'completed');
-  const canProcessAll = completedFiles.length > 0 && selectedProject;
+  const completedUploads = uploadedDocuments.filter(doc => doc.status === 'completed');
+  const canProcessAll = completedUploads.length > 0 && selectedProject;
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <DashboardLayout title="Document Upload">
+    <DashboardLayout title="Document Upload & Management">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Upload Area */}
@@ -171,117 +171,67 @@ export default function DocumentsPage() {
             {/* Project Selection */}
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Select Project</h3>
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Choose a project to upload documents to</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* File Drop Zone */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  isDragging
-                    ? 'border-blue-400 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Upload Documents</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Drag and drop files here, or{' '}
-                  <label className="text-blue-600 hover:text-blue-500 cursor-pointer">
-                    browse
-                    <input
-                      type="file"
-                      multiple
-                      onChange={handleFileInput}
-                      accept=".pdf,.docx,.txt,.md,.html"
-                      className="hidden"
-                    />
-                  </label>
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  PDF, DOCX, TXT, MD, HTML up to 10MB each
-                </p>
-              </div>
-            </div>
-
-            {/* Upload Queue */}
-            {uploadedFiles.length > 0 && (
-              <div className="bg-white shadow rounded-lg">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Upload Queue</h3>
-                    <span className="text-sm text-gray-500">
-                      {completedFiles.length} of {uploadedFiles.length} completed
-                    </span>
-                  </div>
+              {projectsLoading ? (
+                <div className="animate-pulse">
+                  <div className="h-10 bg-gray-200 rounded"></div>
                 </div>
-                <div className="divide-y divide-gray-200">
-                  {uploadedFiles.map((uploadedFile) => (
-                    <div key={uploadedFile.id} className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          {getStatusIcon(uploadedFile.status)}
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {uploadedFile.file.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB • {getStatusText(uploadedFile.status)}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removeFile(uploadedFile.id)}
-                          className="text-gray-400 hover:text-red-500"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                      {uploadedFile.status === 'uploading' && (
-                        <div className="mt-2">
-                          <div className="bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-200"
-                              style={{ width: `${uploadedFile.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+              ) : projects.length > 0 ? (
+                <select
+                  value={selectedProject}
+                  onChange={(e) => setSelectedProject(e.target.value)}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Choose a project to upload documents to</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
                   ))}
+                </select>
+              ) : (
+                <div className="text-center py-4">
+                  <FolderPlusIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500 mb-3">No projects found</p>
+                  <button
+                    onClick={() => router.push('/projects/create')}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Create Project
+                  </button>
                 </div>
+              )}
+            </div>
+
+            {/* Enhanced Document Upload */}
+            {selectedProject && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <EnhancedDocumentUpload
+                  projectId={selectedProject}
+                  onUploadComplete={handleUploadComplete}
+                  onUploadStart={handleUploadStart}
+                  maxFiles={20}
+                  maxSizePerFile={100}
+                />
               </div>
             )}
 
-            {/* Batch Actions */}
-            {completedFiles.length > 0 && (
+            {/* Process All Documents Button */}
+            {canProcessAll && (
               <div className="bg-white shadow rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Process Documents</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Process Documents</h3>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <InformationCircleIcon className="h-4 w-4 mr-1" />
+                    {completedUploads.length} documents ready
+                  </div>
+                </div>
                 <p className="text-sm text-gray-600 mb-4">
-                  Ready to process {completedFiles.length} documents and trigger element generation.
+                  Generate all elements for the uploaded documents to start the RAG pipeline.
                 </p>
                 <button
                   onClick={processAllDocuments}
-                  disabled={!canProcessAll || isProcessingAll}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-                    canProcessAll && !isProcessingAll
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-400 cursor-not-allowed'
-                  }`}
+                  disabled={isProcessingAll}
+                  className="w-full flex items-center justify-center px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
                 >
                   {isProcessingAll ? (
                     <>
@@ -291,7 +241,7 @@ export default function DocumentsPage() {
                   ) : (
                     <>
                       <PlayIcon className="h-4 w-4 mr-2" />
-                      Process All & Generate Elements
+                      Process All Documents
                     </>
                   )}
                 </button>
@@ -299,19 +249,35 @@ export default function DocumentsPage() {
             )}
           </div>
 
-          {/* Instructions & Info */}
+          {/* Information & Document List */}
           <div className="space-y-6">
-            {/* Instructions */}
+            {/* Supported Formats */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Instructions</h3>
-              <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Supported Formats</h3>
+              <div className="grid grid-cols-1 gap-3">
+                {supportedFormats.map((format) => (
+                  <div key={format.format} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-2xl mr-3">{format.icon}</span>
+                    <div>
+                      <div className="font-medium text-gray-900">{format.format}</div>
+                      <div className="text-sm text-gray-500">{format.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Processing Pipeline Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-blue-900 mb-4">Processing Pipeline</h3>
+              <div className="space-y-3">
                 <div className="flex items-start">
                   <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 mt-0.5">
                     <span className="text-xs font-bold text-white">1</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Select Your Project</p>
-                    <p className="text-sm text-gray-600">Choose which RAG project to upload documents to.</p>
+                    <p className="text-sm font-medium text-blue-900">Document Upload</p>
+                    <p className="text-xs text-blue-700">Files are uploaded and validated</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -319,8 +285,8 @@ export default function DocumentsPage() {
                     <span className="text-xs font-bold text-white">2</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Upload Documents</p>
-                    <p className="text-sm text-gray-600">Drag and drop or browse to select your files.</p>
+                    <p className="text-sm font-medium text-blue-900">Content Extraction</p>
+                    <p className="text-xs text-blue-700">Text and metadata are extracted</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -328,42 +294,42 @@ export default function DocumentsPage() {
                     <span className="text-xs font-bold text-white">3</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Process & Generate</p>
-                    <p className="text-sm text-gray-600">Trigger document processing and element generation.</p>
+                    <p className="text-sm font-medium text-blue-900">Element Generation</p>
+                    <p className="text-xs text-blue-700">AI elements process the content</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                    <span className="text-xs font-bold text-white">4</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Ready for Queries</p>
+                    <p className="text-xs text-blue-700">Documents are ready for Q&A</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Supported Formats */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Supported Formats</h3>
-              <div className="space-y-3">
-                {supportedFormats.map((format) => (
-                  <div key={format.format} className="flex items-center space-x-3">
-                    <span className="text-2xl">{format.icon}</span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{format.format}</p>
-                      <p className="text-sm text-gray-600">{format.description}</p>
-                    </div>
+            {/* Existing Documents List */}
+            {selectedProject && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Project Documents</h3>
+                {documentsLoading ? (
+                  <div className="animate-pulse space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                    ))}
                   </div>
-                ))}
+                ) : documents.length > 0 ? (
+                  <DocumentList documents={documents} />
+                ) : (
+                  <div className="text-center py-8">
+                    <DocumentArrowUpIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">No documents uploaded yet</p>
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Processing Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex">
-                <InformationCircleIcon className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-medium">What happens next?</p>
-                  <p className="mt-1">
-                    After processing, your documents will be chunked, embedded, and indexed. 
-                    You can then use them with your elements to generate intelligent responses.
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

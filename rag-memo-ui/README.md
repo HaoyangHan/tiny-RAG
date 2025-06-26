@@ -1,303 +1,445 @@
-# TinyRAG v1.4.1 Frontend - Next.js UI
+# TinyRAG Frontend - React Next.js Application
 
-**Modern React Frontend for TinyRAG Platform**
+**Version**: 1.4.1  
+**Framework**: Next.js 15.3.3 with TypeScript  
+**Styling**: Tailwind CSS  
+**State Management**: Zustand + React Query  
 
-A comprehensive Next.js 14 frontend providing a complete user interface for the TinyRAG platform, featuring project management, document processing, element creation, and real-time monitoring.
+## 📋 Overview
 
-## 🚀 Quick Start
+TinyRAG Frontend is a modern, responsive web application that provides a comprehensive interface for managing RAG (Retrieval-Augmented Generation) workflows. Built with Next.js and TypeScript, it offers authentication, project management, document processing, and AI-powered content generation capabilities.
+
+## 🏗️ Architecture & Tech Stack
+
+### Core Technologies
+- **Framework**: Next.js 15.3.3 with App Router
+- **Language**: TypeScript 5.x
+- **Styling**: Tailwind CSS 3.x
+- **Icons**: Heroicons
+- **HTTP Client**: Axios with React Query
+- **State Management**: Zustand + React Query
+- **File Upload**: React Dropzone
+- **Form Handling**: React Hook Form
+- **Development**: Turbopack (Next.js bundler)
+
+### Key Features
+- 🔐 **JWT Authentication** with secure token management
+- 📊 **Real-time Dashboard** with user analytics
+- 📁 **Project Management** with collaboration support
+- 📄 **Document Upload** with individual status tracking
+- ⚡ **Element Management** for AI templates and tools
+- 🤖 **Generation Tracking** with detailed metrics
+- 📈 **Evaluation System** for quality assessment
+- 🎨 **Responsive Design** with mobile-first approach
+
+## 🛣️ Route Structure
+
+### Authentication Routes
+```
+/ (root)                          # Landing page with login/register
+├── Landing Page                  # Split-screen auth interface
+├── Login Form                    # Email/password authentication
+└── Register Form                 # User registration with validation
+```
+
+### Dashboard Routes
+```
+/dashboard                        # Main dashboard after login
+├── Welcome Header                # Personalized user greeting
+├── Quick Actions                 # Fast access to key features
+├── Analytics Overview            # User statistics and metrics
+├── Recent Activity               # Timeline of recent actions
+└── Getting Started Guide        # Onboarding checklist
+```
+
+### Project Management Routes
+```
+/projects                         # Projects listing and management
+├── Projects Grid/List View       # Responsive project cards
+├── Search & Filters             # Filter by type, status, visibility
+├── Project Statistics           # Documents, elements, generations count
+└── Collaboration Info           # Team members and permissions
+
+/projects/create                  # Multi-step project creation wizard
+├── Step 1: Basic Details        # Name, description, tenant type
+├── Step 2: Configuration        # Visibility, keywords, settings
+└── Step 3: Confirmation         # Review and create
+
+/projects/[id]                    # Individual project management
+├── Overview Tab                 # Project summary and statistics
+├── Documents Tab                # Project-specific documents
+├── Elements Tab                 # AI templates and tools
+├── Generations Tab              # Content generation history
+└── Settings Tab                 # Project configuration
+```
+
+### Document Management Routes
+```
+/documents                        # Global document upload and management
+├── Project Selection            # Choose target project
+├── Enhanced Upload Zone         # Drag-and-drop with progress tracking
+├── Individual Status Tracking   # Real-time upload and processing status
+├── Batch Processing Actions     # Process all documents for RAG pipeline
+├── Supported Formats Info       # PDF, DOCX, TXT, DOC support
+├── Processing Pipeline Guide    # Step-by-step workflow explanation
+└── Existing Documents List      # Project documents with metadata
+
+/projects/[id]/documents/upload   # Project-specific document upload
+└── Same features as global documents page
+```
+
+### Element Management Routes
+```
+/elements                         # Global elements management
+├── Elements Grid View           # All user elements across projects
+├── Filter by Type & Status      # PROMPT_TEMPLATE, MCP_CONFIG, AGENTIC_TOOL
+└── Bulk Operations              # Execute all, archive, delete
+
+/projects/[id]/elements           # Project-specific elements
+├── Elements List                # Project elements with execution stats
+├── Bulk Actions Toolbar         # Execute all elements for project
+└── Element Status Monitoring    # Real-time execution progress
+
+/projects/[id]/elements/create    # Create new element wizard
+├── Element Type Selector        # Choose element type
+├── Type-specific Forms          # Dynamic form based on element type
+├── Template Preview             # Live preview with variable substitution
+├── Variables Editor             # Dynamic variable definition
+└── Validation & Testing         # Template syntax validation
+```
+
+### Generation Management Routes
+```
+/generations                      # Global generations listing
+├── Generations Timeline         # Visual activity timeline
+├── Filter & Search              # By element, status, date, model
+├── Generation Cards             # Status, metrics, quick actions
+└── Export Options               # Data export functionality
+
+/projects/[id]/generations        # Project-specific generations
+└── Same features as global generations
+
+/generations/[id]                 # Individual generation details
+├── Generation Header            # Status, element, execution time
+├── Generated Content            # Formatted text with citations
+├── Performance Metrics          # Token usage, cost, timing
+├── Source Documents             # Links to source materials
+├── Evaluation Actions           # Create quality assessments
+└── Metadata Display             # Model used, parameters, etc.
+```
+
+### Evaluation Routes
+```
+/evaluations                      # Global evaluation management
+├── Evaluation Queue             # Pending evaluations
+├── Batch Evaluation Tools       # Evaluate multiple generations
+└── Quality Analytics            # Evaluation statistics
+
+/projects/[id]/evaluations        # Project-specific evaluations
+├── Evaluation Interface         # Generation quality assessment
+├── Multi-criteria Scoring       # Accuracy, relevance, clarity
+├── Source Context Panel         # Original prompts and documents
+├── Evaluation Guidelines        # Scoring rubric and instructions
+├── Quality Checklist           # Hallucination and accuracy checks
+└── Comparative Evaluation       # Side-by-side generation comparison
+```
+
+### API Testing Routes
+```
+/testing                          # Development and testing interface
+├── API Test Suite               # Comprehensive API testing
+├── Endpoint Testing             # Individual API endpoint tests
+├── Authentication Tests         # Login/register functionality
+├── Upload Testing               # Document upload validation
+└── Integration Tests            # End-to-end workflow testing
+```
+
+## 🔧 Component Architecture
+
+### Layout Components
+```
+src/components/layout/
+├── DashboardLayout.tsx          # Main authenticated layout
+├── MainLayout.tsx               # Public layout wrapper
+├── Header.tsx                   # Navigation and user menu
+├── Sidebar.tsx                  # Navigation sidebar
+└── StatusBar.tsx                # System status indicator
+```
+
+### Feature Components
+```
+src/components/
+├── auth/                        # Authentication components
+│   ├── LandingPage.tsx         # Split-screen landing page
+│   ├── LoginForm.tsx           # Login form with validation
+│   └── RegisterForm.tsx        # Registration form
+├── documents/                   # Document management
+│   ├── EnhancedDocumentUpload.tsx  # Advanced upload with status
+│   ├── DocumentList.tsx        # Document listing component
+│   └── DocumentUpload.tsx      # Basic upload component
+├── projects/                    # Project management
+├── elements/                    # Element management
+├── generations/                 # Generation tracking
+├── evaluations/                 # Quality assessment
+├── common/                      # Shared components
+│   └── ErrorBoundary.tsx       # Error handling wrapper
+└── ui/                          # Base UI components
+    ├── Button.tsx              # Reusable button component
+    ├── Card.tsx                # Card layout component
+    ├── LoadingSpinner.tsx      # Loading indicators
+    └── StatusBadge.tsx         # Status display component
+```
+
+## 🚀 Getting Started
 
 ### Prerequisites
+- Node.js 20+ (managed via nvm)
+- npm or yarn package manager
+- Docker and Docker Compose (for full stack)
 
-- **Node.js** 18+ and npm
-- **Backend API** running on `http://localhost:8000`
-- **Modern Browser** (Chrome, Firefox, Safari, Edge)
+### Development Setup
 
-### 1. Install Dependencies
+1. **Install Node.js 20+**
+   ```bash
+   # Using nvm (recommended)
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+   nvm install 20
+   nvm use 20
+   ```
 
-```bash
-cd rag-memo-ui
-npm install
-```
+2. **Install Dependencies**
+   ```bash
+   cd rag-memo-ui
+   npm install
+   ```
 
-### 2. Start Development Server
+3. **Environment Configuration**
+   ```bash
+   # Copy environment template
+   cp .env.example .env.local
+   
+   # Configure API endpoint
+   echo "NEXT_PUBLIC_API_URL=http://localhost:8000" >> .env.local
+   ```
 
-```bash
-npm run dev
-```
+4. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-### 3. Access the Frontend
+5. **Access Application**
+   - Frontend: http://localhost:3000
+   - API: http://localhost:8000 (if running backend)
 
-Open your browser and navigate to:
-
-**🌐 Frontend URL**: [http://localhost:3000](http://localhost:3000)
-
-## 📱 Application Pages & Features
-
-### 🏠 **Main Application Routes**
-
-| **Route** | **Description** | **Features** |
-|-----------|-----------------|--------------|
-| **`/`** | Landing Page | Authentication forms, welcome interface |
-| **`/dashboard`** | Main Dashboard | Project overview, statistics, quick actions |
-| **`/projects`** | Project Management | Create, list, filter, and manage projects |
-| **`/projects/create`** | Project Creation | Multi-step project wizard |
-| **`/projects/[id]`** | Project Details | Detailed project view with tabs |
-| **`/documents`** | Document Upload | Drag & drop file upload with progress |
-| **`/elements`** | Element Management | Template and tool creation |
-| **`/elements/create`** | Element Creation | Type-specific element forms |
-| **`/generations`** | Generation Monitoring | Real-time execution tracking |
-| **`/generations/[id]`** | Generation Details | Detailed generation inspection |
-| **`/evaluations`** | Quality Assessment | LLM evaluation results |
-| **`/testing`** | API Test Suite | Built-in API testing interface |
-
-### 🔐 **Authentication Flow**
-
-1. **Landing Page** (`/`) - Choose to login or register
-2. **Registration** - Create new account with email/username/password
-3. **Login** - Authenticate with email/username and password
-4. **Dashboard** - Automatic redirect after successful authentication
-5. **Logout** - Secure session termination
-
-### 🎨 **UI Components & Design**
-
-- **Framework**: Next.js 14 with App Router
-- **Styling**: Tailwind CSS for responsive design
-- **Components**: Radix UI for accessible, modern components
-- **Icons**: Heroicons for consistent iconography
-- **Typography**: Inter font for optimal readability
-- **Theme**: Light/dark mode support (planned)
-
-## 🛠️ Development
-
-### Available Scripts
+### Production Build
 
 ```bash
-# Development server
-npm run dev
-
-# Production build
+# Build for production
 npm run build
 
 # Start production server
 npm start
 
-# Type checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Linting with auto-fix
-npm run lint:fix
+# Or using Docker
+docker build -t tinyrag-ui .
+docker run -p 3000:3000 tinyrag-ui
 ```
 
-### Project Structure
+## 🐳 Docker Configuration
 
-```
-rag-memo-ui/
-├── src/
-│   ├── app/                    # Next.js 14 App Router
-│   │   ├── dashboard/         # Dashboard pages
-│   │   ├── projects/          # Project management
-│   │   ├── documents/         # Document upload
-│   │   ├── elements/          # Element management
-│   │   ├── generations/       # Generation tracking
-│   │   └── evaluations/       # Evaluation results
-│   ├── components/            # Reusable UI components
-│   │   ├── auth/             # Authentication components
-│   │   ├── layout/           # Layout components
-│   │   ├── projects/         # Project-specific components
-│   │   ├── documents/        # Document components
-│   │   ├── elements/         # Element components
-│   │   ├── generations/      # Generation components
-│   │   ├── evaluations/      # Evaluation components
-│   │   ├── common/           # Common components
-│   │   └── ui/               # Base UI components
-│   ├── services/             # API client and services
-│   ├── stores/               # State management (Zustand)
-│   ├── types/                # TypeScript type definitions
-│   ├── hooks/                # Custom React hooks
-│   └── utils/                # Utility functions
-├── public/                   # Static assets
-└── docs/                     # Documentation
+### Development with Docker Compose
+```bash
+# Start all services (API, UI, databases)
+docker-compose up -d
+
+# Rebuild UI without cache
+docker-compose build --no-cache tinyrag-ui
+docker-compose up -d tinyrag-ui
+
+# View logs
+docker-compose logs -f tinyrag-ui
 ```
 
-### Key Technologies
-
-- **Next.js 14**: React framework with App Router
-- **TypeScript**: Full type safety
-- **Tailwind CSS**: Utility-first CSS framework
-- **Radix UI**: Accessible component primitives
-- **Zustand**: Lightweight state management
-- **Axios**: HTTP client for API communication
-- **React Hook Form**: Form handling and validation
+### Docker Configuration Files
+- `Dockerfile` - Multi-stage production build
+- `docker-compose.yml` - Full stack orchestration
+- `.dockerignore` - Exclude unnecessary files
 
 ## 🔌 API Integration
 
-### Backend Configuration
+### API Client Configuration
+```typescript
+// src/services/api.ts
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-The frontend expects the TinyRAG API to be running on:
-
-```
-API Base URL: http://localhost:8000
-Health Check: http://localhost:8000/health
-Documentation: http://localhost:8000/docs
-```
-
-### Authentication
-
-- **JWT Tokens**: Stored in localStorage
-- **Auto-refresh**: Automatic token renewal
-- **Interceptors**: Axios interceptors for auth headers
-- **Error Handling**: Automatic logout on auth failures
-
-### API Client Features
-
-- **Centralized Configuration**: Single API client setup
-- **Type Safety**: Full TypeScript integration
-- **Error Handling**: Comprehensive error responses
-- **Loading States**: Built-in loading indicators
-- **Retry Logic**: Automatic retry for failed requests
-
-## 🎯 Key Features
-
-### 📊 **Dashboard**
-- Project statistics and overview
-- Recent activity timeline
-- Quick action buttons
-- User profile management
-
-### 🏗️ **Project Management**
-- Create projects with different tenant types
-- List and filter projects
-- Project collaboration features
-- Detailed project views with tabs
-
-### 📄 **Document Processing**
-- Drag & drop file upload
-- Multiple file format support
-- Upload progress tracking
-- Batch processing capabilities
-
-### 🧩 **Element System**
-- Create prompt templates
-- MCP configuration management
-- Agentic tool definitions
-- Template execution interface
-
-### ⚡ **Real-time Features**
-- Generation progress tracking
-- Live status updates
-- WebSocket integration (planned)
-- Notification system
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env.local` file in the frontend directory:
-
-```bash
-# API Configuration
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-NEXT_PUBLIC_WS_URL=ws://localhost:8000
-
-# App Configuration
-NEXT_PUBLIC_APP_NAME=TinyRAG
-NEXT_PUBLIC_APP_VERSION=1.4.1
-
-# Feature Flags
-NEXT_PUBLIC_ENABLE_TESTING=true
-NEXT_PUBLIC_ENABLE_ANALYTICS=false
+// Features:
+// - Automatic JWT token management
+// - Request/response interceptors
+// - Error handling and retries
+// - Type-safe API calls
 ```
 
-### Customization
+### Authentication Flow
+1. User submits login credentials
+2. API returns JWT access token
+3. Token stored in localStorage
+4. Automatic token attachment to requests
+5. Token refresh on expiration
+6. Redirect to login on 401 errors
 
-- **Themes**: Modify `tailwind.config.js` for custom themes
-- **Components**: Extend base components in `src/components/ui/`
-- **API**: Configure endpoints in `src/services/api.ts`
-- **Types**: Add custom types in `src/types/index.ts`
+### Real-time Updates
+- React Query for data fetching and caching
+- Optimistic updates for better UX
+- Background refetching for fresh data
+- Error boundaries for graceful failures
 
-## 🚀 Production Deployment
+## 🎨 Design System
 
-### Build for Production
+### Color Palette
+- **Primary**: Blue (#3B82F6) - Actions, links, highlights
+- **Secondary**: Gray (#6B7280) - Text, borders, backgrounds
+- **Success**: Green (#10B981) - Completed states, success messages
+- **Warning**: Yellow (#F59E0B) - Pending states, warnings
+- **Error**: Red (#EF4444) - Failed states, error messages
 
-```bash
-# Create optimized production build
-npm run build
+### Typography
+- **Font Family**: Inter (Google Fonts)
+- **Headings**: Font weights 600-800
+- **Body Text**: Font weight 400-500
+- **Responsive Scaling**: Base 16px with rem units
 
-# Start production server
-npm start
-```
+### Component Patterns
+- **Cards**: Consistent padding, shadows, rounded corners
+- **Forms**: Validation states, error messages, loading states
+- **Buttons**: Primary, secondary, danger variants
+- **Status Badges**: Color-coded status indicators
+- **Loading States**: Skeleton screens and spinners
 
-### Docker Deployment
+## 📱 Responsive Design
 
-The frontend is included in the main TinyRAG Docker setup:
+### Breakpoints
+- **Mobile**: < 640px (sm)
+- **Tablet**: 640px - 1024px (md/lg)
+- **Desktop**: > 1024px (xl)
 
-```bash
-# From project root
-./scripts/start-tinyrag.sh
+### Mobile-First Approach
+- Base styles for mobile devices
+- Progressive enhancement for larger screens
+- Touch-friendly interface elements
+- Optimized navigation for small screens
 
-# Frontend will be available at http://localhost:3000
-```
+## 🧪 Testing Strategy
 
-### Deployment Platforms
+### Testing Tools
+- **Unit Tests**: Jest + React Testing Library
+- **Integration Tests**: Cypress or Playwright
+- **API Tests**: Built-in testing interface at `/testing`
+- **Type Checking**: TypeScript strict mode
 
-- **Vercel**: Recommended for Next.js applications
-- **Netlify**: Static site deployment
-- **Docker**: Container-based deployment
-- **Traditional Hosting**: Any Node.js hosting provider
+### Test Coverage Areas
+- Authentication flows
+- Document upload functionality
+- Project management operations
+- API integration points
+- Error handling scenarios
 
-## 🔍 Testing
+## 🚀 Performance Optimization
 
-### Manual Testing
+### Build Optimization
+- **Turbopack**: Fast development bundling
+- **Code Splitting**: Automatic route-based splitting
+- **Tree Shaking**: Remove unused code
+- **Image Optimization**: Next.js automatic optimization
+- **Bundle Analysis**: Built-in bundle analyzer
 
-1. **Start Backend**: Ensure API is running on port 8000
-2. **Start Frontend**: Run `npm run dev`
-3. **Open Browser**: Navigate to `http://localhost:3000`
-4. **Test Authentication**: Register/login with test credentials
-5. **Test Features**: Navigate through all main pages
+### Runtime Performance
+- **React Query**: Intelligent caching and background updates
+- **Lazy Loading**: Components and routes loaded on demand
+- **Memoization**: Prevent unnecessary re-renders
+- **Virtual Scrolling**: For large data sets
 
-### Test User Credentials
+## 🔧 Development Guidelines
 
-```
-Email: tester3@example.com
-Username: tester3
-Password: TestPassword123!
-```
-
-### Built-in Testing
-
-- **API Test Suite**: Available at `/testing` route
-- **Component Testing**: Jest and React Testing Library
-- **Type Checking**: TypeScript compiler validation
-- **Linting**: ESLint for code quality
-
-## 🤝 Contributing
-
-1. **Follow Standards**: Adhere to `.cursorrules` in project root
-2. **Type Safety**: All components must be fully typed
-3. **Component Structure**: Use consistent component patterns
-4. **Testing**: Add tests for new features
-5. **Documentation**: Update README for significant changes
-
-### Code Style
-
+### Code Standards
 - **TypeScript**: Strict mode enabled
-- **ESLint**: Configured with Next.js rules
-- **Prettier**: Code formatting (if configured)
-- **Components**: Functional components with hooks
-- **State**: Zustand for global state, useState for local
+- **ESLint**: Code quality and consistency
+- **Prettier**: Automatic code formatting
+- **Husky**: Pre-commit hooks for quality checks
 
-## 📞 Support
+### Component Guidelines
+- Functional components with hooks
+- TypeScript interfaces for all props
+- Consistent naming conventions
+- Comprehensive JSDoc comments
+- Error boundaries for fault tolerance
 
-- **Documentation**: Available in `/docs` when running
-- **API Docs**: http://localhost:8000/docs
-- **Issues**: GitHub Issues
-- **Development**: Check main project README
+### State Management
+- **Local State**: useState for component-specific state
+- **Global State**: Zustand for app-wide state
+- **Server State**: React Query for API data
+- **Form State**: React Hook Form for complex forms
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Port 3000 Already in Use**
+   ```bash
+   # Kill existing process
+   lsof -ti:3000 | xargs kill -9
+   
+   # Or use different port
+   npm run dev -- -p 3001
+   ```
+
+2. **API Connection Errors**
+   ```bash
+   # Check API status
+   curl http://localhost:8000/health
+   
+   # Verify environment variables
+   echo $NEXT_PUBLIC_API_URL
+   ```
+
+3. **Docker Build Issues**
+   ```bash
+   # Clear Docker cache
+   docker system prune -a
+   
+   # Rebuild without cache
+   docker-compose build --no-cache tinyrag-ui
+   ```
+
+4. **Node.js Version Issues**
+   ```bash
+   # Check current version
+   node --version
+   
+   # Switch to correct version
+   nvm use 20
+   ```
+
+### Development Tips
+- Use React DevTools for component debugging
+- Enable React Query DevTools for API debugging
+- Check browser console for error messages
+- Use network tab to monitor API requests
+
+## 📚 Additional Resources
+
+### Documentation
+- [Next.js Documentation](https://nextjs.org/docs)
+- [React Query Guide](https://tanstack.com/query/latest)
+- [Tailwind CSS Reference](https://tailwindcss.com/docs)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs)
+
+### API Documentation
+- Backend API: `/api/docs` (when running)
+- API Testing Interface: `/testing`
+- Health Check: `/health`
 
 ---
 
-**TinyRAG Frontend v1.4.1** - Modern React Interface for AI Workflows! 🚀
+**TinyRAG Frontend v1.4.1** - Modern RAG Workflow Management Interface 🚀
 
-🔗 **Quick Access**: [http://localhost:3000](http://localhost:3000) (after starting dev server)
+Built with ❤️ using Next.js, TypeScript, and Tailwind CSS

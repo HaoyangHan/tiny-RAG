@@ -1,135 +1,209 @@
 /**
- * Enhanced Document Upload Component for TinyRAG v1.2
- * 
- * Supports multi-format document upload with drag-and-drop, preview, and progress tracking.
- * Includes support for PDF, DOCX, and image formats with OCR capabilities.
+ * Enhanced Document Upload Component with Individual Status Tracking
+ * TinyRAG v1.4.1 - Supports real-time upload progress and processing status
  */
 
-import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import Image from 'next/image';
-import Button from '../ui/Button';
+'use client';
 
-interface UploadedFile {
-  file: File;
+import { useState, useCallback, useRef } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { 
+  DocumentIcon, 
+  TrashIcon, 
+  CheckCircleIcon, 
+  ExclamationCircleIcon,
+  ClockIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline';
+import { api } from '@/services/api';
+
+export interface DocumentUploadStatus {
   id: string;
+  file: File;
+  name: string;
+  size: number;
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
   progress: number;
-  status: 'uploading' | 'processing' | 'completed' | 'error';
-  preview?: string;
   error?: string;
+  documentId?: string;
+  uploadedAt?: Date;
 }
 
 interface EnhancedDocumentUploadProps {
-  onUpload: (files: File[]) => Promise<void>;
+  projectId?: string;
+  onUploadComplete?: (documents: DocumentUploadStatus[]) => void;
+  onUploadStart?: (document: DocumentUploadStatus) => void;
   maxFiles?: number;
-  maxSize?: number;
+  maxSizePerFile?: number; // in MB
 }
 
-export function EnhancedDocumentUpload({
-  onUpload,
+export function EnhancedDocumentUpload({ 
+  projectId,
+  onUploadComplete,
+  onUploadStart,
   maxFiles = 10,
-  maxSize = 50 * 1024 * 1024, // 50MB
+  maxSizePerFile = 50
 }: EnhancedDocumentUploadProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [documents, setDocuments] = useState<DocumentUploadStatus[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
+  const updateDocumentStatus = useCallback((id: string, updates: Partial<DocumentUploadStatus>) => {
+    setDocuments(prev => prev.map(doc => 
+      doc.id === id ? { ...doc, ...updates } : doc
+    ));
+  }, []);
 
-    setIsUploading(true);
-    
-    // Create file objects with initial state
-    const newFiles: UploadedFile[] = acceptedFiles.map(file => ({
-      file,
-      id: Math.random().toString(36).substr(2, 9),
-      progress: 0,
-      status: 'uploading' as const,
-      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-    }));
-
-    setUploadedFiles(prev => [...prev, ...newFiles]);
+  const uploadDocument = async (document: DocumentUploadStatus) => {
+    const abortController = new AbortController();
+    abortControllersRef.current.set(document.id, abortController);
 
     try {
-      // Simulate upload progress
-      for (const fileObj of newFiles) {
-        // Update progress
-        for (let progress = 0; progress <= 100; progress += 10) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          setUploadedFiles(prev => 
-            prev.map(f => 
-              f.id === fileObj.id 
-                ? { ...f, progress, status: progress === 100 ? 'processing' : 'uploading' }
-                : f
-            )
-          );
-        }
-      }
+      updateDocumentStatus(document.id, { status: 'uploading', progress: 0 });
 
-      // Call the upload handler
-      await onUpload(acceptedFiles);
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        updateDocumentStatus(document.id, { 
+          progress: Math.min(document.progress + Math.random() * 20, 90) 
+        });
+      }, 500);
 
-      // Mark as completed
-      setUploadedFiles(prev => 
-        prev.map(f => 
-          newFiles.some(nf => nf.id === f.id)
-            ? { ...f, status: 'completed' }
-            : f
-        )
-      );
-    } catch (error) {
-      // Mark as error
-      setUploadedFiles(prev => 
-        prev.map(f => 
-          newFiles.some(nf => nf.id === f.id)
-            ? { ...f, status: 'error', error: error instanceof Error ? error.message : 'Upload failed' }
-            : f
-        )
-      );
+      // Upload document via API
+      const uploadedDoc = await api.uploadDocument(document.file, projectId);
+      
+      clearInterval(progressInterval);
+      
+      updateDocumentStatus(document.id, {
+        status: 'processing',
+        progress: 95,
+        documentId: uploadedDoc.id,
+        uploadedAt: new Date()
+      });
+
+      // Simulate processing time
+      setTimeout(() => {
+        updateDocumentStatus(document.id, {
+          status: 'completed',
+          progress: 100
+        });
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Upload failed:', error);
+      updateDocumentStatus(document.id, {
+        status: 'failed',
+        progress: 0,
+        error: error.message || 'Upload failed'
+      });
     } finally {
-      setIsUploading(false);
+      abortControllersRef.current.delete(document.id);
     }
-  }, [onUpload]);
+  };
+
+  const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
+    // Handle rejected files
+    if (rejectedFiles.length > 0) {
+      console.warn('Some files were rejected:', rejectedFiles);
+    }
+
+    // Check file limits
+    const totalFiles = documents.length + acceptedFiles.length;
+    if (totalFiles > maxFiles) {
+      alert(`Maximum ${maxFiles} files allowed. Please remove some files first.`);
+      return;
+    }
+
+    // Create document status objects
+    const newDocuments: DocumentUploadStatus[] = acceptedFiles.map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      status: 'pending',
+      progress: 0
+    }));
+
+    // Add to documents list
+    setDocuments(prev => [...prev, ...newDocuments]);
+    setIsUploading(true);
+
+    // Notify parent of upload start
+    newDocuments.forEach(doc => onUploadStart?.(doc));
+
+    // Upload documents sequentially
+    for (const document of newDocuments) {
+      await uploadDocument(document);
+    }
+
+    setIsUploading(false);
+    
+    // Notify parent of completion
+    const updatedDocs = [...documents, ...newDocuments];
+    onUploadComplete?.(updatedDocs);
+  }, [documents, maxFiles, onUploadComplete, onUploadStart, projectId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt'],
       'application/msword': ['.doc'],
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/tiff': ['.tiff', '.tif']
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
-    maxFiles,
-    maxSize,
+    multiple: true,
+    maxSize: maxSizePerFile * 1024 * 1024, // Convert MB to bytes
     disabled: isUploading
   });
 
-  const removeFile = (id: string) => {
-    setUploadedFiles(prev => {
-      const fileToRemove = prev.find(f => f.id === id);
-      if (fileToRemove?.preview) {
-        URL.revokeObjectURL(fileToRemove.preview);
-      }
-      return prev.filter(f => f.id !== id);
-    });
+  const removeDocument = (id: string) => {
+    // Cancel upload if in progress
+    const abortController = abortControllersRef.current.get(id);
+    if (abortController) {
+      abortController.abort();
+      abortControllersRef.current.delete(id);
+    }
+
+    // Remove from list
+    setDocuments(prev => prev.filter(doc => doc.id !== id));
   };
 
-  const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'pdf':
-        return '📄';
-      case 'docx':
-      case 'doc':
-        return '📝';
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'tiff':
-        return '🖼️';
+  const retryUpload = async (id: string) => {
+    const document = documents.find(doc => doc.id === id);
+    if (document && document.status === 'failed') {
+      await uploadDocument(document);
+    }
+  };
+
+  const getStatusIcon = (status: DocumentUploadStatus['status']) => {
+    switch (status) {
+      case 'pending':
+        return <ClockIcon className="h-5 w-5 text-gray-400" />;
+      case 'uploading':
+      case 'processing':
+        return <ArrowPathIcon className="h-5 w-5 text-blue-500 animate-spin" />;
+      case 'completed':
+        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'failed':
+        return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
       default:
-        return '📎';
+        return <DocumentIcon className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  const getStatusText = (doc: DocumentUploadStatus) => {
+    switch (doc.status) {
+      case 'pending':
+        return 'Waiting to upload...';
+      case 'uploading':
+        return `Uploading... ${Math.round(doc.progress)}%`;
+      case 'processing':
+        return 'Processing document...';
+      case 'completed':
+        return 'Upload complete';
+      case 'failed':
+        return doc.error || 'Upload failed';
+      default:
+        return 'Unknown status';
     }
   };
 
@@ -142,137 +216,102 @@ export function EnhancedDocumentUpload({
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Upload Area */}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-gray-900">Upload Documents</h2>
+        <div className="text-sm text-gray-500">
+          {documents.length}/{maxFiles} files • Max {maxSizePerFile}MB per file
+        </div>
+      </div>
+      
+      {/* Drop Zone */}
       <div
         {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragActive 
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-            : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
-          }
-          ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
+        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          isDragActive
+            ? 'border-blue-500 bg-blue-50'
+            : isUploading
+            ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+            : 'border-gray-300 hover:border-gray-400'
+        }`}
       >
         <input {...getInputProps()} />
-        
-        <div className="space-y-4">
-          <div className="text-6xl">📁</div>
-          
+        <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <div className="mt-4">
           {isDragActive ? (
-            <div>
-              <p className="text-lg font-medium text-blue-600 dark:text-blue-400">
-                Drop files here to upload
-              </p>
-              <p className="text-sm text-gray-500">
-                Release to start processing
-              </p>
-            </div>
+            <p className="text-blue-600">Drop the files here...</p>
+          ) : isUploading ? (
+            <p className="text-gray-500">Upload in progress...</p>
           ) : (
             <div>
-              <p className="text-lg font-medium text-gray-900 dark:text-white">
-                Drag & drop files here, or click to select
+              <p className="text-gray-600">
+                Drag & drop documents here, or click to select
               </p>
               <p className="text-sm text-gray-500 mt-2">
-                Supports PDF, DOCX, and images (PNG, JPG, TIFF) up to {formatFileSize(maxSize)}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Maximum {maxFiles} files at once
+                Supports PDF, TXT, DOC, DOCX files
               </p>
             </div>
           )}
-
-          <Button 
-            variant="primary" 
-            size="md"
-            disabled={isUploading}
-            className="mt-4"
-          >
-            {isUploading ? 'Uploading...' : 'Select Files'}
-          </Button>
         </div>
       </div>
 
-      {/* File List */}
-      {uploadedFiles.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            Uploaded Files ({uploadedFiles.length})
+      {/* Documents List */}
+      {documents.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            Uploaded Documents ({documents.length})
           </h3>
-          
-          <div className="space-y-2">
-            {uploadedFiles.map((fileObj) => (
+          <div className="space-y-3">
+            {documents.map((doc) => (
               <div
-                key={fileObj.id}
-                className="flex items-center space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                key={doc.id}
+                className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200 shadow-sm"
               >
-                {/* File Icon/Preview */}
-                <div className="flex-shrink-0">
-                  {fileObj.preview ? (
-                    <Image
-                      src={fileObj.preview}
-                      alt={fileObj.file.name}
-                      width={48}
-                      height={48}
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 flex items-center justify-center text-2xl">
-                      {getFileIcon(fileObj.file.name)}
-                    </div>
-                  )}
-                </div>
-
-                {/* File Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {fileObj.file.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatFileSize(fileObj.file.size)}
-                  </p>
-                  
-                  {/* Progress Bar */}
-                  {fileObj.status === 'uploading' && (
-                    <div className="mt-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${fileObj.progress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Uploading... {fileObj.progress}%
+                <div className="flex items-center space-x-4 flex-1">
+                  {getStatusIcon(doc.status)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {doc.name}
+                      </p>
+                      <p className="text-xs text-gray-500 ml-2">
+                        {formatFileSize(doc.size)}
                       </p>
                     </div>
-                  )}
-
-                  {/* Status */}
-                  {fileObj.status === 'processing' && (
-                    <p className="text-xs text-blue-600 mt-1">Processing...</p>
-                  )}
-                  
-                  {fileObj.status === 'completed' && (
-                    <p className="text-xs text-green-600 mt-1">✓ Upload complete</p>
-                  )}
-                  
-                  {fileObj.status === 'error' && (
-                    <p className="text-xs text-red-600 mt-1">
-                      ✗ {fileObj.error || 'Upload failed'}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {getStatusText(doc)}
                     </p>
-                  )}
+                    {/* Progress Bar */}
+                    {(doc.status === 'uploading' || doc.status === 'processing') && (
+                      <div className="mt-2">
+                        <div className="bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${doc.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                {/* Remove Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFile(fileObj.id)}
-                  className="text-gray-400 hover:text-red-600"
-                >
-                  ✕
-                </Button>
+                
+                <div className="flex items-center space-x-2 ml-4">
+                  {doc.status === 'failed' && (
+                    <button
+                      onClick={() => retryUpload(doc.id)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Retry
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeDocument(doc.id)}
+                    className="text-red-600 hover:text-red-800"
+                    disabled={doc.status === 'uploading'}
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
