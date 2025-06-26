@@ -1,46 +1,59 @@
-# Build stage
-FROM node:18-alpine AS builder
+# TinyRAG Frontend Dockerfile
+# Multi-stage build for optimized production image
 
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json* ./
+RUN npm ci
 
-# Copy source code and config files
+# Stage 2: Builder
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Set environment variables for build
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
 
 # Build the application
 RUN npm run build
 
-# Production stage
+# Stage 3: Runner
 FROM node:18-alpine AS runner
-
 WORKDIR /app
 
-# Create non-root user
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Create nextjs user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy package files and install production dependencies
-COPY package*.json ./
-RUN npm install --only=production && npm cache clean --force
+# Copy built application
+COPY --from=builder /app/public ./public
 
-# Copy built assets and necessary files from builder
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./next.config.ts
+# Copy Next.js build output
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Switch to non-root user
+# Set correct permissions
 USER nextjs
 
 # Expose port
 EXPOSE 3000
 
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
 # Start the application
-CMD ["npm", "start"] 
+CMD ["node", "server.js"] 

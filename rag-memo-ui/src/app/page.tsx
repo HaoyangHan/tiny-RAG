@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '@/stores/authStore';
+import { LandingPage } from '@/components/auth/LandingPage';
 import { DocumentUpload } from '@/components/DocumentUpload';
 import { QueryInterface } from '@/components/QueryInterface';
 import { ResultsDisplay } from '@/components/ResultsDisplay';
@@ -11,17 +13,23 @@ interface QueryResult {
   confidence: number;
 }
 
-export default function RAGWorkflowPage() {
+export default function HomePage() {
+  const { isAuthenticated, isLoading, initializeAuth } = useAuthStore();
   const [documents, setDocuments] = useState<string[]>([]);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isQueryLoading, setIsQueryLoading] = useState(false);
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   const handleDocumentUpload = (fileName: string) => {
     setDocuments(prev => [...prev, fileName]);
   };
 
   const handleQuery = async (query: string) => {
-    setIsLoading(true);
+    setIsQueryLoading(true);
     try {
       // Mock API call - replace with actual API
       const response = await fetch('/api/query', {
@@ -49,10 +57,25 @@ export default function RAGWorkflowPage() {
         confidence: 0
       });
     } finally {
-      setIsLoading(false);
+      setIsQueryLoading(false);
     }
   };
 
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show landing page if not authenticated
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  // Show main RAG workflow for authenticated users
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -80,7 +103,7 @@ export default function RAGWorkflowPage() {
           <div className="space-y-6">
             <QueryInterface 
               onQuery={handleQuery}
-              isLoading={isLoading}
+              isLoading={isQueryLoading}
               disabled={documents.length === 0}
             />
             
@@ -98,11 +121,11 @@ export default function RAGWorkflowPage() {
                 Documents: {documents.length}
               </span>
               <span className="text-sm text-gray-600">
-                Status: {isLoading ? 'Processing...' : 'Ready'}
+                Status: {isQueryLoading ? 'Processing...' : 'Ready'}
               </span>
             </div>
             <div className="text-xs text-gray-400">
-              TinyRAG v0.1.0
+              TinyRAG v1.4.1
             </div>
           </div>
         </div>
