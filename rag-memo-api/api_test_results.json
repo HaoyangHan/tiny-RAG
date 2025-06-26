@@ -1,0 +1,65 @@
+[
+  {
+    "timestamp": "08:33:23",
+    "test": "Health Check",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200, Version: 1.4.0"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "API Documentation (/docs)",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "API ReDoc (/redoc)",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "OpenAPI Specification",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "User Registration",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 400"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "User Login",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200, Token: Yes"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "Token Verification",
+    "status": "\u274c FAIL",
+    "success": false,
+    "details": "Status: 404"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "Auth Me Endpoint",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  },
+  {
+    "timestamp": "08:33:23",
+    "test": "Auth Verify Token",
+    "status": "\u2705 PASS",
+    "success": true,
+    "details": "Status: 200"
+  }
+]

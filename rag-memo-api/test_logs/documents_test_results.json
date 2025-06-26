@@ -1,41 +1,41 @@
 [
   {
-    "timestamp": "2025-06-25 15:43:37",
+    "timestamp": "2025-06-26 08:33:42",
     "test": "v1.4 Document Upload",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 201, Project: True, Chunks: 1"
   },
   {
-    "timestamp": "2025-06-25 15:43:37",
+    "timestamp": "2025-06-26 08:33:42",
     "test": "v1.3 Legacy Document Upload",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 500 (500 expected for legacy compatibility)"
   },
   {
-    "timestamp": "2025-06-25 15:43:37",
+    "timestamp": "2025-06-26 08:33:42",
     "test": "v1.4 List Documents",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:43:37",
+    "timestamp": "2025-06-26 08:33:42",
     "test": "v1.3 Legacy List Documents",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 500 (500 expected for legacy compatibility)"
   },
   {
-    "timestamp": "2025-06-25 15:43:37",
+    "timestamp": "2025-06-26 08:33:42",
     "test": "v1.4 Get Document Details",
     "status": "\u2705 PASS",
     "success": true,
     "details": "Status: 200"
   },
   {
-    "timestamp": "2025-06-25 15:43:37",
+    "timestamp": "2025-06-26 08:33:42",
     "test": "v1.4 Get Document Content",
     "status": "\u2705 PASS",
     "success": true,

@@ -6,7 +6,8 @@ evaluation framework and quality assessment.
 """
 
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import status
 from pydantic import BaseModel, Field
 
 from models import EvaluationStatus
