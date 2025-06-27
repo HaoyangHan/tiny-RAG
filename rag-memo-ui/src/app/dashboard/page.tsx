@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   PlusIcon, 
@@ -12,16 +12,78 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '@/stores/authStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { api } from '@/services/api';
+import { Project } from '@/types';
+
+interface UserAnalytics {
+  total_projects: number;
+  total_documents: number;
+  total_elements: number;
+  total_generations: number;
+  total_cost: number;
+  recent_activity: Array<{
+    type: string;
+    description: string;
+    timestamp: string;
+  }>;
+}
 
 export default function Dashboard() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
+  
+  // State for dashboard data
+  const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/');
     }
   }, [isAuthenticated, router]);
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!isAuthenticated || !user) return;
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch user analytics and recent projects in parallel
+        const [analyticsResponse, projectsResponse] = await Promise.allSettled([
+          api.getUserAnalytics(),
+          api.getProjects({ page: 1, page_size: 5 }) // Get 5 most recent projects
+        ]);
+
+        // Handle analytics response
+        if (analyticsResponse.status === 'fulfilled') {
+          setAnalytics(analyticsResponse.value);
+        } else {
+          console.error('Failed to fetch analytics:', analyticsResponse.reason);
+        }
+
+        // Handle projects response
+        if (projectsResponse.status === 'fulfilled') {
+          setRecentProjects(projectsResponse.value.items || []);
+        } else {
+          console.error('Failed to fetch projects:', projectsResponse.reason);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [isAuthenticated, user]);
 
   if (!isAuthenticated || !user) {
     return (
@@ -31,6 +93,17 @@ export default function Dashboard() {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Dashboard">
+        <div className="flex items-center justify-center min-h-96">
+          <LoadingSpinner size="lg" />
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -58,12 +131,56 @@ export default function Dashboard() {
     }
   ];
 
+  // Use real analytics data or fallback to zeros
   const stats = [
-    { name: 'Total Projects', value: '0', icon: FolderPlusIcon, color: 'text-blue-600' },
-    { name: 'Documents', value: '0', icon: DocumentArrowUpIcon, color: 'text-green-600' },
-    { name: 'Elements', value: '0', icon: CpuChipIcon, color: 'text-purple-600' },
-    { name: 'Generations', value: '0', icon: SparklesIcon, color: 'text-orange-600' },
+    { 
+      name: 'Total Projects', 
+      value: analytics?.total_projects?.toString() || '0', 
+      icon: FolderPlusIcon, 
+      color: 'text-blue-600' 
+    },
+    { 
+      name: 'Documents', 
+      value: analytics?.total_documents?.toString() || '0', 
+      icon: DocumentArrowUpIcon, 
+      color: 'text-green-600' 
+    },
+    { 
+      name: 'Elements', 
+      value: analytics?.total_elements?.toString() || '0', 
+      icon: CpuChipIcon, 
+      color: 'text-purple-600' 
+    },
+    { 
+      name: 'Generations', 
+      value: analytics?.total_generations?.toString() || '0', 
+      icon: SparklesIcon, 
+      color: 'text-orange-600' 
+    },
   ];
+
+  // Helper function to format dates
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Helper function to get tenant type display
+  const getTenantTypeDisplay = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'hr': return 'Human Resources';
+      case 'coding': return 'Software Development';
+      case 'financial_report': return 'Financial Analysis';
+      case 'deep_research': return 'Research & Analysis';
+      case 'qa_generation': return 'Q&A Generation';
+      case 'raw_rag': return 'General RAG Tasks';
+      default: return type || 'Unknown';
+    }
+  };
 
   return (
     <DashboardLayout title="Dashboard">
@@ -141,22 +258,49 @@ export default function Dashboard() {
                     View all
                   </button>
                 </div>
-                <div className="text-center py-12">
-                  <FolderPlusIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <h4 className="mt-2 text-sm font-medium text-gray-900">No projects yet</h4>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Get started by creating your first RAG project.
-                  </p>
-                  <div className="mt-6">
-                    <button
-                      onClick={() => router.push('/projects/create')}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                      <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-                      Create Project
-                    </button>
+                {recentProjects.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+                        onClick={() => router.push(`/projects/${project.id}`)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <FolderPlusIcon className="h-6 w-6 text-blue-600" />
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900">{project.name}</h4>
+                            <p className="text-xs text-gray-500">
+                              {getTenantTypeDisplay(project.tenant_type)} • {formatDate(project.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          project.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {project.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <FolderPlusIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <h4 className="mt-2 text-sm font-medium text-gray-900">No projects yet</h4>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Get started by creating your first RAG project.
+                    </p>
+                    <div className="mt-6">
+                      <button
+                        onClick={() => router.push('/projects/create')}
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                      >
+                        <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+                        Create Project
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -167,12 +311,42 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg">
               <div className="p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Recent Activity</h3>
-                <div className="text-center py-8">
-                  <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">
-                    No recent activity. Start using TinyRAG to see your activity here!
-                  </p>
-                </div>
+                {analytics?.recent_activity && analytics.recent_activity.length > 0 ? (
+                  <div className="space-y-4">
+                    {analytics.recent_activity.map((activity, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          {activity.type === 'project_created' && (
+                            <FolderPlusIcon className="h-5 w-5 text-blue-600" />
+                          )}
+                          {activity.type === 'document_uploaded' && (
+                            <DocumentArrowUpIcon className="h-5 w-5 text-green-600" />
+                          )}
+                          {activity.type === 'element_created' && (
+                            <CpuChipIcon className="h-5 w-5 text-purple-600" />
+                          )}
+                          {activity.type === 'generation_completed' && (
+                            <SparklesIcon className="h-5 w-5 text-orange-600" />
+                          )}
+                          {!['project_created', 'document_uploaded', 'element_created', 'generation_completed'].includes(activity.type) && (
+                            <ChartBarIcon className="h-5 w-5 text-gray-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900">{activity.description}</p>
+                          <p className="text-xs text-gray-500">{formatDate(activity.timestamp)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-500">
+                      No recent activity. Start using TinyRAG to see your activity here!
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
