@@ -109,8 +109,6 @@ export default function DocumentsPage() {
       page: currentPage,
       page_size: pageSize,
       project_id: selectedProject || undefined,
-      search: searchTerm || undefined,
-      status: selectedStatus || undefined,
     }),
     enabled: isAuthenticated,
     refetchInterval: 10000, // Refresh every 10 seconds for status updates
@@ -122,8 +120,7 @@ export default function DocumentsPage() {
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = !searchTerm || 
-      doc.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.title?.toLowerCase().includes(searchTerm.toLowerCase());
+      doc.filename.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesProject = !selectedProject || doc.project_id === selectedProject;
     const matchesStatus = !selectedStatus || doc.status === selectedStatus;
@@ -353,7 +350,7 @@ export default function DocumentsPage() {
                         <div>
                           <div className="flex items-center space-x-2">
                             <h4 className="text-lg font-medium text-gray-900">
-                              {document.title || document.filename}
+                              {document.filename}
                             </h4>
                             {getStatusIcon(document.status)}
                           </div>

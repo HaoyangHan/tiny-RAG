@@ -1,8 +1,9 @@
 /**
- * TinyRAG v1.4.1 TypeScript Type Definitions
+ * TinyRAG v1.4.2 TypeScript Type Definitions
  * 
  * Comprehensive type definitions for the frontend application
  * following the API schema and UI/UX design requirements.
+ * Updated to match backend model structure.
  */
 
 // ============================================================================
@@ -91,44 +92,48 @@ export interface ProjectCreateRequest {
 }
 
 // ============================================================================
-// Document Types
+// Document Types (Updated to match backend model)
 // ============================================================================
 
 export enum DocumentStatus {
-  PENDING = "pending",
+  UPLOADING = "uploading",
   PROCESSING = "processing",
   COMPLETED = "completed",
-  FAILED = "failed"
+  FAILED = "failed",
+  ARCHIVED = "archived"
 }
 
 export interface Document {
   id: string;
+  user_id: string;
+  project_id: string;
   filename: string;
   content_type: string;
   file_size: number;
-  project_id: string;
   status: DocumentStatus;
-  chunk_count: number;
+  chunk_count?: number;
   metadata: Record<string, any>;
-  upload_url?: string;
   created_at: string;
   updated_at: string;
+  is_deleted: boolean;
 }
 
 // ============================================================================
-// Element Types
+// Element Types (Updated to match backend model)
 // ============================================================================
 
 export enum ElementType {
   PROMPT_TEMPLATE = "prompt_template",
   MCP_CONFIG = "mcp_config",
-  AGENTIC_TOOL = "agentic_tool"
+  AGENTIC_TOOL = "agentic_tool",
+  RAG_CONFIG = "rag_config"
 }
 
 export enum ElementStatus {
   DRAFT = "draft",
   ACTIVE = "active",
-  DEPRECATED = "deprecated"
+  DEPRECATED = "deprecated",
+  ARCHIVED = "archived"
 }
 
 export interface Element {
@@ -136,10 +141,21 @@ export interface Element {
   name: string;
   description?: string;
   project_id: string;
+  tenant_type: TenantType;
+  task_type: string;
   element_type: ElementType;
   status: ElementStatus;
-  template_version: string;
+  template: {
+    content: string;
+    variables: string[];
+    execution_config: Record<string, any>;
+    version: string;
+    changelog: string[];
+  };
+  execution_history: string[];
+  usage_statistics: Record<string, any>;
   tags: string[];
+  owner_id: string;
   execution_count: number;
   created_at: string;
   updated_at: string;
@@ -148,8 +164,6 @@ export interface Element {
 export interface ElementDetail extends Element {
   template_content: string;
   template_variables: string[];
-  execution_config: Record<string, any>;
-  usage_statistics: Record<string, any>;
 }
 
 export interface ElementCreateRequest {
@@ -171,7 +185,8 @@ export enum GenerationStatus {
   PENDING = "pending",
   PROCESSING = "processing",
   COMPLETED = "completed",
-  FAILED = "failed"
+  FAILED = "failed",
+  CANCELLED = "cancelled"
 }
 
 export interface Generation {

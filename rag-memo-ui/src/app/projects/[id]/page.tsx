@@ -238,7 +238,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                   <div className="flex items-center space-x-3">
                     <DocumentTextIcon className="h-5 w-5 text-gray-400" />
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{doc.title}</p>
+                      <p className="text-sm font-medium text-gray-900">{doc.filename}</p>
                       <p className="text-xs text-gray-500">
                         {(doc.file_size / 1024).toFixed(1)} KB • {new Date(doc.created_at).toLocaleDateString()}
                       </p>
@@ -275,7 +275,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                     <div>
                       <p className="text-sm font-medium text-gray-900">{element.name}</p>
                       <p className="text-xs text-gray-500">
-                        {element.execution_count} executions • {new Date(element.updated_at).toLocaleDateString()}
+                        {element.execution_count} executions • Last run Never
                       </p>
                     </div>
                   </div>
@@ -346,9 +346,9 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
               <div className="flex items-center space-x-4">
                 <DocumentTextIcon className="h-8 w-8 text-gray-400" />
                 <div>
-                  <h4 className="text-lg font-medium text-gray-900">{doc.title}</h4>
+                  <h4 className="text-lg font-medium text-gray-900">{doc.filename}</h4>
                   <p className="text-sm text-gray-500">
-                    {doc.file_type.toUpperCase()} • {(doc.file_size / 1024).toFixed(1)} KB
+                    {doc.content_type.toUpperCase()} • {(doc.file_size / 1024).toFixed(1)} KB
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Uploaded {new Date(doc.created_at).toLocaleDateString()}
@@ -394,7 +394,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                   <h4 className="text-lg font-medium text-gray-900">{element.name}</h4>
                   <p className="text-sm text-gray-500">{element.description}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {element.execution_count} executions • Last run {element.last_executed ? new Date(element.last_executed).toLocaleDateString() : 'Never'}
+                    {element.execution_count} executions • Last run Never
                   </p>
                 </div>
               </div>
