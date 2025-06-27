@@ -18,6 +18,18 @@ from .dependencies import get_project_service
 
 router = APIRouter()
 
+# Helper function to get owner information
+async def get_owner_info(owner_id: str) -> tuple[Optional[str], Optional[str]]:
+    """Get owner name and email by user ID."""
+    try:
+        user = await User.get(PydanticObjectId(owner_id))
+        if user:
+            return user.full_name, user.email
+        return None, None
+    except Exception:
+        return None, None
+
+
 # Request/Response schemas
 class ProjectCreateRequest(BaseModel):
     """Request schema for creating a new project."""
@@ -50,6 +62,8 @@ class ProjectResponse(BaseModel):
     visibility: VisibilityType = Field(description="Project visibility")
     status: ProjectStatus = Field(description="Project status")
     owner_id: str = Field(description="Project owner ID")
+    owner_name: Optional[str] = Field(None, description="Project owner full name")
+    owner_email: Optional[str] = Field(None, description="Project owner email")
     collaborators: List[str] = Field(description="Collaborator user IDs")
     document_count: int = Field(description="Number of documents")
     element_count: int = Field(description="Number of elements")
@@ -128,6 +142,8 @@ async def create_project(
             visibility=project.visibility,
             status=project.status,
             owner_id=project.owner_id,
+            owner_name=current_user.full_name,
+            owner_email=current_user.email,
             collaborators=project.collaborators,
             document_count=len(project.document_ids),
             element_count=len(project.element_ids),
@@ -171,25 +187,30 @@ async def list_projects(
             search=search
         )
         
-        project_responses = [
-            ProjectResponse(
-                id=str(project.id),
-                name=project.name,
-                description=project.description,
-                tenant_type=project.tenant_type,
-                keywords=project.keywords,
-                visibility=project.visibility,
-                status=project.status,
-                owner_id=project.owner_id,
-                collaborators=project.collaborators,
-                document_count=len(project.document_ids),
-                element_count=len(project.element_ids),
-                generation_count=len(project.generation_ids),
-                created_at=project.created_at.isoformat(),
-                updated_at=project.updated_at.isoformat()
+        # Fetch owner information for each project
+        project_responses = []
+        for project in projects:
+            owner_name, owner_email = await get_owner_info(project.owner_id)
+            project_responses.append(
+                ProjectResponse(
+                    id=str(project.id),
+                    name=project.name,
+                    description=project.description,
+                    tenant_type=project.tenant_type,
+                    keywords=project.keywords,
+                    visibility=project.visibility,
+                    status=project.status,
+                    owner_id=project.owner_id,
+                    owner_name=owner_name,
+                    owner_email=owner_email,
+                    collaborators=project.collaborators,
+                    document_count=len(project.document_ids),
+                    element_count=len(project.element_ids),
+                    generation_count=len(project.generation_ids),
+                    created_at=project.created_at.isoformat(),
+                    updated_at=project.updated_at.isoformat()
+                )
             )
-            for project in projects
-        ]
         
         return ProjectListResponse(
             items=project_responses,
@@ -229,25 +250,30 @@ async def list_public_projects(
             search=search
         )
         
-        project_responses = [
-            ProjectResponse(
-                id=str(project.id),
-                name=project.name,
-                description=project.description,
-                tenant_type=project.tenant_type,
-                keywords=project.keywords,
-                visibility=project.visibility,
-                status=project.status,
-                owner_id=project.owner_id,
-                collaborators=project.collaborators,
-                document_count=len(project.document_ids),
-                element_count=len(project.element_ids),
-                generation_count=len(project.generation_ids),
-                created_at=project.created_at.isoformat(),
-                updated_at=project.updated_at.isoformat()
+        # Fetch owner information for each project
+        project_responses = []
+        for project in projects:
+            owner_name, owner_email = await get_owner_info(project.owner_id)
+            project_responses.append(
+                ProjectResponse(
+                    id=str(project.id),
+                    name=project.name,
+                    description=project.description,
+                    tenant_type=project.tenant_type,
+                    keywords=project.keywords,
+                    visibility=project.visibility,
+                    status=project.status,
+                    owner_id=project.owner_id,
+                    owner_name=owner_name,
+                    owner_email=owner_email,
+                    collaborators=project.collaborators,
+                    document_count=len(project.document_ids),
+                    element_count=len(project.element_ids),
+                    generation_count=len(project.generation_ids),
+                    created_at=project.created_at.isoformat(),
+                    updated_at=project.updated_at.isoformat()
+                )
             )
-            for project in projects
-        ]
         
         return ProjectListResponse(
             items=project_responses,
@@ -289,6 +315,9 @@ async def get_project(
                 detail="Project not found"
             )
         
+        # Fetch owner information
+        owner_name, owner_email = await get_owner_info(project.owner_id)
+        
         return ProjectResponse(
             id=str(project.id),
             name=project.name,
@@ -298,6 +327,8 @@ async def get_project(
             visibility=project.visibility,
             status=project.status,
             owner_id=project.owner_id,
+            owner_name=owner_name,
+            owner_email=owner_email,
             collaborators=project.collaborators,
             document_count=len(project.document_ids),
             element_count=len(project.element_ids),
@@ -341,6 +372,9 @@ async def update_project(
                 detail="Project not found or access denied"
             )
         
+        # Fetch owner information
+        owner_name, owner_email = await get_owner_info(project.owner_id)
+        
         return ProjectResponse(
             id=str(project.id),
             name=project.name,
@@ -350,6 +384,8 @@ async def update_project(
             visibility=project.visibility,
             status=project.status,
             owner_id=project.owner_id,
+            owner_name=owner_name,
+            owner_email=owner_email,
             collaborators=project.collaborators,
             document_count=len(project.document_ids),
             element_count=len(project.element_ids),

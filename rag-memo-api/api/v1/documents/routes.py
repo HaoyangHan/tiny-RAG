@@ -41,17 +41,30 @@ class DocumentResponse(BaseModel):
     updated_at: str = Field(description="Last update timestamp")
 
 
+class DocumentListResponse(BaseModel):
+    """Response schema for document list - matches frontend PaginatedResponse."""
+    
+    items: List[DocumentResponse] = Field(description="List of documents")
+    total_count: int = Field(description="Total number of documents")
+    page: int = Field(description="Current page number")
+    page_size: int = Field(description="Number of items per page")
+    has_next: bool = Field(description="Whether there is a next page")
+    has_prev: bool = Field(description="Whether there is a previous page")
+
+
 @router.get(
     "/",
-    response_model=List[DocumentResponse],
+    response_model=DocumentListResponse,
     summary="List documents",
     description="Get a list of documents accessible to the current user"
 )
 async def list_documents(
     project_id: Optional[str] = Query(None, description="Filter by project ID"),
     status: Optional[str] = Query(None, description="Filter by processing status"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_active_user)
-) -> List[DocumentResponse]:
+) -> DocumentListResponse:
     """List documents."""
     try:
         # Convert status string to enum if provided
@@ -69,12 +82,14 @@ async def list_documents(
         document_service = DocumentService()
         documents, total = await document_service.list_documents(
             user_id=str(current_user.id),
+            page=page,
+            page_size=page_size,
             project_id=project_id,
             status=status_filter
         )
         
         # Convert to response models
-        return [
+        response_items = [
             DocumentResponse(
                 id=str(doc.id),
                 filename=doc.filename,
@@ -97,6 +112,20 @@ async def list_documents(
             )
             for doc in documents
         ]
+        
+        # Calculate pagination metadata
+        total_pages = (total + page_size - 1) // page_size  # Ceiling division
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return DocumentListResponse(
+            items=response_items,
+            total_count=total,
+            page=page,
+            page_size=page_size,
+            has_next=has_next,
+            has_prev=has_prev
+        )
         
     except Exception as e:
         raise HTTPException(

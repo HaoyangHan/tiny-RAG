@@ -15,6 +15,7 @@ import {
   SparklesIcon,
   EyeIcon,
   CalendarIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Project, TenantType, ProjectStatus } from '@/types';
@@ -163,6 +164,19 @@ export default function ProjectsPage() {
           </div>
         </div>
 
+        {/* Owner Information */}
+        {project.owner_name && (
+          <div className="mb-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center text-xs text-gray-600">
+              <UserIcon className="h-3 w-3 mr-1" />
+              <span className="font-medium">{project.owner_name}</span>
+              {project.owner_email && (
+                <span className="ml-1">({project.owner_email})</span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center">
             <CalendarIcon className="h-3 w-3 mr-1" />
@@ -172,6 +186,86 @@ export default function ProjectsPage() {
             {project.collaborators && project.collaborators.length > 0 && (
               <span>{project.collaborators.length + 1} members</span>
             )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Compact List Item Component
+  const ProjectListItem = ({ project }: { project: any }) => (
+    <div
+      onClick={() => handleProjectClick(project.id)}
+      className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer border border-gray-200 overflow-hidden"
+    >
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          {/* Left side - Project info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3 mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 truncate">
+                {project.name}
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                  {project.status || 'Active'}
+                </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getTenantTypeColor(project.tenant_type)}`}>
+                  {getTenantTypeDisplay(project.tenant_type)}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-6 text-xs text-gray-600 mb-2">
+              {/* Owner */}
+              {project.owner_name && (
+                <div className="flex items-center">
+                  <UserIcon className="h-3 w-3 mr-1" />
+                  <span>{project.owner_name}</span>
+                </div>
+              )}
+              
+              {/* Created date */}
+              <div className="flex items-center">
+                <CalendarIcon className="h-3 w-3 mr-1" />
+                <span>{new Date(project.created_at).toLocaleDateString()}</span>
+              </div>
+              
+              {/* Members */}
+              {project.collaborators && project.collaborators.length > 0 && (
+                <span>{project.collaborators.length + 1} members</span>
+              )}
+            </div>
+            
+            <p className="text-gray-600 text-sm truncate">
+              {project.description || 'No description available'}
+            </p>
+          </div>
+
+          {/* Right side - Statistics */}
+          <div className="flex items-center space-x-6 ml-6">
+            <div className="text-center">
+              <div className="flex items-center justify-center">
+                <DocumentTextIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <span className="text-sm font-medium text-gray-900">{project.document_count || 0}</span>
+              </div>
+              <p className="text-xs text-gray-500">Docs</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center">
+                <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <span className="text-sm font-medium text-gray-900">{project.element_count || 0}</span>
+              </div>
+              <p className="text-xs text-gray-500">Elements</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center">
+                <SparklesIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <span className="text-sm font-medium text-gray-900">{project.generation_count || 0}</span>
+              </div>
+              <p className="text-xs text-gray-500">Gens</p>
+            </div>
+            <EyeIcon className="h-5 w-5 text-gray-400" />
           </div>
         </div>
       </div>
@@ -351,9 +445,13 @@ export default function ProjectsPage() {
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
             : 'space-y-4'
           }>
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
+            {projects.map((project) => 
+              viewMode === 'grid' ? (
+                <ProjectCard key={project.id} project={project} />
+              ) : (
+                <ProjectListItem key={project.id} project={project} />
+              )
+            )}
           </div>
         )}
 

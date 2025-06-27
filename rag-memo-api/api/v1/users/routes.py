@@ -209,8 +209,33 @@ async def get_user_by_id(
     current_user: User = Depends(get_current_active_user)
 ) -> UserResponse:
     """Get user information by ID."""
-    # TODO: Implement get user by ID with privacy controls
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Get user by ID functionality not implemented yet"
-    ) 
+    try:
+        from beanie import PydanticObjectId
+        
+        # Convert string to ObjectId and get user by ID
+        user = await User.get(PydanticObjectId(user_id))
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Return public user information
+        return UserResponse(
+            id=str(user.id),
+            email=user.email,
+            username=user.username,
+            full_name=user.full_name,
+            role=user.role,
+            status=user.status,
+            created_at=user.created_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user: {str(e)}"
+        ) 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import {
   ChevronLeftIcon,
   DocumentTextIcon,
@@ -14,6 +15,12 @@ import {
   ChartBarIcon,
   PlusIcon,
   FolderOpenIcon,
+  CheckCircleIcon,
+  ArrowPathIcon,
+  ExclamationCircleIcon,
+  ClockIcon,
+  ChevronLeftIcon as ChevronLeftPageIcon,
+  ChevronRightIcon as ChevronRightPageIcon
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -38,6 +45,10 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Documents tab pagination state
+  const [documentsPage, setDocumentsPage] = useState(1);
+  const documentsPageSize = 20;
+
   // Fetch project data on component mount
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -49,7 +60,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         const projectData = await api.getProject(params.id);
         setProject(projectData);
 
-        // Fetch related data in parallel
+        // Fetch related data in parallel (only recent items for overview)
         const [documentsResponse, elementsResponse, generationsResponse] = await Promise.allSettled([
           api.getDocuments({ project_id: params.id, page_size: 5 }),
           api.getElements({ project_id: params.id, page_size: 5 }),
@@ -83,6 +94,22 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
       fetchProjectData();
     }
   }, [params.id]);
+
+  // Separate query for full documents list in Documents tab
+  const { data: allDocumentsData, isLoading: allDocumentsLoading, refetch: refetchAllDocuments } = useQuery({
+    queryKey: ['project-all-documents', params.id, documentsPage],
+    queryFn: () => api.getDocuments({ 
+      project_id: params.id, 
+      page: documentsPage,
+      page_size: documentsPageSize 
+    }),
+    enabled: !!params.id && activeTab === 'documents',
+    refetchInterval: 5000, // Real-time updates for document status
+  });
+
+  const allDocuments = allDocumentsData?.items || [];
+  const totalDocuments = allDocumentsData?.total_count || 0;
+  const totalDocumentPages = Math.ceil(totalDocuments / documentsPageSize);
 
   // Show loading spinner while fetching data
   if (isLoading) {
@@ -146,6 +173,42 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     });
   };
 
+  // Helper function to get ingestion status icon
+  const getIngestionStatusIcon = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+      case 'processed':
+        return <CheckCircleIcon className="h-5 w-5 text-green-600" />;
+      case 'processing':
+      case 'uploading':
+        return <ArrowPathIcon className="h-5 w-5 text-blue-600 animate-spin" />;
+      case 'failed':
+      case 'error':
+        return <ExclamationCircleIcon className="h-5 w-5 text-red-600" />;
+      case 'pending':
+      default:
+        return <ClockIcon className="h-5 w-5 text-yellow-600" />;
+    }
+  };
+
+  // Helper function to get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+      case 'processed':
+        return 'bg-green-100 text-green-800';
+      case 'processing':
+      case 'uploading':
+        return 'bg-blue-100 text-blue-800';
+      case 'failed':
+      case 'error':
+        return 'bg-red-100 text-red-800';
+      case 'pending':
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  };
+
   const tabs = [
     { id: 'overview', name: 'Overview', icon: FolderOpenIcon },
     { id: 'documents', name: 'Documents', icon: DocumentTextIcon },
@@ -167,7 +230,12 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
               </div>
               <div className="ml-5">
                 <p className="text-sm font-medium text-gray-500">Documents</p>
-                <p className="text-2xl font-semibold text-gray-900">{project.document_count}</p>
+                <button
+                  onClick={() => setActiveTab('documents')}
+                  className="text-2xl font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-200 cursor-pointer"
+                >
+                  {project.document_count}
+                </button>
               </div>
             </div>
           </div>
@@ -181,7 +249,12 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
               </div>
               <div className="ml-5">
                 <p className="text-sm font-medium text-gray-500">Elements</p>
-                <p className="text-2xl font-semibold text-gray-900">{project.element_count}</p>
+                <button
+                  onClick={() => setActiveTab('elements')}
+                  className="text-2xl font-semibold text-gray-900 hover:text-green-600 transition-colors duration-200 cursor-pointer"
+                >
+                  {project.element_count}
+                </button>
               </div>
             </div>
           </div>
@@ -195,7 +268,12 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
               </div>
               <div className="ml-5">
                 <p className="text-sm font-medium text-gray-500">Generations</p>
-                <p className="text-2xl font-semibold text-gray-900">{project.generation_count}</p>
+                <button
+                  onClick={() => setActiveTab('generations')}
+                  className="text-2xl font-semibold text-gray-900 hover:text-purple-600 transition-colors duration-200 cursor-pointer"
+                >
+                  {project.generation_count}
+                </button>
               </div>
             </div>
           </div>
@@ -329,7 +407,12 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const renderProjectDocuments = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">Project Documents</h3>
+        <div>
+          <h3 className="text-lg font-medium text-gray-900">Project Documents</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {totalDocuments} total documents • Real-time status updates
+          </p>
+        </div>
         <button
           onClick={() => router.push(`/projects/${project.id}/document-upload`)}
           className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
@@ -339,34 +422,120 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         </button>
       </div>
 
-      <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
-        {recentDocuments.map((doc) => (
-          <div key={doc.id} className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <DocumentTextIcon className="h-8 w-8 text-gray-400" />
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900">{doc.filename}</h4>
-                  <p className="text-sm text-gray-500">
-                    {doc.content_type.toUpperCase()} • {(doc.file_size / 1024).toFixed(1)} KB
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Uploaded {new Date(doc.created_at).toLocaleDateString()}
-                  </p>
+      {allDocumentsLoading ? (
+        <div className="flex justify-center py-8">
+          <LoadingSpinner size="md" />
+        </div>
+      ) : allDocuments.length > 0 ? (
+        <>
+          <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
+            {allDocuments.map((doc) => (
+              <div key={doc.id} className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <DocumentTextIcon className="h-8 w-8 text-gray-400" />
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h4 className="text-lg font-medium text-gray-900">{doc.filename}</h4>
+                        <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {doc.content_type.toUpperCase()} • {(doc.file_size / 1024).toFixed(1)} KB
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Uploaded {new Date(doc.created_at).toLocaleDateString()} • {doc.chunk_count || 0} chunks
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {doc.status}
+                    </span>
+                    <button className="text-gray-400 hover:text-gray-600">
+                      <EyeIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Processed
-                </span>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <EyeIcon className="h-5 w-5" />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalDocumentPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                  onClick={() => setDocumentsPage(Math.max(1, documentsPage - 1))}
+                  disabled={documentsPage === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setDocumentsPage(Math.min(totalDocumentPages, documentsPage + 1))}
+                  disabled={documentsPage === totalDocumentPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Next
                 </button>
               </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing{' '}
+                    <span className="font-medium">{(documentsPage - 1) * documentsPageSize + 1}</span>
+                    {' '}to{' '}
+                    <span className="font-medium">
+                      {Math.min(documentsPage * documentsPageSize, totalDocuments)}
+                    </span>
+                    {' '}of{' '}
+                    <span className="font-medium">{totalDocuments}</span>
+                    {' '}results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={() => setDocumentsPage(Math.max(1, documentsPage - 1))}
+                      disabled={documentsPage === 1}
+                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    >
+                      <ChevronLeftPageIcon className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300">
+                      {documentsPage} of {totalDocumentPages}
+                    </span>
+                    <button
+                      onClick={() => setDocumentsPage(Math.min(totalDocumentPages, documentsPage + 1))}
+                      disabled={documentsPage === totalDocumentPages}
+                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
+                    >
+                      <ChevronRightPageIcon className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-12">
+          <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-semibold text-gray-900">No documents</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Get started by uploading your first document to this project.
+          </p>
+          <div className="mt-6">
+            <button
+              onClick={() => router.push(`/projects/${project.id}/document-upload`)}
+              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+            >
+              <PlusIcon className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+              Upload Document
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 

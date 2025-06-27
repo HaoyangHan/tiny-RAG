@@ -14,7 +14,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { api } from '@/services/api';
-import { Project } from '@/types';
+import { Project, ProjectStatus } from '@/types';
 
 interface UserAnalytics {
   total_projects: number;
@@ -276,7 +276,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          project.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          project.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}>
                           {project.status}
                         </span>
