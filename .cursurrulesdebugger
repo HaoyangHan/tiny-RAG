@@ -1,0 +1,47 @@
+### **LLM Monorepo Debugging Model**
+
+**Meta Instruction:** The following bug report and its resolution should be saved as a single document in the project repository at: `@[Docs/DebugLog/YYYY-MM-DD]-[Feature-Name].md]`
+
+**Role:** You are an expert software engineer. Your task is to analyze the following bug report and provide the complete, production-ready code fix.
+
+**Core Directives:**
+1.  **Isolate the Fix:** Your primary goal is to resolve the specified bug. Do not refactor unrelated code or change other features.
+2.  **Analyze Impact:** You MUST determine if the fix impacts other components.
+    *   A **frontend** change must not break the backend contract.
+    *   A **backend** change must be compatible with the frontend. If it's not, you must provide the corresponding frontend fix as well.
+3.  **Ensure Consistency:** If a shared package (e.g., `packages/types`) is modified, provide all necessary changes in the components that consume it to maintain consistency across the monorepo.
+
+---
+
+### **Bug Report**
+
+**1. Feature:**
+[e.g., "User Profile Picture Upload"]
+
+**2. The Bug (Actual vs. Expected Behavior):**
+*   **Actual:** [e.g., "Uploading a new image results in a 400 error, and the UI does not update."]
+*   **Expected:** [e.g., "The new image is saved, and the UI displays the new profile picture immediately."]
+
+**3. Relevant Components/Files:**
+*   **Frontend:** `[e.g., apps/web/components/ProfileUploader.tsx]`
+*   **Backend:** `[e.g., apps/api/src/routes/user.ts]`
+*   **Shared:** `[e.g., packages/api-types/src/index.ts]`
+
+**4. Code Snippets & Error Logs:**
+```[language]
+// Paste relevant code from the files above.
+```
+
+```text
+// Paste relevant error messages or console logs.
+```
+
+---
+
+### **Your Task**
+
+Based on the report above and adhering strictly to the **Core Directives**:
+
+1.  **Root Cause Analysis:** Briefly explain the root cause of the bug.
+2.  **Provide the Fix:** Deliver the complete, line-by-line code changes required to fix the bug. Use a clear `diff` format or provide the full, corrected code blocks for each affected file.
+3.  **Impact Statement:** Explicitly state which components are affected and confirm that the fix is self-contained and consistent. For example: "This fix only modifies `[file path]`. No backend impact." or "This fix requires changes to both `[frontend file]` and `[backend file]` to keep the API contract in sync."

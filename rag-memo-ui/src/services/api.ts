@@ -146,6 +146,16 @@ export class APIClient {
     }
   }
 
+  // Public method to set token (for auth store synchronization)
+  setToken(token: string | null): void {
+    this.token = token;
+    if (token) {
+      this.saveTokenToStorage(token);
+    } else {
+      this.clearToken();
+    }
+  }
+
   // Authentication endpoints
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {

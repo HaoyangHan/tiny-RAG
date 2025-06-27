@@ -46,8 +46,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           const authResponse = await api.login(credentials);
           
+          // The login response only contains token info, need to fetch user data
+          const user = await api.getCurrentUser();
+          
           set({
-            user: authResponse.user,
+            user: user,
             token: authResponse.access_token,
             isAuthenticated: true,
             isLoading: false,
@@ -125,12 +128,16 @@ export const useAuthStore = create<AuthState>()(
         const { token } = get();
         
         if (!token) {
+          set({ isLoading: false });
           return;
         }
 
         set({ isLoading: true, error: null });
         
         try {
+          // Ensure API client has the token
+          api.setToken(token);
+          
           const user = await api.getCurrentUser();
           
           set({
