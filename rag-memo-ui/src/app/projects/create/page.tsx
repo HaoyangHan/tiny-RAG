@@ -104,7 +104,7 @@ export default function CreateProjectPage() {
     }
   };
 
-  const isStepValid = (step: number) => {
+  const isStepValid = (step: number): boolean => {
     switch (step) {
       case 1:
         return formData.name.trim().length > 0 && formData.description.trim().length > 0;
@@ -117,7 +117,8 @@ export default function CreateProjectPage() {
     }
   };
 
-  const StepIndicator = () => (
+  // Step indicator render function
+  const renderStepIndicator = () => (
     <div className="mb-8">
       <nav aria-label="Progress">
         <ol className="flex items-center">
@@ -166,7 +167,8 @@ export default function CreateProjectPage() {
     </div>
   );
 
-  const BasicDetailsStep = () => (
+  // Basic details step render function
+  const renderBasicDetailsStep = () => (
     <div className="space-y-6">
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -218,7 +220,8 @@ export default function CreateProjectPage() {
     </div>
   );
 
-  const ConfigurationStep = () => (
+  // Configuration step render function
+  const renderConfigurationStep = () => (
     <div className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -336,7 +339,8 @@ export default function CreateProjectPage() {
     </div>
   );
 
-  const ConfirmationStep = () => (
+  // Confirmation step render function
+  const renderConfirmationStep = () => (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
         <div className="flex items-center mb-4">
@@ -395,12 +399,12 @@ export default function CreateProjectPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg">
           <div className="p-8">
-            <StepIndicator />
+            {renderStepIndicator()}
 
             <div className="mb-8">
-              {currentStep === 1 && <BasicDetailsStep />}
-              {currentStep === 2 && <ConfigurationStep />}
-              {currentStep === 3 && <ConfirmationStep />}
+              {currentStep === 1 && renderBasicDetailsStep()}
+              {currentStep === 2 && renderConfigurationStep()}
+              {currentStep === 3 && renderConfirmationStep()}
             </div>
 
             {/* Navigation Buttons */}

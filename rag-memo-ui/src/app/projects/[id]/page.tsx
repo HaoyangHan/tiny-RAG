@@ -116,7 +116,8 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     { id: 'settings', name: 'Settings', icon: Cog6ToothIcon },
   ];
 
-  const ProjectOverview = () => (
+  // Project overview render function
+  const renderProjectOverview = () => (
     <div className="space-y-6">
       {/* Project Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -286,7 +287,8 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     </div>
   );
 
-  const ProjectDocuments = () => (
+  // Project documents render function
+  const renderProjectDocuments = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-900">Project Documents</h3>
@@ -317,7 +319,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
               </div>
               <div className="flex items-center space-x-2">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {doc.status}
+                  Processed
                 </span>
                 <button className="text-gray-400 hover:text-gray-600">
                   <EyeIcon className="h-5 w-5" />
@@ -330,7 +332,8 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     </div>
   );
 
-  const ProjectElements = () => (
+  // Project elements render function
+  const renderProjectElements = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-900">Project Elements</h3>
@@ -375,17 +378,17 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <ProjectOverview />;
+        return renderProjectOverview();
       case 'documents':
-        return <ProjectDocuments />;
+        return renderProjectDocuments();
       case 'elements':
-        return <ProjectElements />;
+        return renderProjectElements();
       case 'generations':
-        return <div className="text-center py-12 text-gray-500">Generations view coming soon...</div>;
+        return <div className="text-center py-8"><p className="text-gray-500">Generations view coming soon</p></div>;
       case 'settings':
-        return <div className="text-center py-12 text-gray-500">Settings view coming soon...</div>;
+        return <div className="text-center py-8"><p className="text-gray-500">Settings view coming soon</p></div>;
       default:
-        return <ProjectOverview />;
+        return renderProjectOverview();
     }
   };
 
