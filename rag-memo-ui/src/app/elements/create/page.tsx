@@ -327,7 +327,7 @@ export default function CreateElementPage() {
                   </select>
                   <button
                     type="button"
-                    onClick={handleAddVariable}
+                    onClick={addVariable}
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
                     Add
@@ -346,7 +346,7 @@ export default function CreateElementPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleRemoveVariable(index)}
+                        onClick={() => removeVariable(index)}
                         className="text-red-600 hover:text-red-800"
                       >
                         Remove
