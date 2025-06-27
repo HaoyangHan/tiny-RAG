@@ -10,7 +10,8 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { TenantType, ProjectStatus, VisibilityType } from '@/types';
+import { TenantType, ProjectStatus, VisibilityType, ProjectCreateRequest } from '@/types';
+import { api } from '@/services/api';
 
 interface ProjectFormData {
   name: string;
@@ -92,13 +93,23 @@ export default function CreateProjectPage() {
     setIsSubmitting(true);
     
     try {
-      // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create the project using the real API
+      const projectData: ProjectCreateRequest = {
+        name: formData.name,
+        description: formData.description,
+        tenant_type: formData.tenant_type,
+        keywords: formData.keywords,
+        visibility: formData.visibility
+      };
+
+      const createdProject = await api.createProject(projectData);
       
-      // Navigate to the new project
-      router.push('/projects/1'); // Mock project ID
+      // Navigate to the actual created project
+      router.push(`/projects/${createdProject.id}`);
     } catch (error) {
       console.error('Failed to create project:', error);
+      // TODO: Add proper error handling with toast notifications
+      alert('Failed to create project. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

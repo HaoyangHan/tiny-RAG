@@ -45,3 +45,4 @@ Based on the report above and adhering strictly to the **Core Directives**:
 1.  **Root Cause Analysis:** Briefly explain the root cause of the bug.
 2.  **Provide the Fix:** Deliver the complete, line-by-line code changes required to fix the bug. Use a clear `diff` format or provide the full, corrected code blocks for each affected file.
 3.  **Impact Statement:** Explicitly state which components are affected and confirm that the fix is self-contained and consistent. For example: "This fix only modifies `[file path]`. No backend impact." or "This fix requires changes to both `[frontend file]` and `[backend file]` to keep the API contract in sync."
+4. **Service Restart:** Researt the docker service for the fix you implemented without cache so user could use it.
