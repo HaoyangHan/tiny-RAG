@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeftIcon,
@@ -16,7 +16,9 @@ import {
   FolderOpenIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Project, TenantType, ProjectStatus, Document, Element, Generation } from '@/types';
+import { api } from '@/services/api';
 
 interface ProjectDetailsProps {
   params: { id: string };
@@ -25,88 +27,124 @@ interface ProjectDetailsProps {
 export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // State for project data
+  const [project, setProject] = useState<Project | null>(null);
+  const [recentDocuments, setRecentDocuments] = useState<Document[]>([]);
+  const [recentElements, setRecentElements] = useState<Element[]>([]);
+  const [recentGenerations, setRecentGenerations] = useState<Generation[]>([]);
+  
+  // Loading and error states
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock project data - replace with actual API call
-  const project: Project = {
-    id: params.id,
-    name: 'Customer Support Knowledge Base',
-    description: 'AI-powered customer support with FAQ processing and automated response generation for improved customer experience.',
-    tenant_type: TenantType.TEAM,
-    status: ProjectStatus.ACTIVE,
-    keywords: ['customer-support', 'faq', 'automation'],
-    visibility: 'PRIVATE' as any,
-    owner_id: '1',
-    collaborators: ['2', '3'],
-    document_count: 24,
-    element_count: 8,
-    generation_count: 156,
-    created_at: '2024-12-20T10:30:00Z',
-    updated_at: '2024-12-25T14:20:00Z'
+  // Fetch project data on component mount
+  useEffect(() => {
+    const fetchProjectData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch project details
+        const projectData = await api.getProject(params.id);
+        setProject(projectData);
+
+        // Fetch related data in parallel
+        const [documentsResponse, elementsResponse, generationsResponse] = await Promise.allSettled([
+          api.getDocuments({ project_id: params.id, page_size: 5 }),
+          api.getElements({ project_id: params.id, page_size: 5 }),
+          api.getGenerations({ project_id: params.id, page_size: 5 })
+        ]);
+
+        // Handle documents response
+        if (documentsResponse.status === 'fulfilled') {
+          setRecentDocuments(documentsResponse.value.items || []);
+        }
+
+        // Handle elements response
+        if (elementsResponse.status === 'fulfilled') {
+          setRecentElements(elementsResponse.value.items || []);
+        }
+
+        // Handle generations response
+        if (generationsResponse.status === 'fulfilled') {
+          setRecentGenerations(generationsResponse.value.items || []);
+        }
+
+      } catch (err) {
+        console.error('Failed to fetch project data:', err);
+        setError('Failed to load project data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchProjectData();
+    }
+  }, [params.id]);
+
+  // Show loading spinner while fetching data
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <LoadingSpinner size="lg" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error message if failed to load
+  if (error || !project) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              {error || 'Project not found'}
+            </h2>
+            <button
+              onClick={() => router.push('/projects')}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <ChevronLeftIcon className="h-5 w-5 mr-2" />
+              Back to Projects
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Helper function to get tenant type display name
+  const getTenantTypeDisplay = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'hr':
+        return 'Human Resources';
+      case 'coding':
+        return 'Software Development';
+      case 'financial_report':
+        return 'Financial Analysis';
+      case 'deep_research':
+        return 'Research & Analysis';
+      case 'qa_generation':
+        return 'Q&A Generation';
+      case 'raw_rag':
+        return 'General RAG Tasks';
+      default:
+        return type || 'Unknown';
+    }
   };
 
-  // Mock related data
-  const recentDocuments: Document[] = [
-    {
-      id: '1',
-      title: 'Return Policy FAQ.pdf',
-      content: 'Our return policy allows...',
-      filename: 'return-policy-faq.pdf',
-      file_type: 'pdf',
-      file_size: 245760,
-      status: 'PROCESSED' as any,
-      project_id: params.id,
-      created_at: '2024-12-24T15:30:00Z',
-      updated_at: '2024-12-24T15:35:00Z'
-    },
-    {
-      id: '2', 
-      title: 'Shipping Information.docx',
-      content: 'Shipping times and costs...',
-      filename: 'shipping-info.docx',
-      file_type: 'docx',
-      file_size: 128000,
-      status: 'PROCESSED' as any,
-      project_id: params.id,
-      created_at: '2024-12-23T10:15:00Z',
-      updated_at: '2024-12-23T10:20:00Z'
-    }
-  ];
-
-  const recentElements: Element[] = [
-    {
-      id: '1',
-      name: 'Customer FAQ Template',
-      description: 'Template for generating customer FAQ responses',
-      type: 'PROMPT_TEMPLATE' as any,
-      status: 'ACTIVE' as any,
-      template_content: 'Based on context: {context}\nAnswer: {question}',
-      variables: [],
-      project_id: params.id,
-      created_at: '2024-12-22T14:00:00Z',
-      updated_at: '2024-12-25T09:30:00Z',
-      execution_count: 89,
-      last_executed: '2024-12-25T09:30:00Z'
-    }
-  ];
-
-  const recentGenerations: Generation[] = [
-    {
-      id: '1',
-      element_id: '1',
-      element_name: 'Customer FAQ Template',
-      status: 'COMPLETED' as any,
-      input_data: { context: 'Return policy...', question: 'Can I return after 2 weeks?' },
-      output_text: 'Yes, you can return your product after 2 weeks...',
-      model_used: 'gpt-4-turbo',
-      tokens_used: 245,
-      execution_time: 2.3,
-      cost: 0.012,
-      project_id: params.id,
-      created_at: '2024-12-25T14:20:00Z',
-      updated_at: '2024-12-25T14:20:00Z',
-      error_message: null
-    }
-  ];
+  // Helper function to format dates
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
   const tabs = [
     { id: 'overview', name: 'Overview', icon: FolderOpenIcon },
@@ -419,7 +457,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                     {project.status}
                   </span>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {project.tenant_type}
+                    {getTenantTypeDisplay(project.tenant_type)}
                   </span>
                 </div>
                 <p className="text-gray-600">{project.description}</p>
