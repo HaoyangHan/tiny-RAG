@@ -59,12 +59,14 @@ class ProjectResponse(BaseModel):
 
 
 class ProjectListResponse(BaseModel):
-    """Response schema for project list."""
+    """Response schema for project list - matches frontend PaginatedResponse."""
     
-    projects: List[ProjectResponse] = Field(description="List of projects")
+    items: List[ProjectResponse] = Field(description="List of projects")
     total_count: int = Field(description="Total number of projects")
     page: int = Field(description="Current page number")
     page_size: int = Field(description="Number of items per page")
+    has_next: bool = Field(description="Whether there is a next page")
+    has_prev: bool = Field(description="Whether there is a previous page")
 
 
 class CollaboratorRequest(BaseModel):
@@ -190,10 +192,12 @@ async def list_projects(
         ]
         
         return ProjectListResponse(
-            projects=project_responses,
+            items=project_responses,
             total_count=total_count,
             page=page,
-            page_size=page_size
+            page_size=page_size,
+            has_next=page < total_count // page_size + (1 if total_count % page_size > 0 else 0),
+            has_prev=page > 1
         )
         
     except Exception as e:
@@ -246,10 +250,12 @@ async def list_public_projects(
         ]
         
         return ProjectListResponse(
-            projects=project_responses,
+            items=project_responses,
             total_count=total_count,
             page=page,
-            page_size=page_size
+            page_size=page_size,
+            has_next=page < total_count // page_size + (1 if total_count % page_size > 0 else 0),
+            has_prev=page > 1
         )
         
     except Exception as e:

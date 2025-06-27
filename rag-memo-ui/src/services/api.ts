@@ -221,7 +221,7 @@ export class APIClient {
     search?: string;
   }): Promise<PaginatedResponse<Project>> {
     try {
-      const response = await this.axiosInstance.get<PaginatedResponse<Project>>('/api/v1/projects', { params });
+      const response = await this.axiosInstance.get<PaginatedResponse<Project>>('/api/v1/projects/', { params });
       return response.data;
     } catch (error) {
       throw this.handleError(error as AxiosError);
@@ -239,7 +239,7 @@ export class APIClient {
 
   async createProject(projectData: Partial<Project>): Promise<Project> {
     try {
-      const response = await this.axiosInstance.post<Project>('/api/v1/projects', projectData);
+      const response = await this.axiosInstance.post<Project>('/api/v1/projects/', projectData);
       return response.data;
     } catch (error) {
       throw this.handleError(error as AxiosError);
