@@ -227,39 +227,39 @@ export default function CreateElementPage() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Element Name *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   placeholder="Enter a descriptive name for your element"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Description *
                 </label>
                 <textarea
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   placeholder="Describe what this element does and how it should be used"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Status
                 </label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as ElementStatus }))}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 >
                   <option value={ElementStatus.DRAFT}>Draft</option>
                   <option value={ElementStatus.ACTIVE}>Active</option>
@@ -284,17 +284,17 @@ export default function CreateElementPage() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Template *
                 </label>
                 <textarea
                   rows={12}
                   value={formData.template_content}
                   onChange={(e) => setFormData(prev => ({ ...prev, template_content: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm text-gray-900"
                   placeholder="Enter your template content here..."
                 />
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-gray-700">
                   Use {selectedType === ElementType.PROMPT_TEMPLATE ? '{{variable}}' : 'JSON'} syntax for dynamic content
                 </p>
               </div>
@@ -313,13 +313,13 @@ export default function CreateElementPage() {
                     type="text"
                     value={newVariable.name}
                     onChange={(e) => setNewVariable(prev => ({ ...prev, name: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                     placeholder="Variable name"
                   />
                   <select
                     value={newVariable.type}
                     onChange={(e) => setNewVariable(prev => ({ ...prev, type: e.target.value }))}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="string">String</option>
                     <option value="number">Number</option>
@@ -434,14 +434,14 @@ export default function CreateElementPage() {
                 <div className="space-y-3">
                   <div className="flex">
                     <InformationCircleIcon className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-800">
                       <p className="font-medium">Variable Syntax</p>
                       <p>Use {'{variable_name}'} to insert variables in your template.</p>
                     </div>
                   </div>
                   <div className="flex">
                     <InformationCircleIcon className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-800">
                       <p className="font-medium">Best Practices</p>
                       <p>Be specific about the context and expected output format.</p>
                     </div>
@@ -453,14 +453,14 @@ export default function CreateElementPage() {
                 <div className="space-y-3">
                   <div className="flex">
                     <InformationCircleIcon className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-800">
                       <p className="font-medium">Tool Definition</p>
                       <p>Define clear parameters and descriptions for AI agents to use.</p>
                     </div>
                   </div>
                   <div className="flex">
                     <InformationCircleIcon className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-800">
                       <p className="font-medium">JSON Format</p>
                       <p>Use valid JSON with tool_name, description, and parameters.</p>
                     </div>
@@ -472,14 +472,14 @@ export default function CreateElementPage() {
                 <div className="space-y-3">
                   <div className="flex">
                     <InformationCircleIcon className="h-5 w-5 text-purple-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-800">
                       <p className="font-medium">Provider Settings</p>
                       <p>Configure model parameters like temperature and max_tokens.</p>
                     </div>
                   </div>
                   <div className="flex">
                     <InformationCircleIcon className="h-5 w-5 text-purple-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-800">
                       <p className="font-medium">System Prompts</p>
                       <p>Set system prompts to define AI behavior and constraints.</p>
                     </div>

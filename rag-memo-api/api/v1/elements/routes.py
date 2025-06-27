@@ -128,7 +128,7 @@ async def create_element(
 
 @router.get(
     "/",
-    response_model=List[ElementResponse],
+    response_model=Dict[str, Any],
     summary="List elements",
     description="Get a list of elements"
 )
@@ -140,7 +140,7 @@ async def list_elements(
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_active_user),
     element_service: ElementService = Depends(get_element_service)
-) -> List[ElementResponse]:
+) -> Dict[str, Any]:
     """List elements."""
     try:
         elements, total_count = await element_service.list_elements(
@@ -169,7 +169,14 @@ async def list_elements(
             for element in elements
         ]
         
-        return element_responses
+        return {
+            "items": element_responses,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "has_next": page * page_size < total_count,
+            "has_prev": page > 1
+        }
         
     except Exception as e:
         raise HTTPException(
