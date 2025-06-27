@@ -120,7 +120,7 @@ export default function Dashboard() {
       description: 'Add documents to process and analyze',
       icon: DocumentArrowUpIcon,
       color: 'bg-green-500 hover:bg-green-600',
-      href: '/documents/upload'
+      href: '/documents'
     },
     {
       title: 'Create Element',
