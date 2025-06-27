@@ -20,11 +20,19 @@ import {
   ExclamationCircleIcon,
   ClockIcon,
   ChevronLeftIcon as ChevronLeftPageIcon,
-  ChevronRightIcon as ChevronRightPageIcon
+  ChevronRightIcon as ChevronRightPageIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PencilIcon,
+  XMarkIcon,
+  HashtagIcon,
+  DocumentDuplicateIcon,
+  PlayIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Project, TenantType, ProjectStatus, Document, Element, Generation } from '@/types';
+import { Project, TenantType, ProjectStatus, Document, Element, Generation, ElementType, ElementStatus } from '@/types';
 import { api } from '@/services/api';
 
 interface ProjectDetailsProps {
@@ -48,6 +56,121 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   // Documents tab pagination state
   const [documentsPage, setDocumentsPage] = useState(1);
   const documentsPageSize = 20;
+
+  // Expansion state for documents and elements
+  const [expandedDocuments, setExpandedDocuments] = useState<Set<string>>(new Set());
+  const [expandedElements, setExpandedElements] = useState<Set<string>>(new Set());
+  const [editingElements, setEditingElements] = useState<Set<string>>(new Set());
+  
+  // Document and Element detail data
+  const [documentDetails, setDocumentDetails] = useState<Map<string, any>>(new Map());
+  const [elementDetails, setElementDetails] = useState<Map<string, any>>(new Map());
+  const [elementEditData, setElementEditData] = useState<Map<string, any>>(new Map());
+
+  // Function to toggle document expansion and fetch details
+  const toggleDocumentExpansion = async (documentId: string) => {
+    const newExpanded = new Set(expandedDocuments);
+    
+    if (expandedDocuments.has(documentId)) {
+      newExpanded.delete(documentId);
+    } else {
+      newExpanded.add(documentId);
+      
+      // Fetch document details if not already loaded
+      if (!documentDetails.has(documentId)) {
+        try {
+          const details = await api.getDocument(documentId);
+          setDocumentDetails(new Map(documentDetails.set(documentId, details)));
+        } catch (error) {
+          console.error('Failed to fetch document details:', error);
+        }
+      }
+    }
+    
+    setExpandedDocuments(newExpanded);
+  };
+
+  // Function to toggle element expansion and fetch details
+  const toggleElementExpansion = async (elementId: string) => {
+    const newExpanded = new Set(expandedElements);
+    
+    if (expandedElements.has(elementId)) {
+      newExpanded.delete(elementId);
+    } else {
+      newExpanded.add(elementId);
+      
+      // Fetch element details if not already loaded
+      if (!elementDetails.has(elementId)) {
+        try {
+          const details = await api.getElement(elementId);
+          setElementDetails(new Map(elementDetails.set(elementId, details)));
+        } catch (error) {
+          console.error('Failed to fetch element details:', error);
+        }
+      }
+    }
+    
+    setExpandedElements(newExpanded);
+  };
+
+  // Function to start editing an element
+  const startElementEdit = (elementId: string) => {
+    const element = elementDetails.get(elementId);
+    if (element) {
+      setElementEditData(new Map(elementEditData.set(elementId, {
+        name: element.name,
+        description: element.description || '',
+        template_content: element.template?.content || element.template_content || '',
+        variables: element.template?.variables || element.template_variables || [],
+        tags: element.tags || []
+      })));
+      setEditingElements(new Set(editingElements.add(elementId)));
+    }
+  };
+
+  // Function to cancel element editing
+  const cancelElementEdit = (elementId: string) => {
+    const newEditing = new Set(editingElements);
+    newEditing.delete(elementId);
+    setEditingElements(newEditing);
+    
+    const newEditData = new Map(elementEditData);
+    newEditData.delete(elementId);
+    setElementEditData(newEditData);
+  };
+
+  // Function to save element changes
+  const saveElementChanges = async (elementId: string) => {
+    const editData = elementEditData.get(elementId);
+    if (!editData) return;
+
+    try {
+      // TODO: Implement updateElement API method
+      // For now, just update the local state
+      const currentElement = elementDetails.get(elementId);
+      const updatedElement = { ...currentElement, ...editData };
+      
+      // Update the element details cache
+      setElementDetails(new Map(elementDetails.set(elementId, updatedElement)));
+      
+      // Exit edit mode
+      cancelElementEdit(elementId);
+      
+      // Show success message
+      alert('Element updated successfully! (Note: Changes are local only until API is implemented)');
+      
+    } catch (error) {
+      console.error('Failed to save element changes:', error);
+      alert('Failed to save changes. Please try again.');
+    }
+  };
+
+  // Function to update element edit data
+  const updateElementEditData = (elementId: string, field: string, value: any) => {
+    const currentData = elementEditData.get(elementId) || {};
+    const newData = { ...currentData, [field]: value };
+    setElementEditData(new Map(elementEditData.set(elementId, newData)));
+  };
 
   // Fetch project data on component mount
   useEffect(() => {
@@ -403,7 +526,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     </div>
   );
 
-  // Project documents render function
+  // Project documents render function with expandable details
   const renderProjectDocuments = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -430,32 +553,137 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         <>
           <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
             {allDocuments.map((doc) => (
-              <div key={doc.id} className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <DocumentTextIcon className="h-8 w-8 text-gray-400" />
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h4 className="text-lg font-medium text-gray-900">{doc.filename}</h4>
-                        <CheckCircleIcon className="h-5 w-5 text-green-600" />
+              <div key={doc.id} className="overflow-hidden">
+                {/* Main document card */}
+                <div className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 flex-1">
+                      <DocumentTextIcon className="h-8 w-8 text-gray-400" />
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-lg font-medium text-gray-900">{doc.filename}</h4>
+                          <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {doc.content_type.toUpperCase()} • {(doc.file_size / 1024).toFixed(1)} KB
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Uploaded {new Date(doc.created_at).toLocaleDateString()} • {doc.chunk_count || 0} chunks
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {doc.content_type.toUpperCase()} • {(doc.file_size / 1024).toFixed(1)} KB
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Uploaded {new Date(doc.created_at).toLocaleDateString()} • {doc.chunk_count || 0} chunks
-                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {doc.status}
+                      </span>
+                      <button
+                        onClick={() => toggleDocumentExpansion(doc.id)}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                      >
+                        {expandedDocuments.has(doc.id) ? (
+                          <ChevronDownIcon className="h-5 w-5" />
+                        ) : (
+                          <ChevronRightIcon className="h-5 w-5" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {doc.status}
-                    </span>
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <EyeIcon className="h-5 w-5" />
-                    </button>
-                  </div>
                 </div>
+
+                {/* Expanded document details */}
+                {expandedDocuments.has(doc.id) && (
+                  <div className="border-t border-gray-200 bg-gray-50">
+                    <div className="p-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Document Metadata */}
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Document Information</h5>
+                          <dl className="space-y-2">
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">File Size</dt>
+                              <dd className="text-sm text-gray-900">{(doc.file_size / 1024).toFixed(1)} KB</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Content Type</dt>
+                              <dd className="text-sm text-gray-900">{doc.content_type}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Chunks</dt>
+                              <dd className="text-sm text-gray-900">{doc.chunk_count || 0}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Status</dt>
+                              <dd className="text-sm text-gray-900">{doc.status}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Created</dt>
+                              <dd className="text-sm text-gray-900">{formatDate(doc.created_at)}</dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        {/* Chunk Information */}
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Chunk Analysis</h5>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between p-3 bg-white rounded-md border border-gray-200">
+                              <div className="flex items-center space-x-2">
+                                <HashtagIcon className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">Total Chunks</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">{doc.chunk_count || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-white rounded-md border border-gray-200">
+                              <div className="flex items-center space-x-2">
+                                <DocumentDuplicateIcon className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">Avg. Chunk Size</span>
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {doc.chunk_count ? Math.round(doc.file_size / doc.chunk_count) : 0} bytes
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-white rounded-md border border-gray-200">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                                <span className="text-sm text-gray-600">Processing</span>
+                              </div>
+                              <span className="text-sm font-medium text-green-600">Completed</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Document Metadata Tags */}
+                      {doc.metadata && Object.keys(doc.metadata).length > 0 && (
+                        <div className="mt-6">
+                          <h5 className="text-sm font-medium text-gray-900 mb-3">Document Metadata</h5>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(doc.metadata).map(([key, value]) => (
+                              <span
+                                key={key}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {key}: {String(value)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="mt-6 flex space-x-3">
+                        <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                          <EyeIcon className="h-4 w-4 mr-2" />
+                          View Content
+                        </button>
+                        <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                          <DocumentDuplicateIcon className="h-4 w-4 mr-2" />
+                          View Chunks
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -539,7 +767,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     </div>
   );
 
-  // Project elements render function
+  // Project elements render function with expandable details and editing
   const renderProjectElements = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -555,27 +783,232 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
 
       <div className="bg-white shadow rounded-lg divide-y divide-gray-200">
         {recentElements.map((element) => (
-          <div key={element.id} className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <CpuChipIcon className="h-8 w-8 text-gray-400" />
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900">{element.name}</h4>
-                  <p className="text-sm text-gray-500">{element.description}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {element.execution_count} executions • Last run Never
-                  </p>
+          <div key={element.id} className="overflow-hidden">
+            {/* Main element card */}
+            <div className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4 flex-1">
+                  <CpuChipIcon className="h-8 w-8 text-gray-400" />
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <h4 className="text-lg font-medium text-gray-900">{element.name}</h4>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        element.element_type === ElementType.PROMPT_TEMPLATE ? 'bg-blue-100 text-blue-800' :
+                        element.element_type === ElementType.AGENTIC_TOOL ? 'bg-green-100 text-green-800' :
+                        element.element_type === ElementType.MCP_CONFIG ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {element.element_type.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">{element.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {element.execution_count} executions • Last updated {formatDate(element.updated_at)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    element.status === ElementStatus.ACTIVE ? 'bg-green-100 text-green-800' :
+                    element.status === ElementStatus.DRAFT ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {element.status}
+                  </span>
+                  <button
+                    onClick={() => toggleElementExpansion(element.id)}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    {expandedElements.has(element.id) ? (
+                      <ChevronDownIcon className="h-5 w-5" />
+                    ) : (
+                      <ChevronRightIcon className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {element.status}
-                </span>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <EyeIcon className="h-5 w-5" />
-                </button>
-              </div>
             </div>
+
+            {/* Expanded element details */}
+            {expandedElements.has(element.id) && (
+              <div className="border-t border-gray-200 bg-gray-50">
+                <div className="p-6">
+                  {editingElements.has(element.id) ? (
+                    /* Edit Mode */
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-sm font-medium text-gray-900">Edit Element</h5>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => saveElementChanges(element.id)}
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            <CheckCircleIcon className="h-4 w-4 mr-2" />
+                            Save
+                          </button>
+                          <button
+                            onClick={() => cancelElementEdit(element.id)}
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                          >
+                            <XMarkIcon className="h-4 w-4 mr-2" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Basic Information */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Element Name
+                            </label>
+                            <input
+                              type="text"
+                              value={elementEditData.get(element.id)?.name || ''}
+                              onChange={(e) => updateElementEditData(element.id, 'name', e.target.value)}
+                              className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Description
+                            </label>
+                            <textarea
+                              rows={3}
+                              value={elementEditData.get(element.id)?.description || ''}
+                              onChange={(e) => updateElementEditData(element.id, 'description', e.target.value)}
+                              className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Template Content */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Template Content
+                          </label>
+                          <textarea
+                            rows={8}
+                            value={elementEditData.get(element.id)?.template_content || ''}
+                            onChange={(e) => updateElementEditData(element.id, 'template_content', e.target.value)}
+                            className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm text-gray-900"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* View Mode */
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-sm font-medium text-gray-900">Element Details</h5>
+                        <button
+                          onClick={() => startElementEdit(element.id)}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          <PencilIcon className="h-4 w-4 mr-2" />
+                          Edit
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Element Information */}
+                        <div>
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">Element Information</h6>
+                          <dl className="space-y-2">
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Type</dt>
+                              <dd className="text-sm text-gray-900">{element.element_type.replace('_', ' ')}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Status</dt>
+                              <dd className="text-sm text-gray-900">{element.status}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Executions</dt>
+                              <dd className="text-sm text-gray-900">{element.execution_count}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Created</dt>
+                              <dd className="text-sm text-gray-900">{formatDate(element.created_at)}</dd>
+                            </div>
+                            <div className="flex justify-between">
+                              <dt className="text-sm text-gray-500">Updated</dt>
+                              <dd className="text-sm text-gray-900">{formatDate(element.updated_at)}</dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        {/* Template Preview */}
+                        <div>
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">Template Preview</h6>
+                          <div className="bg-white rounded-md border border-gray-200 p-4">
+                            <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono overflow-x-auto">
+                              {elementDetails.get(element.id)?.template?.content || 
+                               elementDetails.get(element.id)?.template_content || 
+                               'Loading template content...'}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Variables */}
+                      {(elementDetails.get(element.id)?.template?.variables || elementDetails.get(element.id)?.template_variables || []).length > 0 && (
+                        <div>
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">Template Variables</h6>
+                          <div className="flex flex-wrap gap-2">
+                            {(elementDetails.get(element.id)?.template?.variables || elementDetails.get(element.id)?.template_variables || []).map((variable: string, index: number) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                              >
+                                {variable}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tags */}
+                      {element.tags && element.tags.length > 0 && (
+                        <div>
+                          <h6 className="text-sm font-medium text-gray-900 mb-3">Tags</h6>
+                          <div className="flex flex-wrap gap-2">
+                            {element.tags.map((tag: string, index: number) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => startElementEdit(element.id)}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          <PencilIcon className="h-4 w-4 mr-2" />
+                          Edit Element
+                        </button>
+                        <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                          <PlayIcon className="h-4 w-4 mr-2" />
+                          Execute
+                        </button>
+                        <button className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50">
+                          <TrashIcon className="h-4 w-4 mr-2" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
