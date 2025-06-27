@@ -189,7 +189,7 @@ export const APITestSuite: React.FC = () => {
           const project = await api.createProject({
             name: `Test Project ${Date.now()}`,
             description: 'API test project',
-            tenant_type: 'individual' as any,
+            tenant_type: 'raw_rag' as any,
             keywords: ['test', 'api'],
             visibility: 'private' as any
           });

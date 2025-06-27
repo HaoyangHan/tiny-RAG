@@ -27,7 +27,7 @@ export default function CreateProjectPage() {
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
     description: '',
-    tenant_type: TenantType.INDIVIDUAL,
+    tenant_type: TenantType.RAW_RAG,
     visibility: VisibilityType.PRIVATE,
     keywords: [],
     collaborators: [],
@@ -208,10 +208,12 @@ export default function CreateProjectPage() {
           onChange={(e) => setFormData(prev => ({ ...prev, tenant_type: e.target.value as TenantType }))}
           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value={TenantType.INDIVIDUAL}>Individual</option>
-          <option value={TenantType.TEAM}>Team</option>
-          <option value={TenantType.ORGANIZATION}>Organization</option>
-          <option value={TenantType.ENTERPRISE}>Enterprise</option>
+          <option value={TenantType.HR}>Human Resources</option>
+          <option value={TenantType.CODING}>Software Development</option>
+          <option value={TenantType.FINANCIAL_REPORT}>Financial Analysis</option>
+          <option value={TenantType.DEEP_RESEARCH}>Research & Analysis</option>
+          <option value={TenantType.QA_GENERATION}>Q&A Generation</option>
+          <option value={TenantType.RAW_RAG}>General RAG Tasks</option>
         </select>
         <p className="mt-1 text-sm text-gray-500">
           This determines the collaboration features and resource limits for your project.

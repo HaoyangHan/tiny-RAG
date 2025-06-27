@@ -45,10 +45,12 @@ export interface AuthResponse {
 // ============================================================================
 
 export enum TenantType {
-  INDIVIDUAL = "individual",
-  TEAM = "team",
-  ORGANIZATION = "organization",
-  ENTERPRISE = "enterprise"
+  HR = "hr",
+  CODING = "coding", 
+  FINANCIAL_REPORT = "financial_report",
+  DEEP_RESEARCH = "deep_research",
+  QA_GENERATION = "qa_generation",
+  RAW_RAG = "raw_rag"
 }
 
 export enum ProjectStatus {

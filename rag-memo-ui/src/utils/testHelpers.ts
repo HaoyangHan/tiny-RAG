@@ -39,7 +39,7 @@ export const createMockProject = (overrides?: Partial<Project>): Project => ({
   id: '1',
   name: 'Test Project',
   description: 'A test project for development',
-  tenant_type: TenantType.INDIVIDUAL,
+  tenant_type: TenantType.RAW_RAG,
   keywords: ['test', 'development'],
   visibility: VisibilityType.PRIVATE,
   status: ProjectStatus.ACTIVE,

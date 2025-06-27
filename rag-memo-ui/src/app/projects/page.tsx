@@ -78,16 +78,39 @@ export default function ProjectsPage() {
 
   const getTenantTypeColor = (type: string) => {
     switch (type?.toLowerCase()) {
-      case 'individual':
+      case 'hr':
         return 'bg-blue-100 text-blue-800';
-      case 'team':
+      case 'coding':
         return 'bg-purple-100 text-purple-800';
-      case 'organization':
+      case 'financial_report':
+        return 'bg-green-100 text-green-800';
+      case 'deep_research':
         return 'bg-orange-100 text-orange-800';
-      case 'enterprise':
-        return 'bg-red-100 text-red-800';
+      case 'qa_generation':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'raw_rag':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTenantTypeDisplay = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'hr':
+        return 'Human Resources';
+      case 'coding':
+        return 'Software Development';
+      case 'financial_report':
+        return 'Financial Analysis';
+      case 'deep_research':
+        return 'Research & Analysis';
+      case 'qa_generation':
+        return 'Q&A Generation';
+      case 'raw_rag':
+        return 'General RAG Tasks';
+      default:
+        return type || 'Unknown';
     }
   };
 
@@ -103,7 +126,7 @@ export default function ProjectsPage() {
               {project.status || 'Active'}
             </span>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTenantTypeColor(project.tenant_type)}`}>
-              {project.tenant_type || 'Individual'}
+              {getTenantTypeDisplay(project.tenant_type)}
             </span>
           </div>
           <EyeIcon className="h-5 w-5 text-gray-400" />
@@ -211,10 +234,12 @@ export default function ProjectsPage() {
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">All Types</option>
-                  <option value="individual">Individual</option>
-                  <option value="team">Team</option>
-                  <option value="organization">Organization</option>
-                  <option value="enterprise">Enterprise</option>
+                  <option value="hr">Human Resources</option>
+                  <option value="coding">Software Development</option>
+                  <option value="financial_report">Financial Analysis</option>
+                  <option value="deep_research">Research & Analysis</option>
+                  <option value="qa_generation">Q&A Generation</option>
+                  <option value="raw_rag">General RAG Tasks</option>
                 </select>
 
                 <select
