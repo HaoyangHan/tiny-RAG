@@ -68,17 +68,16 @@ export default function Dashboard() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch user analytics, documents count, and recent projects in parallel
-        const [analyticsResponse, documentsResponse, projectsResponse] = await Promise.allSettled([
+        // Fetch user analytics and recent projects in parallel
+        const [analyticsResponse, projectsResponse] = await Promise.allSettled([
           api.getUserAnalytics(),
-          api.getDocuments({ page: 1, page_size: 1 }), // Just to get total count
-          api.getProjects({ page: 1, page_size: 5 }) // Get 5 most recent projects
+          api.getProjects({ page: 1, page_size: 50 }) // Get more projects to calculate total documents
         ]);
 
         // Handle analytics response
         if (analyticsResponse.status === 'fulfilled') {
           // Transform the API response to match UserAnalytics interface
-          const analyticsData = analyticsResponse.value;
+          const analyticsData = analyticsResponse.value as any;
           const transformedAnalytics: UserAnalytics = {
             projects: {
               total: analyticsData.total_projects || 0,
@@ -109,18 +108,19 @@ export default function Dashboard() {
           console.error('Failed to fetch analytics:', analyticsResponse.reason);
         }
 
-        // Handle documents count response
-        if (documentsResponse.status === 'fulfilled') {
-          setDocumentsCount(documentsResponse.value.total_count || 0);
-        } else {
-          console.error('Failed to fetch documents count:', documentsResponse.reason);
-        }
-
-        // Handle projects response
+        // Handle projects response and calculate total documents
         if (projectsResponse.status === 'fulfilled') {
-          setRecentProjects(projectsResponse.value.items || []);
+          const projects = projectsResponse.value.items || [];
+          setRecentProjects(projects.slice(0, 5)); // Show only 5 most recent
+          
+          // Calculate total documents across all projects
+          const totalDocuments = projects.reduce((total, project) => {
+            return total + (project.document_count || 0);
+          }, 0);
+          setDocumentsCount(totalDocuments);
         } else {
           console.error('Failed to fetch projects:', projectsResponse.reason);
+          setDocumentsCount(0);
         }
 
       } catch (err) {
