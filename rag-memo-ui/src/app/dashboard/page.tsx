@@ -118,6 +118,50 @@ export default function Dashboard() {
             return total + (project.document_count || 0);
           }, 0);
           setDocumentsCount(totalDocuments);
+          
+          // Update analytics with correct project and element counts
+          const totalElements = projects.reduce((total, project) => {
+            return total + (project.element_count || 0);
+          }, 0);
+          
+          setAnalytics(prev => prev ? ({
+            ...prev,
+            projects: {
+              total: projects.length,
+              owned: projects.length, // All projects returned are owned by the user
+              collaborated: 0,
+              recent: Math.min(projects.length, 5)
+            },
+            elements: {
+              total: totalElements,
+              recent: 0,
+              by_type: {}
+            }
+          }) : {
+            projects: {
+              total: projects.length,
+              owned: projects.length,
+              collaborated: 0,
+              recent: Math.min(projects.length, 5)
+            },
+            elements: {
+              total: totalElements,
+              recent: 0,
+              by_type: {}
+            },
+            generations: {
+              total: 0,
+              recent: 0,
+              total_tokens: 0,
+              total_cost_usd: 0
+            },
+            evaluations: {
+              total: 0,
+              recent: 0,
+              completed: 0,
+              average_score: 0
+            }
+          });
         } else {
           console.error('Failed to fetch projects:', projectsResponse.reason);
           setDocumentsCount(0);
