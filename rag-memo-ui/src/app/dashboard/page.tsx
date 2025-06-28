@@ -17,16 +17,29 @@ import { api } from '@/services/api';
 import { Project, ProjectStatus } from '@/types';
 
 interface UserAnalytics {
-  total_projects: number;
-  total_documents: number;
-  total_elements: number;
-  total_generations: number;
-  total_cost: number;
-  recent_activity: Array<{
-    type: string;
-    description: string;
-    timestamp: string;
-  }>;
+  projects: {
+    total: number;
+    owned: number;
+    collaborated: number;
+    recent: number;
+  };
+  elements: {
+    total: number;
+    recent: number;
+    by_type: Record<string, number>;
+  };
+  generations: {
+    total: number;
+    recent: number;
+    total_tokens: number;
+    total_cost_usd: number;
+  };
+  evaluations: {
+    total: number;
+    recent: number;
+    completed: number;
+    average_score: number;
+  };
 }
 
 export default function Dashboard() {
@@ -35,6 +48,7 @@ export default function Dashboard() {
   
   // State for dashboard data
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
+  const [documentsCount, setDocumentsCount] = useState<number>(0);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +68,10 @@ export default function Dashboard() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch user analytics and recent projects in parallel
-        const [analyticsResponse, projectsResponse] = await Promise.allSettled([
+        // Fetch user analytics, documents count, and recent projects in parallel
+        const [analyticsResponse, documentsResponse, projectsResponse] = await Promise.allSettled([
           api.getUserAnalytics(),
+          api.getDocuments({ page: 1, page_size: 1 }), // Just to get total count
           api.getProjects({ page: 1, page_size: 5 }) // Get 5 most recent projects
         ]);
 
@@ -65,6 +80,13 @@ export default function Dashboard() {
           setAnalytics(analyticsResponse.value);
         } else {
           console.error('Failed to fetch analytics:', analyticsResponse.reason);
+        }
+
+        // Handle documents count response
+        if (documentsResponse.status === 'fulfilled') {
+          setDocumentsCount(documentsResponse.value.total_count || 0);
+        } else {
+          console.error('Failed to fetch documents count:', documentsResponse.reason);
         }
 
         // Handle projects response
@@ -135,25 +157,25 @@ export default function Dashboard() {
   const stats = [
     { 
       name: 'Total Projects', 
-      value: analytics?.total_projects?.toString() || '0', 
+      value: analytics?.projects?.total?.toString() || '0', 
       icon: FolderPlusIcon, 
       color: 'text-blue-600' 
     },
     { 
       name: 'Documents', 
-      value: analytics?.total_documents?.toString() || '0', 
+      value: documentsCount.toString(), 
       icon: DocumentArrowUpIcon, 
       color: 'text-green-600' 
     },
     { 
       name: 'Elements', 
-      value: analytics?.total_elements?.toString() || '0', 
+      value: analytics?.elements?.total?.toString() || '0', 
       icon: CpuChipIcon, 
       color: 'text-purple-600' 
     },
     { 
       name: 'Generations', 
-      value: analytics?.total_generations?.toString() || '0', 
+      value: analytics?.generations?.total?.toString() || '0', 
       icon: SparklesIcon, 
       color: 'text-orange-600' 
     },
@@ -311,42 +333,12 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg">
               <div className="p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Recent Activity</h3>
-                {analytics?.recent_activity && analytics.recent_activity.length > 0 ? (
-                  <div className="space-y-4">
-                    {analytics.recent_activity.map((activity, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          {activity.type === 'project_created' && (
-                            <FolderPlusIcon className="h-5 w-5 text-blue-600" />
-                          )}
-                          {activity.type === 'document_uploaded' && (
-                            <DocumentArrowUpIcon className="h-5 w-5 text-green-600" />
-                          )}
-                          {activity.type === 'element_created' && (
-                            <CpuChipIcon className="h-5 w-5 text-purple-600" />
-                          )}
-                          {activity.type === 'generation_completed' && (
-                            <SparklesIcon className="h-5 w-5 text-orange-600" />
-                          )}
-                          {!['project_created', 'document_uploaded', 'element_created', 'generation_completed'].includes(activity.type) && (
-                            <ChartBarIcon className="h-5 w-5 text-gray-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900">{activity.description}</p>
-                          <p className="text-xs text-gray-500">{formatDate(activity.timestamp)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      No recent activity. Start using TinyRAG to see your activity here!
-                    </p>
-                  </div>
-                )}
+                <div className="text-center py-8">
+                  <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">
+                    No recent activity. Start using TinyRAG to see your activity here!
+                  </p>
+                </div>
               </div>
             </div>
 
