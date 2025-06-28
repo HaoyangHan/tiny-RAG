@@ -16,6 +16,7 @@ import {
   EyeIcon,
   CalendarIcon,
   UserIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Project, TenantType, ProjectStatus } from '@/types';
@@ -62,6 +63,20 @@ export default function ProjectsPage() {
 
   const handleProjectClick = (projectId: string) => {
     router.push(`/projects/${projectId}`);
+  };
+
+  const handleDeleteProject = async (projectId: string, projectName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+    
+    if (window.confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) {
+      try {
+        await api.deleteProject(projectId);
+        refetch(); // Refresh the projects list
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('Failed to delete project. Please try again.');
+      }
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -182,10 +197,17 @@ export default function ProjectsPage() {
             <CalendarIcon className="h-3 w-3 mr-1" />
             {new Date(project.created_at).toLocaleDateString()}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
             {project.collaborators && project.collaborators.length > 0 && (
               <span>{project.collaborators.length + 1} members</span>
             )}
+            <button
+              onClick={(e) => handleDeleteProject(project.id, project.name, e)}
+              className="inline-flex items-center p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+              title="Delete project"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -194,14 +216,14 @@ export default function ProjectsPage() {
 
   // Compact List Item Component
   const ProjectListItem = ({ project }: { project: any }) => (
-    <div
-      onClick={() => handleProjectClick(project.id)}
-      className="bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer border border-gray-200 overflow-hidden"
-    >
+    <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
       <div className="p-4">
         <div className="flex items-center justify-between">
           {/* Left side - Project info */}
-          <div className="flex-1 min-w-0">
+          <div 
+            className="flex-1 min-w-0 cursor-pointer"
+            onClick={() => handleProjectClick(project.id)}
+          >
             <div className="flex items-center space-x-3 mb-2">
               <h3 className="text-lg font-semibold text-gray-900 truncate">
                 {project.name}
@@ -242,7 +264,7 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          {/* Right side - Statistics */}
+          {/* Right side - Statistics and Actions */}
           <div className="flex items-center space-x-6 ml-6">
             <div className="text-center">
               <div className="flex items-center justify-center">
@@ -265,7 +287,13 @@ export default function ProjectsPage() {
               </div>
               <p className="text-xs text-gray-500">Gens</p>
             </div>
-            <EyeIcon className="h-5 w-5 text-gray-400" />
+            <button
+              onClick={(e) => handleDeleteProject(project.id, project.name, e)}
+              className="inline-flex items-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+              title="Delete project"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>

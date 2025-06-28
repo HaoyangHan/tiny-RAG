@@ -17,16 +17,29 @@ import { api } from '@/services/api';
 import { Project, ProjectStatus } from '@/types';
 
 interface UserAnalytics {
-  total_projects: number;
-  total_documents: number;
-  total_elements: number;
-  total_generations: number;
-  total_cost: number;
-  recent_activity: Array<{
-    type: string;
-    description: string;
-    timestamp: string;
-  }>;
+  projects: {
+    total: number;
+    owned: number;
+    collaborated: number;
+    recent: number;
+  };
+  elements: {
+    total: number;
+    recent: number;
+    by_type: Record<string, number>;
+  };
+  generations: {
+    total: number;
+    recent: number;
+    total_tokens: number;
+    total_cost_usd: number;
+  };
+  evaluations: {
+    total: number;
+    recent: number;
+    completed: number;
+    average_score: number;
+  };
 }
 
 export default function Dashboard() {
@@ -35,6 +48,7 @@ export default function Dashboard() {
   
   // State for dashboard data
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
+  const [documentsCount, setDocumentsCount] = useState<number>(0);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,21 +71,100 @@ export default function Dashboard() {
         // Fetch user analytics and recent projects in parallel
         const [analyticsResponse, projectsResponse] = await Promise.allSettled([
           api.getUserAnalytics(),
-          api.getProjects({ page: 1, page_size: 5 }) // Get 5 most recent projects
+          api.getProjects({ page: 1, page_size: 50 }) // Get more projects to calculate total documents
         ]);
 
         // Handle analytics response
         if (analyticsResponse.status === 'fulfilled') {
-          setAnalytics(analyticsResponse.value);
+          // Transform the API response to match UserAnalytics interface
+          const analyticsData = analyticsResponse.value as any;
+          const transformedAnalytics: UserAnalytics = {
+            projects: {
+              total: analyticsData.total_projects || 0,
+              owned: analyticsData.total_projects || 0,
+              collaborated: 0,
+              recent: 0
+            },
+            elements: {
+              total: analyticsData.total_elements || 0,
+              recent: 0,
+              by_type: {}
+            },
+            generations: {
+              total: analyticsData.total_generations || 0,
+              recent: 0,
+              total_tokens: 0,
+              total_cost_usd: analyticsData.total_cost || 0
+            },
+            evaluations: {
+              total: 0,
+              recent: 0,
+              completed: 0,
+              average_score: 0
+            }
+          };
+          setAnalytics(transformedAnalytics);
         } else {
           console.error('Failed to fetch analytics:', analyticsResponse.reason);
         }
 
-        // Handle projects response
+        // Handle projects response and calculate total documents
         if (projectsResponse.status === 'fulfilled') {
-          setRecentProjects(projectsResponse.value.items || []);
+          const projects = projectsResponse.value.items || [];
+          setRecentProjects(projects.slice(0, 5)); // Show only 5 most recent
+          
+          // Calculate total documents across all projects
+          const totalDocuments = projects.reduce((total, project) => {
+            return total + (project.document_count || 0);
+          }, 0);
+          setDocumentsCount(totalDocuments);
+          
+          // Update analytics with correct project and element counts
+          const totalElements = projects.reduce((total, project) => {
+            return total + (project.element_count || 0);
+          }, 0);
+          
+          setAnalytics(prev => prev ? ({
+            ...prev,
+            projects: {
+              total: projects.length,
+              owned: projects.length, // All projects returned are owned by the user
+              collaborated: 0,
+              recent: Math.min(projects.length, 5)
+            },
+            elements: {
+              total: totalElements,
+              recent: 0,
+              by_type: {}
+            }
+          }) : {
+            projects: {
+              total: projects.length,
+              owned: projects.length,
+              collaborated: 0,
+              recent: Math.min(projects.length, 5)
+            },
+            elements: {
+              total: totalElements,
+              recent: 0,
+              by_type: {}
+            },
+            generations: {
+              total: 0,
+              recent: 0,
+              total_tokens: 0,
+              total_cost_usd: 0
+            },
+            evaluations: {
+              total: 0,
+              recent: 0,
+              completed: 0,
+              average_score: 0
+            }
+          });
         } else {
           console.error('Failed to fetch projects:', projectsResponse.reason);
+          setDocumentsCount(0);
         }
 
       } catch (err) {
@@ -135,27 +228,31 @@ export default function Dashboard() {
   const stats = [
     { 
       name: 'Total Projects', 
-      value: analytics?.total_projects?.toString() || '0', 
+      value: analytics?.projects?.total?.toString() || '0', 
       icon: FolderPlusIcon, 
-      color: 'text-blue-600' 
+      color: 'text-blue-600',
+      href: '/projects'
     },
     { 
       name: 'Documents', 
-      value: analytics?.total_documents?.toString() || '0', 
+      value: documentsCount.toString(), 
       icon: DocumentArrowUpIcon, 
-      color: 'text-green-600' 
+      color: 'text-green-600',
+      href: '/documents'
     },
     { 
       name: 'Elements', 
-      value: analytics?.total_elements?.toString() || '0', 
+      value: analytics?.elements?.total?.toString() || '0', 
       icon: CpuChipIcon, 
-      color: 'text-purple-600' 
+      color: 'text-purple-600',
+      href: '/elements'
     },
     { 
       name: 'Generations', 
-      value: analytics?.total_generations?.toString() || '0', 
+      value: analytics?.generations?.total?.toString() || '0', 
       icon: SparklesIcon, 
-      color: 'text-orange-600' 
+      color: 'text-orange-600',
+      href: '/generations'
     },
   ];
 
@@ -198,7 +295,11 @@ export default function Dashboard() {
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat) => (
-            <div key={stat.name} className="bg-white overflow-hidden shadow rounded-lg">
+            <button
+              key={stat.name}
+              onClick={() => router.push(stat.href)}
+              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow cursor-pointer text-left"
+            >
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -216,7 +317,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -311,42 +412,12 @@ export default function Dashboard() {
             <div className="bg-white shadow rounded-lg">
               <div className="p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Recent Activity</h3>
-                {analytics?.recent_activity && analytics.recent_activity.length > 0 ? (
-                  <div className="space-y-4">
-                    {analytics.recent_activity.map((activity, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          {activity.type === 'project_created' && (
-                            <FolderPlusIcon className="h-5 w-5 text-blue-600" />
-                          )}
-                          {activity.type === 'document_uploaded' && (
-                            <DocumentArrowUpIcon className="h-5 w-5 text-green-600" />
-                          )}
-                          {activity.type === 'element_created' && (
-                            <CpuChipIcon className="h-5 w-5 text-purple-600" />
-                          )}
-                          {activity.type === 'generation_completed' && (
-                            <SparklesIcon className="h-5 w-5 text-orange-600" />
-                          )}
-                          {!['project_created', 'document_uploaded', 'element_created', 'generation_completed'].includes(activity.type) && (
-                            <ChartBarIcon className="h-5 w-5 text-gray-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900">{activity.description}</p>
-                          <p className="text-xs text-gray-500">{formatDate(activity.timestamp)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      No recent activity. Start using TinyRAG to see your activity here!
-                    </p>
-                  </div>
-                )}
+                <div className="text-center py-8">
+                  <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
+                  <p className="mt-2 text-sm text-gray-500">
+                    No recent activity. Start using TinyRAG to see your activity here!
+                  </p>
+                </div>
               </div>
             </div>
 

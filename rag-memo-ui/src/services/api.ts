@@ -336,6 +336,14 @@ export class APIClient {
     }
   }
 
+  async deleteDocument(documentId: string): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`/api/v1/documents/${documentId}`);
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
+
   // Element endpoints
   async getElements(params?: {
     project_id?: string;
@@ -365,6 +373,14 @@ export class APIClient {
     try {
       const response = await this.axiosInstance.get<Element>(`/api/v1/elements/${elementId}`);
       return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
+
+  async deleteElement(elementId: string): Promise<void> {
+    try {
+      await this.axiosInstance.delete(`/api/v1/elements/${elementId}`);
     } catch (error) {
       throw this.handleError(error as AxiosError);
     }

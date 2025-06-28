@@ -474,15 +474,22 @@ class DocumentService:
             List of accessible project ID strings
         """
         try:
-            # Get projects where user is owner or collaborator
+            # Get projects where user is owner or collaborator AND not deleted
             projects = await Project.find(
-                Or(
-                    Project.owner_id == user_id,
-                    In(user_id, Project.collaborators)
+                And(
+                    Project.is_deleted == False,
+                    Or(
+                        Project.owner_id == user_id,
+                        In(user_id, Project.collaborators)
+                    )
                 )
             ).to_list()
             
-            return [str(project.id) for project in projects if not project.is_deleted]
+            logger.info(f"Found {len(projects)} accessible projects for user {user_id}")
+            project_ids = [str(project.id) for project in projects]
+            logger.info(f"Accessible project IDs: {project_ids}")
+            
+            return project_ids
             
         except Exception as e:
             logger.error(f"Failed to get accessible projects: {str(e)}")
