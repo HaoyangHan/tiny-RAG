@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     for i in $(seq 1 3); do \
         apt-get update -y && \
         apt-get install -y --no-install-recommends \
-            build-essential \
+    build-essential \
             curl \
             python3-dev \
             git \
