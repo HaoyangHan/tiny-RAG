@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { EyeIcon, EyeSlashIcon, UserIcon, EnvelopeIcon, LockClosedIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { env, API_ENDPOINTS } from '@/config/environment';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -111,7 +112,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     try {
       const { confirmPassword: _confirmPassword, ...registrationData } = formData;
       
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${env.API_URL}${API_ENDPOINTS.AUTH.REGISTER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
