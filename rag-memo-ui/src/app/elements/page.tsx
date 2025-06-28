@@ -13,6 +13,7 @@ import {
   PlayIcon,
   ChartBarIcon,
   ClockIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -53,6 +54,20 @@ export default function ElementsPage() {
 
   const handleElementClick = (elementId: string) => {
     router.push(`/elements/${elementId}`);
+  };
+
+  const handleDeleteElement = async (elementId: string, elementName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+    
+    if (window.confirm(`Are you sure you want to delete "${elementName}"? This action cannot be undone.`)) {
+      try {
+        await api.deleteElement(elementId);
+        refetchElements(); // Refresh the elements list
+      } catch (error) {
+        console.error('Failed to delete element:', error);
+        alert('Failed to delete element. Please try again.');
+      }
+    }
   };
 
   const getTypeIcon = (type: ElementType) => {
@@ -154,16 +169,25 @@ export default function ElementsPage() {
             <div className="text-xs text-gray-500">
               Created {new Date(element.created_at).toLocaleDateString()}
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log('Execute element:', element.id);
-              }}
-              className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <PlayIcon className="h-3 w-3 mr-1" />
-              Execute
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log('Execute element:', element.id);
+                }}
+                className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <PlayIcon className="h-3 w-3 mr-1" />
+                Execute
+              </button>
+              <button
+                onClick={(e) => handleDeleteElement(element.id, element.name, e)}
+                className="inline-flex items-center p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                title="Delete element"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

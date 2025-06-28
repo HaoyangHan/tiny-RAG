@@ -20,6 +20,7 @@ import {
   ExclamationCircleIcon,
   ClockIcon,
   ArrowPathIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { api } from '@/services/api';
@@ -103,7 +104,7 @@ export default function DocumentsPage() {
   const projects = projectsData?.items || [];
 
   // Fetch documents with filtering
-  const { data: documentsData, isLoading: documentsLoading } = useQuery({
+  const { data: documentsData, isLoading: documentsLoading, refetch: refetchDocuments } = useQuery({
     queryKey: ['all-documents', currentPage, searchTerm, selectedProject, selectedStatus],
     queryFn: () => api.getDocuments({
       page: currentPage,
@@ -137,6 +138,20 @@ export default function DocumentsPage() {
 
   const handleDocumentClick = (document: Document) => {
     router.push(`/projects/${document.project_id}`);
+  };
+
+  const handleDeleteDocument = async (documentId: string, fileName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+    
+    if (window.confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+      try {
+        await api.deleteDocument(documentId);
+        refetchDocuments(); // Refresh the documents list
+      } catch (error) {
+        console.error('Failed to delete document:', error);
+        alert('Failed to delete document. Please try again.');
+      }
+    }
   };
 
   const handleUploadClick = () => {
@@ -309,9 +324,9 @@ export default function DocumentsPage() {
               </div>
             </div>
           </div>
-        </div>
+      </div>
 
-        {/* Documents List */}
+      {/* Documents List */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">
@@ -387,8 +402,16 @@ export default function DocumentsPage() {
                             // View document details logic
                           }}
                           className="text-gray-400 hover:text-gray-600"
+                          title="View document"
                         >
                           <EyeIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteDocument(document.id, document.filename, e)}
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition-colors"
+                          title="Delete document"
+                        >
+                          <TrashIcon className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -438,15 +461,15 @@ export default function DocumentsPage() {
               </button>
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
+                <div>
                 <p className="text-sm text-gray-700">
                   Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{' '}
                   <span className="font-medium">
                     {Math.min(currentPage * pageSize, totalDocuments)}
                   </span>{' '}
                   of <span className="font-medium">{totalDocuments}</span> results
-                </p>
-              </div>
+                  </p>
+                </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                   <button

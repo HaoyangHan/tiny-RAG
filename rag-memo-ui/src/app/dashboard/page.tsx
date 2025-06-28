@@ -77,7 +77,34 @@ export default function Dashboard() {
 
         // Handle analytics response
         if (analyticsResponse.status === 'fulfilled') {
-          setAnalytics(analyticsResponse.value);
+          // Transform the API response to match UserAnalytics interface
+          const analyticsData = analyticsResponse.value;
+          const transformedAnalytics: UserAnalytics = {
+            projects: {
+              total: analyticsData.total_projects || 0,
+              owned: analyticsData.total_projects || 0,
+              collaborated: 0,
+              recent: 0
+            },
+            elements: {
+              total: analyticsData.total_elements || 0,
+              recent: 0,
+              by_type: {}
+            },
+            generations: {
+              total: analyticsData.total_generations || 0,
+              recent: 0,
+              total_tokens: 0,
+              total_cost_usd: analyticsData.total_cost || 0
+            },
+            evaluations: {
+              total: 0,
+              recent: 0,
+              completed: 0,
+              average_score: 0
+            }
+          };
+          setAnalytics(transformedAnalytics);
         } else {
           console.error('Failed to fetch analytics:', analyticsResponse.reason);
         }
@@ -159,25 +186,29 @@ export default function Dashboard() {
       name: 'Total Projects', 
       value: analytics?.projects?.total?.toString() || '0', 
       icon: FolderPlusIcon, 
-      color: 'text-blue-600' 
+      color: 'text-blue-600',
+      href: '/projects'
     },
     { 
       name: 'Documents', 
       value: documentsCount.toString(), 
       icon: DocumentArrowUpIcon, 
-      color: 'text-green-600' 
+      color: 'text-green-600',
+      href: '/documents'
     },
     { 
       name: 'Elements', 
       value: analytics?.elements?.total?.toString() || '0', 
       icon: CpuChipIcon, 
-      color: 'text-purple-600' 
+      color: 'text-purple-600',
+      href: '/elements'
     },
     { 
       name: 'Generations', 
       value: analytics?.generations?.total?.toString() || '0', 
       icon: SparklesIcon, 
-      color: 'text-orange-600' 
+      color: 'text-orange-600',
+      href: '/generations'
     },
   ];
 
@@ -220,7 +251,11 @@ export default function Dashboard() {
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat) => (
-            <div key={stat.name} className="bg-white overflow-hidden shadow rounded-lg">
+            <button
+              key={stat.name}
+              onClick={() => router.push(stat.href)}
+              className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow cursor-pointer text-left"
+            >
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -238,7 +273,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
