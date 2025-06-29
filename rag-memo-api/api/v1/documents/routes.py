@@ -32,8 +32,10 @@ class TableDataResponse(BaseModel):
     
     page_number: int = Field(description="Page number where table is located")
     table_index: int = Field(description="Index of table on the page")
-    content: dict = Field(description="Table content as structured data")
+    content: List[List[str]] = Field(description="Table content as rows and columns")
     summary: str = Field(description="AI-generated summary of table content")
+    row_count: int = Field(description="Number of rows in the table")
+    column_count: int = Field(description="Number of columns in the table")
 
 
 class ImageDataResponse(BaseModel):
@@ -137,7 +139,9 @@ async def list_documents(
                         page_number=table.page_number,
                         table_index=table.table_index,
                         content=table.content,
-                        summary=table.summary
+                        summary=table.summary,
+                        row_count=getattr(table, 'row_count', 0),
+                        column_count=getattr(table, 'column_count', 0)
                     )
                     for table in doc.tables
                 ],
@@ -245,7 +249,9 @@ async def upload_document(
                     page_number=table.page_number,
                     table_index=table.table_index,
                     content=table.content,
-                    summary=table.summary
+                    summary=table.summary,
+                    row_count=getattr(table, 'row_count', 0),
+                    column_count=getattr(table, 'column_count', 0)
                 )
                 for table in document.tables
             ],
@@ -324,7 +330,9 @@ async def get_document(
                     page_number=table.page_number,
                     table_index=table.table_index,
                     content=table.content,
-                    summary=table.summary
+                    summary=table.summary,
+                    row_count=getattr(table, 'row_count', 0),
+                    column_count=getattr(table, 'column_count', 0)
                 )
                 for table in document.tables
             ],

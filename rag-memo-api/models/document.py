@@ -7,8 +7,10 @@ class TableData(BaseModel):
     """Model for table data extracted from documents."""
     page_number: int
     table_index: int
-    content: Dict[str, Any]  # Pandas DataFrame as dictionary
+    content: List[List[str]]  # Table data as list of rows
     summary: str
+    row_count: int = 0
+    column_count: int = 0
 
 class ImageData(BaseModel):
     """Model for image data extracted from documents."""

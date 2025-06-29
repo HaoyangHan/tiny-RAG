@@ -107,8 +107,10 @@ class DocumentProcessor:
                         table_data = TableData(
                             page_number=page_num + 1,
                             table_index=table_idx,
-                            content=table.df.to_dict(),
-                            summary=table_summary
+                            content=table.df.values.tolist(),
+                            summary=table_summary,
+                            row_count=len(table.df),
+                            column_count=len(table.df.columns)
                         )
                         document.tables.append(table_data)
                         
