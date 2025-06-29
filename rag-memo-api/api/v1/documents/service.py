@@ -40,7 +40,7 @@ class DocumentService:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Document:
         """
-        Upload and process a document for a project.
+        Upload and process a document for a project with enhanced table and image extraction.
         
         Args:
             project_id: Associated project ID
@@ -51,7 +51,7 @@ class DocumentService:
             metadata: Optional document metadata
             
         Returns:
-            Document: Created document instance
+            Document: Created document instance with processed content, tables, and images
             
         Raises:
             ValueError: If validation fails
@@ -72,19 +72,23 @@ class DocumentService:
                 content_type=content_type,
                 size=len(file_content),
                 upload_date=datetime.utcnow(),
-                processed=False
+                processed=False,
+                has_tables=False,
+                has_images=False
             )
             
             # Create document instance
             document = Document(
                 user_id=user_id,
-                project_id=project_id,  # Direct field
+                project_id=project_id,
                 filename=filename,
                 file_size=len(file_content),
                 content_type=content_type,
                 status=DocumentStatus.UPLOADING,
                 metadata=doc_metadata,
-                chunks=[]
+                chunks=[],
+                tables=[],
+                images=[]
             )
             
             # Save to database first
@@ -116,7 +120,7 @@ class DocumentService:
                     document.metadata.processed = True
                     
                 else:
-                    # Full processing with chunking and embeddings
+                    # Enhanced processing with table and image extraction
                     processor = DocumentProcessor(openai_api_key)
                     
                     # Create temporary file for processing
@@ -125,13 +129,24 @@ class DocumentService:
                         temp_path = Path(temp_file.name)
                     
                     try:
-                        # Process document (this will populate chunks and embeddings)
+                        # Update status to processing
+                        document.status = DocumentStatus.PROCESSING
+                        await document.save()
+                        
+                        # Process document with enhanced capabilities
                         if content_type == "application/pdf":
+                            # Use the enhanced PDF processor with table and image extraction
                             await processor._process_pdf(temp_path, document)
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = True
+                            
+                            # Update metadata flags based on extracted content
+                            document.metadata.has_tables = len(document.tables) > 0
+                            document.metadata.has_images = len(document.images) > 0
+                            
+                            logger.info(f"PDF processing completed: {len(document.chunks)} chunks, "
+                                      f"{len(document.tables)} tables, {len(document.images)} images")
+                            
                         elif content_type.startswith('text/'):
-                            # Handle text files
+                            # Handle text files with standard chunking
                             text_content = file_content.decode('utf-8', errors='ignore')
                             chunks = processor.text_splitter.split_text(text_content)
                             
@@ -139,40 +154,87 @@ class DocumentService:
                             for chunk_idx, chunk_text in enumerate(chunks):
                                 chunk = DocumentChunk(
                                     text=chunk_text,
-                                    page_number=1,  # Text files are single page
-                                    chunk_index=chunk_idx
+                                    page_number=1,
+                                    chunk_index=chunk_idx,
+                                    chunk_type="text",
+                                    embedding=await processor._generate_embedding(chunk_text)
                                 )
-                                # Generate embedding
-                                chunk.embedding = await processor._generate_embedding(chunk_text)
                                 document.chunks.append(chunk)
                             
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = True
+                            logger.info(f"Text processing completed: {len(document.chunks)} chunks")
+                            
+                        elif content_type.startswith('image/'):
+                            # Process standalone image files
+                            image_description = await processor._process_image_with_gpt4(file_content)
+                            
+                            # Create image data
+                            from models.document import ImageData
+                            image_data = ImageData(
+                                page_number=1,
+                                image_index=0,
+                                content=file_content,
+                                description=image_description
+                            )
+                            document.images.append(image_data)
+                            document.metadata.has_images = True
+                            
+                            # Create chunk for image description
+                            image_embedding = await processor._generate_embedding(image_description)
+                            chunk = DocumentChunk(
+                                text=image_description,
+                                page_number=1,
+                                chunk_index=0,
+                                chunk_type="image",
+                                embedding=image_embedding
+                            )
+                            document.chunks.append(chunk)
+                            
+                            logger.info(f"Image processing completed: {image_description[:100]}...")
+                            
                         else:
                             # Unsupported file type - store without processing
                             document.status = DocumentStatus.COMPLETED
                             document.metadata.processed = False
                             logger.warning(f"Unsupported content type for processing: {content_type}")
                         
+                        # Mark as completed if processed successfully
+                        if document.status != DocumentStatus.COMPLETED:
+                            document.status = DocumentStatus.COMPLETED
+                            document.metadata.processed = True
+                        
                     finally:
                         # Clean up temporary file
-                        temp_path.unlink()
+                        if temp_path.exists():
+                            temp_path.unlink()
                 
-                # Save updates
+                # Save all updates
                 await document.save()
                 
                 # Add to project's document list
                 project.add_document(str(document.id))
                 await project.save()
                 
-                logger.info(f"Uploaded and processed document {document.id} to project {project_id} with {len(document.chunks)} chunks")
+                # Log comprehensive processing results
+                logger.info(
+                    f"Document upload completed: {document.id} -> Project {project_id}\n"
+                    f"  - Chunks: {len(document.chunks)} (text: {len([c for c in document.chunks if c.chunk_type == 'text'])}, "
+                    f"table: {len([c for c in document.chunks if c.chunk_type == 'table'])}, "
+                    f"image: {len([c for c in document.chunks if c.chunk_type == 'image'])})\n"
+                    f"  - Tables: {len(document.tables)}\n"
+                    f"  - Images: {len(document.images)}\n"
+                    f"  - Status: {document.status}"
+                )
+                
                 return document
                 
             except Exception as processing_error:
                 # Update status to failed
                 document.status = DocumentStatus.FAILED
                 document.metadata.error = str(processing_error)
+                document.metadata.processed = False
                 await document.save()
+                
+                logger.error(f"Document processing failed for {document.id}: {str(processing_error)}")
                 raise processing_error
                 
         except Exception as e:

@@ -23,11 +23,30 @@ class DocumentChunkResponse(BaseModel):
     text: str = Field(description="Chunk text content")
     page_number: int = Field(description="Page number in source document")
     chunk_index: int = Field(description="Index of chunk within document")
+    chunk_type: str = Field(default="text", description="Type of chunk: text, table, or image")
     embedding: Optional[List[float]] = Field(description="Vector embedding for the chunk")
 
 
+class TableDataResponse(BaseModel):
+    """Response schema for table data extracted from documents."""
+    
+    page_number: int = Field(description="Page number where table is located")
+    table_index: int = Field(description="Index of table on the page")
+    content: dict = Field(description="Table content as structured data")
+    summary: str = Field(description="AI-generated summary of table content")
+
+
+class ImageDataResponse(BaseModel):
+    """Response schema for image data extracted from documents."""
+    
+    page_number: int = Field(description="Page number where image is located")
+    image_index: int = Field(description="Index of image on the page")
+    description: str = Field(description="AI-generated description of image content")
+    # Note: Raw image content is not included in API response for performance
+
+
 class DocumentResponse(BaseModel):
-    """Response schema for document data."""
+    """Response schema for document data with enhanced table and image support."""
     
     id: str = Field(description="Document ID")
     filename: str = Field(description="Original filename")
@@ -36,7 +55,13 @@ class DocumentResponse(BaseModel):
     file_size: int = Field(description="File size in bytes")
     status: str = Field(description="Processing status")
     chunks: List[DocumentChunkResponse] = Field(description="Document chunks with text and embeddings")
+    tables: List[TableDataResponse] = Field(description="Extracted tables with summaries")
+    images: List[ImageDataResponse] = Field(description="Extracted images with descriptions")
     chunk_count: int = Field(description="Number of text chunks")
+    table_count: int = Field(description="Number of extracted tables")
+    image_count: int = Field(description="Number of extracted images")
+    has_tables: bool = Field(description="Whether document contains tables")
+    has_images: bool = Field(description="Whether document contains images")
     created_at: str = Field(description="Upload timestamp")
     updated_at: str = Field(description="Last update timestamp")
 
@@ -102,11 +127,33 @@ async def list_documents(
                         text=chunk.text,
                         page_number=chunk.page_number,
                         chunk_index=chunk.chunk_index,
+                        chunk_type=getattr(chunk, 'chunk_type', 'text'),
                         embedding=chunk.embedding
                     )
                     for chunk in doc.chunks
                 ],
+                tables=[
+                    TableDataResponse(
+                        page_number=table.page_number,
+                        table_index=table.table_index,
+                        content=table.content,
+                        summary=table.summary
+                    )
+                    for table in doc.tables
+                ],
+                images=[
+                    ImageDataResponse(
+                        page_number=image.page_number,
+                        image_index=image.image_index,
+                        description=image.description
+                    )
+                    for image in doc.images
+                ],
                 chunk_count=len(doc.chunks),
+                table_count=len(doc.tables),
+                image_count=len(doc.images),
+                has_tables=bool(doc.tables),
+                has_images=bool(doc.images),
                 created_at=doc.created_at.isoformat(),
                 updated_at=doc.updated_at.isoformat()
             )
@@ -188,11 +235,33 @@ async def upload_document(
                     text=chunk.text,
                     page_number=chunk.page_number,
                     chunk_index=chunk.chunk_index,
+                    chunk_type=getattr(chunk, 'chunk_type', 'text'),
                     embedding=chunk.embedding
                 )
                 for chunk in document.chunks
             ],
+            tables=[
+                TableDataResponse(
+                    page_number=table.page_number,
+                    table_index=table.table_index,
+                    content=table.content,
+                    summary=table.summary
+                )
+                for table in document.tables
+            ],
+            images=[
+                ImageDataResponse(
+                    page_number=image.page_number,
+                    image_index=image.image_index,
+                    description=image.description
+                )
+                for image in document.images
+            ],
             chunk_count=len(document.chunks),
+            table_count=len(document.tables),
+            image_count=len(document.images),
+            has_tables=bool(document.tables),
+            has_images=bool(document.images),
             created_at=document.created_at.isoformat(),
             updated_at=document.updated_at.isoformat()
         )
@@ -245,11 +314,33 @@ async def get_document(
                     text=chunk.text,
                     page_number=chunk.page_number,
                     chunk_index=chunk.chunk_index,
+                    chunk_type=getattr(chunk, 'chunk_type', 'text'),
                     embedding=chunk.embedding
                 )
                 for chunk in document.chunks
             ],
+            tables=[
+                TableDataResponse(
+                    page_number=table.page_number,
+                    table_index=table.table_index,
+                    content=table.content,
+                    summary=table.summary
+                )
+                for table in document.tables
+            ],
+            images=[
+                ImageDataResponse(
+                    page_number=image.page_number,
+                    image_index=image.image_index,
+                    description=image.description
+                )
+                for image in document.images
+            ],
             chunk_count=len(document.chunks),
+            table_count=len(document.tables),
+            image_count=len(document.images),
+            has_tables=bool(document.tables),
+            has_images=bool(document.images),
             created_at=document.created_at.isoformat(),
             updated_at=document.updated_at.isoformat()
         )

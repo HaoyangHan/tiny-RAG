@@ -189,7 +189,7 @@ class DocumentProcessor:
             import base64
             image_base64 = base64.b64encode(image_data).decode('utf-8')
             
-            response = await self.openai_client.chat.completions.create(
+            response = self.openai_client.chat.completions.create(
                 model=self.vision_model,
                 messages=[
                     {
@@ -201,7 +201,7 @@ class DocumentProcessor:
                             },
                             {
                                 "type": "image_url",
-                                "image_url": f"data:image/jpeg;base64,{image_base64}"
+                                "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
                             }
                         ]
                     }
@@ -215,12 +215,12 @@ class DocumentProcessor:
     async def _generate_table_summary(self, table_text: str) -> str:
         """Generate a summary of table content using GPT-4."""
         try:
-            response = await self.openai_client.chat.completions.create(
-                model="gpt-4",
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a table analysis expert. Provide a concise summary of the table content."
+                        "content": "You are a table analysis expert. Provide a concise summary of the table content, highlighting key data points and patterns."
                     },
                     {
                         "role": "user",
