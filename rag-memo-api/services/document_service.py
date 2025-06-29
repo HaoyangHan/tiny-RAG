@@ -38,7 +38,7 @@ class DocumentService:
 
             # Create document processor if not available
             if not self.processor:
-                from dependencies import get_document_processor
+                from dependencies import get_docum  8o1mment_processor
                 self.processor = get_document_processor()
 
             # Process document

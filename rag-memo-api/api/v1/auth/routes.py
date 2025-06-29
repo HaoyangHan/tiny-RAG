@@ -70,6 +70,9 @@ async def register(user_data: UserCreate) -> UserResponse:
             last_login=user.last_login
         )
         
+    except HTTPException:
+        # Re-raise HTTPExceptions (like duplicate user errors) as-is
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
