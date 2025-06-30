@@ -32,12 +32,10 @@ class ElementTemplate(BaseDocument):
         variables: Template variables that can be substituted
         execution_config: Execution-specific configuration parameters
         is_system_default: Whether this is a system-created template
-        version: Template version following semantic versioning
+        version: Template version
         tags: Searchable tags for template discovery
         status: Template lifecycle status
         created_by: User ID of template creator
-        usage_count: Number of times template has been used
-        last_used_at: Timestamp of last template usage
     """
     
     # Basic Information
@@ -89,11 +87,7 @@ class ElementTemplate(BaseDocument):
     # Version Control
     version: str = Field(
         default="1.0.0",
-        description="Template version following semantic versioning"
-    )
-    changelog: List[str] = Field(
-        default_factory=list,
-        description="List of changes made to the template"
+        description="Template version"
     )
     
     # Searchability and Classification
@@ -109,29 +103,9 @@ class ElementTemplate(BaseDocument):
         description="Template lifecycle status"
     )
     
-    # Ownership and Usage
+    # Ownership
     created_by: Indexed(str) = Field(
         description="User ID of template creator"
-    )
-    usage_count: int = Field(
-        default=0,
-        description="Number of times template has been used"
-    )
-    last_used_at: Optional[datetime] = Field(
-        None,
-        description="Timestamp of last template usage"
-    )
-    
-    # Statistics and Analytics
-    element_count: int = Field(
-        default=0,
-        description="Number of elements created from this template"
-    )
-    success_rate: float = Field(
-        default=0.0,
-        ge=0.0,
-        le=1.0,
-        description="Success rate of elements created from this template"
     )
     
     @validator('name')
@@ -169,23 +143,6 @@ class ElementTemplate(BaseDocument):
             raise ValueError('Version must follow semantic versioning (e.g., 1.0.0)')
         return v
     
-    def increment_usage(self) -> None:
-        """Increment usage count and update last used timestamp."""
-        self.usage_count += 1
-        self.last_used_at = datetime.utcnow()
-        self.update_timestamp()
-    
-    def increment_element_count(self) -> None:
-        """Increment the count of elements created from this template."""
-        self.element_count += 1
-        self.update_timestamp()
-    
-    def update_success_rate(self, success_count: int) -> None:
-        """Update the success rate based on successful element executions."""
-        if self.element_count > 0:
-            self.success_rate = success_count / self.element_count
-        self.update_timestamp()
-    
     def add_tag(self, tag: str) -> None:
         """Add a tag to the template."""
         normalized_tag = tag.lower().strip()
@@ -200,18 +157,17 @@ class ElementTemplate(BaseDocument):
             self.tags.remove(normalized_tag)
             self.update_timestamp()
     
-    def update_version(self, new_version: str, changelog_entry: str) -> None:
-        """Update template version and add changelog entry."""
+    def update_version(self, new_version: str) -> None:
+        """Update template version."""
         self.version = new_version
-        self.changelog.append(f"{new_version}: {changelog_entry} ({datetime.utcnow().isoformat()})")
         self.update_timestamp()
     
     def is_ready_for_use(self) -> bool:
-        """Check if template is ready for use in projects."""
+        """Check if template is ready for use."""
         return (
             self.status == ElementStatus.ACTIVE and
-            bool(self.generation_prompt) and
-            len(self.generation_prompt) >= 50
+            bool(self.generation_prompt.strip()) and
+            bool(self.name.strip())
         )
     
     def has_retrieval_prompt(self) -> bool:
@@ -219,34 +175,34 @@ class ElementTemplate(BaseDocument):
         return bool(self.retrieval_prompt and self.retrieval_prompt.strip())
     
     def get_template_summary(self) -> Dict[str, Any]:
-        """Get a summary of template information for display."""
+        """Get a summary of the template."""
         return {
             "id": str(self.id),
             "name": self.name,
+            "description": self.description,
             "tenant_type": self.tenant_type.value,
+            "task_type": self.task_type.value,
             "element_type": self.element_type.value,
             "version": self.version,
+            "tags": self.tags,
             "status": self.status.value,
-            "usage_count": self.usage_count,
-            "element_count": self.element_count,
-            "success_rate": round(self.success_rate * 100, 2),
             "has_retrieval_prompt": self.has_retrieval_prompt(),
+            "variables": self.variables,
             "is_system_default": self.is_system_default,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_used_at": self.last_used_at.isoformat() if self.last_used_at else None
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
         }
     
     class Settings:
         name = "element_templates"
         indexes = [
-            "tenant_type",
-            "element_type",
-            "status",
-            "created_by",
-            "is_system_default",
-            ("tenant_type", "name"),  # Compound index for unique constraints
-            ("tenant_type", "element_type"),
-            ("created_by", "tenant_type"),
-            "usage_count",
-            "last_used_at"
+            [("tenant_type", 1), ("name", 1)],  # Unique per tenant
+            [("tenant_type", 1), ("status", 1)],
+            [("element_type", 1)],
+            [("tags", 1)],
+            [("created_by", 1)],
+            [("is_system_default", 1)],
+            [("status", 1)],
+            [("created_at", -1)],
+            [("updated_at", -1)]
         ] 

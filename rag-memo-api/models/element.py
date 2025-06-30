@@ -48,60 +48,8 @@ class ElementContent(BaseDocument):
     # Version control
     version: str = Field(
         default="1.0.0",
-        description="Template version following semantic versioning"
+        description="Template version"
     )
-    changelog: List[str] = Field(
-        default_factory=list,
-        description="List of changes made to the template"
-    )
-
-
-class ElementExecution(BaseDocument):
-    """
-    Tracking for element execution instances.
-    
-    Records individual executions of elements including
-    input parameters, results, and performance metrics.
-    """
-    
-    # Execution context
-    input_variables: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Input variables provided for execution"
-    )
-    output_content: Optional[str] = Field(
-        None,
-        description="Generated output content"
-    )
-    
-    # Performance metrics
-    execution_time_ms: Optional[int] = Field(
-        None,
-        description="Execution time in milliseconds"
-    )
-    token_usage: Dict[str, int] = Field(
-        default_factory=dict,
-        description="Token usage statistics"
-    )
-    
-    # Status and results
-    status: str = Field(
-        default="pending",
-        description="Execution status"
-    )
-    error_message: Optional[str] = Field(
-        None,
-        description="Error message if execution failed"
-    )
-    
-    # Evaluation results
-    evaluation_scores: Dict[str, float] = Field(
-        default_factory=dict,
-        description="Evaluation scores for the execution"
-    )
-    
-    class Settings:
-        name = "element_executions"
 
 
 class Element(BaseDocument):
@@ -121,10 +69,11 @@ class Element(BaseDocument):
         element_type: Type of element (prompt, MCP, etc.)
         status: Element lifecycle status
         template: Template content and configuration
-        execution_history: List of execution records
-        usage_statistics: Element usage and performance statistics
         tags: Searchable tags for element discovery
         owner_id: User ID of element owner
+        is_default_element: Whether created from template vs user-created
+        template_id: Source template ID if created from template
+        insertion_batch_id: Batch ID for script-inserted elements
     """
     
     # Basic Information
@@ -165,7 +114,7 @@ class Element(BaseDocument):
         description="Template content and configuration"
     )
     
-    # Source and Template Tracking (NEW)
+    # Source and Template Tracking (Essential for v1.4.2)
     is_default_element: bool = Field(
         default=False,
         description="Whether this element was created from a template vs user-created"
@@ -177,18 +126,6 @@ class Element(BaseDocument):
     insertion_batch_id: Optional[str] = Field(
         None,
         description="Batch ID for script-inserted elements (for removal tracking)"
-    )
-    
-    # Execution Tracking
-    execution_history: List[str] = Field(
-        default_factory=list,
-        description="List of execution record IDs"
-    )
-    
-    # Statistics and Metrics
-    usage_statistics: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Element usage and performance statistics"
     )
     
     # Searchability
@@ -217,32 +154,10 @@ class Element(BaseDocument):
     
     @validator('task_type')
     def validate_task_type_compatibility(cls, v: TaskType, values: Dict[str, Any]) -> TaskType:
-        """Validate that task type is compatible with tenant type."""
-        if 'tenant_type' in values:
-            from models.enums import TENANT_TASK_MAPPING
-            expected_task_type = TENANT_TASK_MAPPING.get(values['tenant_type'])
-            if expected_task_type and v != expected_task_type:
-                # Allow override but log warning
-                pass
+        """Validate task type compatibility with tenant type."""
+        # Basic validation - can be extended based on business rules
+        # All element types are now supported by all tenants
         return v
-    
-    def add_execution(self, execution_id: str) -> None:
-        """Add an execution record to the history."""
-        if execution_id not in self.execution_history:
-            self.execution_history.append(execution_id)
-            self.update_timestamp()
-    
-    def update_usage_statistics(self, key: str, value: Any) -> None:
-        """Update element usage statistics."""
-        self.usage_statistics[key] = value
-        self.update_timestamp()
-    
-    def increment_usage_count(self) -> None:
-        """Increment the usage count for this element."""
-        current_count = self.usage_statistics.get('usage_count', 0)
-        self.usage_statistics['usage_count'] = current_count + 1
-        self.usage_statistics['last_used'] = datetime.utcnow().isoformat()
-        self.update_timestamp()
     
     def add_tag(self, tag: str) -> None:
         """Add a tag to the element."""
@@ -258,22 +173,17 @@ class Element(BaseDocument):
             self.tags.remove(normalized_tag)
             self.update_timestamp()
     
-    def update_template_version(self, new_version: str, changelog_entry: str) -> None:
-        """Update template version with changelog entry."""
+    def update_template_version(self, new_version: str) -> None:
+        """Update template version."""
         self.template.version = new_version
-        self.template.changelog.append(f"{new_version}: {changelog_entry}")
         self.update_timestamp()
     
     def is_ready_for_execution(self) -> bool:
         """Check if element is ready for execution."""
-        return self.status == ElementStatus.ACTIVE and bool(self.template.content)
-    
-    def get_execution_count(self) -> int:
-        """Get the total number of executions for this element."""
-        return len(self.execution_history)
+        return self.status == ElementStatus.ACTIVE and bool(self.template.content.strip())
     
     def set_from_template(self, template_id: str, batch_id: Optional[str] = None) -> None:
-        """Mark this element as created from a template."""
+        """Mark element as created from a template."""
         self.is_default_element = True
         self.template_id = template_id
         self.insertion_batch_id = batch_id
@@ -307,49 +217,45 @@ class Element(BaseDocument):
             return self.template.content
     
     def is_script_inserted(self) -> bool:
-        """Check if this element was inserted by a script."""
+        """Check if element was inserted by a script."""
         return bool(self.insertion_batch_id)
     
     def get_element_summary(self) -> Dict[str, Any]:
-        """Get a summary of element information for display."""
+        """Get a summary of element information."""
         return {
             "id": str(self.id),
             "name": self.name,
+            "description": self.description,
             "project_id": self.project_id,
             "tenant_type": self.tenant_type.value,
+            "task_type": self.task_type.value,
             "element_type": self.element_type.value,
             "status": self.status.value,
-            "is_default_element": self.is_default_element,
-            "template_id": self.template_id,
-            "insertion_batch_id": self.insertion_batch_id,
+            "tags": self.tags,
+            "template_version": self.template.version,
             "has_generation_prompt": self.has_generation_prompt(),
             "has_retrieval_prompt": self.has_retrieval_prompt(),
-            "usage_count": self.usage_statistics.get('usage_count', 0),
-            "execution_count": self.get_execution_count(),
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "is_default_element": self.is_default_element,
+            "template_id": self.template_id,
+            "is_script_inserted": self.is_script_inserted(),
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
         }
     
     class Settings:
         name = "elements"
         indexes = [
-            "project_id",
-            "owner_id",
-            "tenant_type",
-            "task_type",
-            "element_type",
-            "status",
-            "tags",
-            "name",
-            "created_at",
-            "updated_at",
-            "is_deleted",
-            # New indexes for template tracking
-            "is_default_element",
-            "template_id",
-            "insertion_batch_id",
-            # Compound indexes
-            ("project_id", "is_default_element"),
-            ("template_id", "project_id"),
-            ("insertion_batch_id", "tenant_type")
+            [("project_id", 1)],
+            [("tenant_type", 1)],
+            [("element_type", 1)],
+            [("status", 1)],
+            [("owner_id", 1)],
+            [("tags", 1)],
+            [("is_default_element", 1)],
+            [("template_id", 1)],
+            [("insertion_batch_id", 1)],
+            [("project_id", 1), ("name", 1)],  # Unique per project
+            [("project_id", 1), ("element_type", 1)],
+            [("created_at", -1)],
+            [("updated_at", -1)]
         ] 
