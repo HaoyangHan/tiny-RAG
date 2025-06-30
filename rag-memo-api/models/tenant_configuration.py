@@ -7,7 +7,6 @@ configuration settings for each tenant type in the system.
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from beanie import Indexed
 from pydantic import Field, validator
 from models.base import BaseDocument
 from models.enums import TenantType, TaskType
@@ -31,7 +30,7 @@ class TenantConfiguration(BaseDocument):
     """
     
     # Basic Information
-    tenant_type: Indexed(TenantType) = Field(
+    tenant_type: TenantType = Field(
         description="Unique tenant identifier",
         unique=True
     )
@@ -62,7 +61,7 @@ class TenantConfiguration(BaseDocument):
     )
     
     # Ownership
-    created_by: Indexed(str) = Field(
+    created_by: str = Field(
         description="User ID of configuration creator"
     )
     

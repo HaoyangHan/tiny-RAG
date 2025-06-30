@@ -6,10 +6,15 @@ RAG-based investment memo workflows for financial analysis and reporting automat
 """
 
 import asyncio
+import sys
+from pathlib import Path
 from typing import List, Dict, Any
 
+# Add project root to path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
 from models.enums import TenantType, TaskType, ElementType, ElementStatus
-from .base_inserter import BaseElementInserter
+from scripts.tenant_data_insertion.base_inserter import BaseElementInserter
 
 
 class FinancialElementInserter(BaseElementInserter):
@@ -27,7 +32,7 @@ class FinancialElementInserter(BaseElementInserter):
             {
                 "name": "RAG_Memo_Client_Overview",
                 "description": "Generates the 'Client Overview' section of an investment memo, describing the company's business model, products, and market.",
-                "task_type": TaskType.RAG_QA,
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -78,7 +83,7 @@ class FinancialElementInserter(BaseElementInserter):
             {
                 "name": "RAG_Memo_Historical_Financial_Analysis",
                 "description": "Generates a summary of historical financial performance, focusing on trends in revenue, profitability, and cash flow.",
-                "task_type": TaskType.RAG_QA,
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -129,7 +134,7 @@ class FinancialElementInserter(BaseElementInserter):
             {
                 "name": "RAG_Memo_Liquidity_Analysis",
                 "description": "Generates the 'Liquidity Analysis' section, assessing the company's ability to meet short-term obligations.",
-                "task_type": TaskType.RAG_QA,
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -180,7 +185,7 @@ class FinancialElementInserter(BaseElementInserter):
             {
                 "name": "RAG_Memo_Leverage_Analysis",
                 "description": "Generates the 'Leverage' section, analyzing the company's debt levels and capital structure.",
-                "task_type": TaskType.RAG_QA,
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -228,8 +233,8 @@ class FinancialElementInserter(BaseElementInserter):
             # 5. Refinancing Risks
             {
                 "name": "RAG_Memo_Refinancing_Risks",
-                "description": "Generates the 'Refinancing Risks' section, highlighting risks associated with upcoming debt maturities.",
-                "task_type": TaskType.RAG_QA,
+                "description": "Generates the 'Refinancing Risks' section, analyzing debt maturity and refinancing challenges.",
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -277,8 +282,8 @@ class FinancialElementInserter(BaseElementInserter):
             # 6. Debt Maturity Schedule
             {
                 "name": "RAG_Memo_Debt_Maturity_Schedule",
-                "description": "Extracts and formats the company's debt maturity schedule into a clear table.",
-                "task_type": TaskType.RAG_QA,
+                "description": "Generates a structured debt maturity schedule table from financial disclosures.",
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -328,8 +333,8 @@ class FinancialElementInserter(BaseElementInserter):
             # 7. Facility Request
             {
                 "name": "RAG_Memo_Facility_Request",
-                "description": "Summarizes the details of the new loan or facility being requested.",
-                "task_type": TaskType.RAG_QA,
+                "description": "Generates the 'Facility Request' section, extracting new loan or facility details from term sheets.",
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -379,8 +384,8 @@ class FinancialElementInserter(BaseElementInserter):
             # 8. Obligor Assessment
             {
                 "name": "RAG_Memo_Obligor_Assessment",
-                "description": "Describes the legal entity borrowing the money and its relationship within the corporate structure.",
-                "task_type": TaskType.RAG_QA,
+                "description": "Generates the 'Obligor Assessment' section, describing the legal entity and corporate structure.",
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -428,8 +433,8 @@ class FinancialElementInserter(BaseElementInserter):
             # 9. Key Risks
             {
                 "name": "RAG_Memo_Key_Risks",
-                "description": "Summarizes the most critical risks to the business and creditworthiness.",
-                "task_type": TaskType.RAG_QA,
+                "description": "Generates the 'Key Risks' section, extracting critical business and credit risks from 10-K filings.",
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(
@@ -479,8 +484,8 @@ class FinancialElementInserter(BaseElementInserter):
             # 10. Stock Price Analysis
             {
                 "name": "RAG_Memo_Stock_Price_Analysis",
-                "description": "Generates a summary of the company's stock performance.",
-                "task_type": TaskType.RAG_QA,
+                "description": "Generates the 'Stock Price Analysis' section, analyzing stock performance from recent disclosures.",
+                "task_type": TaskType.RAG,
                 "element_type": ElementType.PROMPT_TEMPLATE,
                 "status": ElementStatus.ACTIVE,
                 "template": self.create_element_template(

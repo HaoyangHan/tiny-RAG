@@ -2,11 +2,33 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 import logging
 from typing import Optional
+import os
 
 from models.document import Document
 from models.memo import Memo
 
 logger = logging.getLogger(__name__)
+
+
+def get_database_url() -> str:
+    """Get MongoDB connection URL from environment or use default."""
+    # Check for explicit MongoDB URL first
+    if os.getenv("MONGODB_URL"):
+        return os.getenv("MONGODB_URL")
+    
+    # Try to build from individual components
+    username = os.getenv("MONGO_ROOT_USERNAME", "admin")
+    password = os.getenv("MONGO_ROOT_PASSWORD", "password123")
+    host = os.getenv("MONGO_HOST", "localhost")
+    port = os.getenv("MONGO_PORT", "27017")
+    database = os.getenv("MONGO_DATABASE", "tinyrag")
+    
+    # Try authenticated connection first
+    if username and password:
+        return f"mongodb://{username}:{password}@{host}:{port}/{database}?authSource=admin"
+    else:
+        # Fall back to unauthenticated for local development
+        return f"mongodb://{host}:{port}/{database}"
 
 class Database:
     """Database connection manager."""

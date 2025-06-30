@@ -1,12 +1,13 @@
 """
-Base abstract class for tenant-specific element insertion.
+Base Element Inserter for TinyRAG v1.4.2 Element Management System.
 
-This module provides the common functionality and interface for all
-tenant-specific element insertion scripts.
+This module provides the BaseElementInserter abstract class for implementing
+tenant-specific element insertion scripts with MongoDB integration.
 """
 
-import logging
 import asyncio
+import logging
+import logging.config
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -19,10 +20,11 @@ from bson import ObjectId
 from models.element import Element, ElementTemplate
 from models.enums import TenantType, TaskType, ElementType, ElementStatus
 from models.project import Project
+from database import get_database_url
 
 # Import configuration
 from .config import (
-    MONGODB_URL, DATABASE_NAME, DEFAULT_USER_ID, DEFAULT_PROJECT_IDS,
+    DATABASE_NAME, DEFAULT_USER_ID, DEFAULT_PROJECT_IDS,
     DEFAULT_LLM_CONFIG, DRY_RUN, CHECK_DUPLICATES, COMMON_TAGS,
     TENANT_TAG_PREFIXES, LOGGING_CONFIG
 )
@@ -61,14 +63,14 @@ class BaseElementInserter(ABC):
     async def connect_to_database(self) -> None:
         """Connect to MongoDB and initialize Beanie."""
         try:
-            logger.info(f"Connecting to MongoDB at {MONGODB_URL}")
-            self.client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
+            logger.info(f"Connecting to MongoDB at {get_database_url()}")
+            self.client = motor.motor_asyncio.AsyncIOMotorClient(get_database_url())
             self.database = self.client[DATABASE_NAME]
             
             # Initialize Beanie with required models
             await init_beanie(
                 database=self.database,
-                document_models=[Element, Project]
+                document_models=[Element, ElementTemplate, Project]
             )
             logger.info("Successfully connected to database")
             
@@ -144,7 +146,9 @@ class BaseElementInserter(ABC):
     def create_element_template(
         self,
         content: str,
-        variables: List[str],
+        generation_prompt: Optional[str] = None,
+        retrieval_prompt: Optional[str] = None,
+        variables: List[str] = None,
         execution_config: Optional[Dict[str, Any]] = None,
         version: str = "1.0.0"
     ) -> ElementTemplate:
@@ -152,7 +156,9 @@ class BaseElementInserter(ABC):
         Create an ElementTemplate instance.
         
         Args:
-            content: Template content
+            content: Legacy template content
+            generation_prompt: Full detailed prompt for generation
+            retrieval_prompt: Summarized prompt for retrieval
             variables: Template variables
             execution_config: Execution configuration
             version: Template version
@@ -161,13 +167,15 @@ class BaseElementInserter(ABC):
             ElementTemplate: Created template instance
         """
         config = execution_config or DEFAULT_LLM_CONFIG.copy()
+        vars_list = variables or []
         
         return ElementTemplate(
             content=content,
-            variables=variables,
+            generation_prompt=generation_prompt,
+            retrieval_prompt=retrieval_prompt,
+            variables=vars_list,
             execution_config=config,
-            version=version,
-            changelog=[f"Initial version created on {datetime.utcnow().isoformat()}"]
+            version=version
         )
     
     def create_element_tags(self, specific_tags: List[str]) -> List[str]:

@@ -25,7 +25,7 @@ from .enums import (
 
 # Core models
 from .project import Project, ProjectConfiguration
-from .element import Element, ElementContent, ElementExecution
+from .element import Element, ElementTemplate as ElementContent
 from .element_template import ElementTemplate
 from .tenant_configuration import TenantConfiguration
 from .element_generation import (
@@ -110,7 +110,6 @@ __all__ = [
     "ProjectConfiguration",
     "Element",
     "ElementContent",
-    "ElementExecution",
     "ElementTemplate",
     "TenantConfiguration",
     "ElementGeneration",

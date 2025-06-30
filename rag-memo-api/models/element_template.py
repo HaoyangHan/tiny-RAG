@@ -7,7 +7,6 @@ templates for each tenant type that can be automatically provisioned to projects
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from beanie import Indexed
 from pydantic import Field, validator
 from models.base import BaseDocument
 from models.enums import TenantType, TaskType, ElementType, ElementStatus
@@ -49,7 +48,7 @@ class ElementTemplate(BaseDocument):
     )
     
     # Tenant and Task Configuration
-    tenant_type: Indexed(TenantType) = Field(
+    tenant_type: TenantType = Field(
         description="Associated tenant type"
     )
     task_type: TaskType = Field(
@@ -104,7 +103,7 @@ class ElementTemplate(BaseDocument):
     )
     
     # Ownership
-    created_by: Indexed(str) = Field(
+    created_by: str = Field(
         description="User ID of template creator"
     )
     

@@ -21,7 +21,7 @@ DEFAULT_USER_ID = "6859036f0cfc8f1bb0f21c76"  # Test user from memories
 DEFAULT_PROJECT_IDS: Dict[TenantType, str] = {
     TenantType.HR: "60f4d2e5e8b4a12345678901",  # Example HR project ID
     TenantType.CODING: "60f4d2e5e8b4a12345678902",  # Example coding project ID
-    TenantType.FINANCIAL_REPORT: "60f4d2e5e8b4a12345678903",  # Example financial project ID
+    TenantType.FINANCIAL_REPORT: "685e40b69bf4ff7e5e03c1ad",  # Real financial project ID (test1)
     TenantType.DEEP_RESEARCH: "60f4d2e5e8b4a12345678904",  # Example research project ID
     TenantType.QA_GENERATION: "60f4d2e5e8b4a12345678905",  # Example QA project ID
     TenantType.RAW_RAG: "60f4d2e5e8b4a12345678906",  # Example raw RAG project ID

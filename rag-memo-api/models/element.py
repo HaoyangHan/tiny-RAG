@@ -7,17 +7,16 @@ prompt templates, MCP configurations, or Agentic tools within projects.
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from beanie import Indexed
 from pydantic import Field, validator
 from models.base import BaseDocument
 from models.enums import TenantType, TaskType, ElementType, ElementStatus
 
 
-class ElementContent(BaseDocument):
+class ElementTemplate(BaseDocument):
     """
-    Element content and configuration.
+    Element template content and configuration.
     
-    Contains the actual element content, variables, and execution
+    Contains the actual element template content, variables, and execution
     parameters for different element types.
     """
     
@@ -88,7 +87,7 @@ class Element(BaseDocument):
     )
     
     # Project Association
-    project_id: Indexed(str) = Field(
+    project_id: str = Field(
         description="Associated project ID"
     )
     
@@ -110,7 +109,7 @@ class Element(BaseDocument):
     )
     
     # Template Content
-    template: ElementContent = Field(
+    template: ElementTemplate = Field(
         description="Template content and configuration"
     )
     
@@ -136,7 +135,7 @@ class Element(BaseDocument):
     )
     
     # Ownership
-    owner_id: Indexed(str) = Field(
+    owner_id: str = Field(
         description="User ID of element owner"
     )
     
