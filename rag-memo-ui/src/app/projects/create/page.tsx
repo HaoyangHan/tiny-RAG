@@ -150,7 +150,7 @@ export default function CreateProjectPage() {
                   ) : (
                     <span
                       className={`text-sm font-medium ${
-                        step.id === currentStep ? 'text-blue-600' : 'text-gray-500'
+                        step.id === currentStep ? 'text-blue-600' : 'text-gray-600'
                       }`}
                     >
                       {step.id}
@@ -160,12 +160,12 @@ export default function CreateProjectPage() {
                 <div className="ml-4 min-w-0 flex flex-col">
                   <span
                     className={`text-sm font-medium ${
-                      step.id <= currentStep ? 'text-blue-600' : 'text-gray-500'
+                      step.id <= currentStep ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   >
                     {step.name}
                   </span>
-                  <span className="text-sm text-gray-500">{step.description}</span>
+                  <span className="text-sm text-gray-600">{step.description}</span>
                 </div>
               </div>
               {stepIdx !== steps.length - 1 && (
@@ -226,7 +226,7 @@ export default function CreateProjectPage() {
           <option value={TenantType.QA_GENERATION}>Q&A Generation</option>
           <option value={TenantType.RAW_RAG}>General RAG Tasks</option>
         </select>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-600">
           This determines the collaboration features and resource limits for your project.
         </p>
       </div>
@@ -397,9 +397,9 @@ export default function CreateProjectPage() {
         <div className="flex">
           <InformationCircleIcon className="h-5 w-5 text-yellow-400 mr-2 mt-0.5" />
           <div className="text-sm text-yellow-800">
-            <p className="font-medium">Next Steps</p>
+            <p className="font-medium">What happens next?</p>
             <p className="mt-1">
-              After creating your project, you'll be able to upload documents, create elements, and start generating content.
+              After creating your project, the system will automatically provision element templates based on your selected tenant type ({formData.tenant_type}). You'll immediately see these ready-to-use elements in your project.
             </p>
           </div>
         </div>

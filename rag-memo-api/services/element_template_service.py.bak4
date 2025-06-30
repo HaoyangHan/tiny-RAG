@@ -210,7 +210,7 @@ class ElementTemplateService:
     
     async def _create_element_from_template(
         self,
-        template: StandaloneElementTemplate,
+        template: ElementTemplate,
         project_id: str,
         owner_id: str,
         batch_id: str

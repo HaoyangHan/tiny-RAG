@@ -58,7 +58,7 @@ export default function DocumentList() {
 
   if (documents.length === 0) {
     return (
-      <div className="text-center text-gray-500 p-4">
+      <div className="text-center text-gray-600 p-4">
         <p>No documents uploaded yet</p>
       </div>
     );
@@ -75,7 +75,7 @@ export default function DocumentList() {
             <DocumentIcon className="h-8 w-8 text-gray-400" />
             <div>
               <h3 className="text-sm font-medium text-gray-900">{doc.name}</h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-600">
                 {new Date(doc.createdAt).toLocaleDateString()}
               </p>
             </div>

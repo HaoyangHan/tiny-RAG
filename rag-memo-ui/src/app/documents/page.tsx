@@ -268,7 +268,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Documents</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Total Documents</dt>
                     <dd className="text-lg font-medium text-gray-900">{totalDocuments}</dd>
                   </dl>
                 </div>
@@ -287,7 +287,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Processed</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Processed</dt>
                     <dd className="text-lg font-medium text-gray-900">
                       {documents.filter(d => d.status === 'completed').length}
                     </dd>
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Processing</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Processing</dt>
                     <dd className="text-lg font-medium text-gray-900">
                       {documents.filter(d => d.status === 'processing').length}
                     </dd>
@@ -329,7 +329,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Projects</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Projects</dt>
                     <dd className="text-lg font-medium text-gray-900">{projects.length}</dd>
                   </dl>
                 </div>

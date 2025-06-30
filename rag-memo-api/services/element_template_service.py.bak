@@ -58,7 +58,7 @@ class ElementTemplateService:
                 raise ValueError(f"Required field missing: {field}")
         
         # Check for duplicate template name within tenant
-        existing = await StandaloneElementTemplate.find_one({
+        existing = await ElementTemplate.find_one({
             "name": template_data['name'],
             "tenant_type": template_data['tenant_type']
         })
@@ -66,7 +66,7 @@ class ElementTemplateService:
             raise ValueError(f"Template with name '{template_data['name']}' already exists for tenant {template_data['tenant_type']}")
         
         # Create template
-        template = StandaloneElementTemplate(
+        template = ElementTemplate(
             **template_data,
             created_by=created_by,
             is_system_default=template_data.get('is_system_default', True)
@@ -120,7 +120,7 @@ class ElementTemplateService:
         if active_only:
             query["status"] = ElementStatus.ACTIVE
         
-        templates = await StandaloneElementTemplate.find(query).sort("name").to_list()
+        templates = await ElementTemplate.find(query).sort("name").to_list()
         return templates
     
     async def provision_templates_to_project(
@@ -210,7 +210,7 @@ class ElementTemplateService:
     
     async def _create_element_from_template(
         self,
-        template: StandaloneElementTemplate,
+        template: ElementTemplate,
         project_id: str,
         owner_id: str,
         batch_id: str
@@ -264,7 +264,7 @@ class ElementTemplateService:
         Returns:
             Updated template
         """
-        template = await StandaloneElementTemplate.get(template_id)
+        template = await ElementTemplate.get(template_id)
         if not template:
             raise ValueError(f"Template not found: {template_id}")
         
@@ -313,7 +313,7 @@ class ElementTemplateService:
         Returns:
             True if deleted successfully
         """
-        template = await StandaloneElementTemplate.get(template_id)
+        template = await ElementTemplate.get(template_id)
         if not template:
             return False
         
@@ -339,7 +339,7 @@ class ElementTemplateService:
     
     async def get_template_usage_stats(self, template_id: str) -> Dict[str, Any]:
         """Get usage statistics for a template."""
-        template = await StandaloneElementTemplate.get(template_id)
+        template = await ElementTemplate.get(template_id)
         if not template:
             raise ValueError(f"Template not found: {template_id}")
         
@@ -398,7 +398,7 @@ class ElementTemplateService:
         if template_ids:
             query["_id"] = {"$in": [ObjectId(tid) for tid in template_ids]}
         
-        templates = await StandaloneElementTemplate.find(query).to_list()
+        templates = await ElementTemplate.find(query).to_list()
         
         if not templates:
             return 0, 0
@@ -435,7 +435,7 @@ class ElementTemplateService:
     async def _update_tenant_template_count(self, tenant_type: TenantType) -> None:
         """Update the template count for a tenant configuration."""
         try:
-            template_count = await StandaloneElementTemplate.find({
+            template_count = await ElementTemplate.find({
                 "tenant_type": tenant_type,
                 "status": ElementStatus.ACTIVE
             }).count()
@@ -480,7 +480,7 @@ class ElementTemplateService:
             ]
         }
         
-        templates = await StandaloneElementTemplate.find(query).to_list()
+        templates = await ElementTemplate.find(query).to_list()
         unused_templates = []
         
         for template in templates:

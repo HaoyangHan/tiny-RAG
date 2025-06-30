@@ -66,7 +66,7 @@ class ElementTemplateService:
             raise ValueError(f"Template with name '{template_data['name']}' already exists for tenant {template_data['tenant_type']}")
         
         # Create template
-        template = StandaloneElementTemplate(
+        template = ElementTemplate(
             **template_data,
             created_by=created_by,
             is_system_default=template_data.get('is_system_default', True)
@@ -210,7 +210,7 @@ class ElementTemplateService:
     
     async def _create_element_from_template(
         self,
-        template: StandaloneElementTemplate,
+        template: ElementTemplate,
         project_id: str,
         owner_id: str,
         batch_id: str

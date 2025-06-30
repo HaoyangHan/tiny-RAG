@@ -161,7 +161,7 @@ export default function ProjectsPage() {
               <DocumentTextIcon className="h-4 w-4 text-gray-500 mr-1" />
               <span className="text-sm font-medium text-gray-900">{project.document_count || 0}</span>
             </div>
-            <p className="text-xs text-gray-500">Documents</p>
+                          <p className="text-xs text-gray-600">Documents</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
@@ -175,7 +175,7 @@ export default function ProjectsPage() {
               <SparklesIcon className="h-4 w-4 text-gray-500 mr-1" />
               <span className="text-sm font-medium text-gray-900">{project.generation_count || 0}</span>
             </div>
-            <p className="text-xs text-gray-500">Generations</p>
+                          <p className="text-xs text-gray-600">Generations</p>
           </div>
         </div>
 
@@ -278,7 +278,7 @@ export default function ProjectsPage() {
                 <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
                 <span className="text-sm font-medium text-gray-900">{project.element_count || 0}</span>
               </div>
-              <p className="text-xs text-gray-500">Elements</p>
+              <p className="text-xs text-gray-600">Elements</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center">

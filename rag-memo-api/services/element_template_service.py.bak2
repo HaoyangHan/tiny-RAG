@@ -66,7 +66,7 @@ class ElementTemplateService:
             raise ValueError(f"Template with name '{template_data['name']}' already exists for tenant {template_data['tenant_type']}")
         
         # Create template
-        template = StandaloneElementTemplate(
+        template = ElementTemplate(
             **template_data,
             created_by=created_by,
             is_system_default=template_data.get('is_system_default', True)
@@ -210,7 +210,7 @@ class ElementTemplateService:
     
     async def _create_element_from_template(
         self,
-        template: StandaloneElementTemplate,
+        template: ElementTemplate,
         project_id: str,
         owner_id: str,
         batch_id: str
@@ -264,7 +264,7 @@ class ElementTemplateService:
         Returns:
             Updated template
         """
-        template = await StandaloneElementTemplate.get(template_id)
+        template = await ElementTemplate.get(template_id)
         if not template:
             raise ValueError(f"Template not found: {template_id}")
         
@@ -313,7 +313,7 @@ class ElementTemplateService:
         Returns:
             True if deleted successfully
         """
-        template = await StandaloneElementTemplate.get(template_id)
+        template = await ElementTemplate.get(template_id)
         if not template:
             return False
         
@@ -339,7 +339,7 @@ class ElementTemplateService:
     
     async def get_template_usage_stats(self, template_id: str) -> Dict[str, Any]:
         """Get usage statistics for a template."""
-        template = await StandaloneElementTemplate.get(template_id)
+        template = await ElementTemplate.get(template_id)
         if not template:
             raise ValueError(f"Template not found: {template_id}")
         

@@ -12,6 +12,7 @@ from beanie import PydanticObjectId
 from beanie.operators import In, And, Or, Eq
 
 from models import Project, TenantType, ProjectStatus, VisibilityType
+from services.element_template_service import ElementTemplateService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ class ProjectService:
     retrieval, updates, deletion, and collaboration management.
     """
     
+    def __init__(self):
+        """Initialize project service with dependencies."""
+        self.element_template_service = ElementTemplateService()
+    
     async def create_project(
         self,
         name: str,
@@ -34,7 +39,7 @@ class ProjectService:
         owner_id: str
     ) -> Project:
         """
-        Create a new project.
+        Create a new project with automatic element template provisioning.
         
         Args:
             name: Project name
@@ -45,7 +50,7 @@ class ProjectService:
             owner_id: ID of the project owner
             
         Returns:
-            Project: Created project instance
+            Project: Created project instance with provisioned elements
             
         Raises:
             ValueError: If validation fails
@@ -67,6 +72,34 @@ class ProjectService:
             await project.insert()
             
             logger.info(f"Created project {project.id} for user {owner_id}")
+            
+            # Provision element templates for the tenant type
+            try:
+                batch_id = f"project_creation_{project.id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                provisioned_elements = await self.element_template_service.provision_templates_to_project(
+                    project_id=str(project.id),
+                    tenant_type=tenant_type,
+                    batch_id=batch_id,
+                    force=False
+                )
+                
+                # Update project element IDs
+                if provisioned_elements:
+                    project.element_ids = [str(elem.id) for elem in provisioned_elements]
+                    await project.save()
+                    
+                    logger.info(
+                        f"Provisioned {len(provisioned_elements)} element templates "
+                        f"to project {project.id} for tenant {tenant_type}"
+                    )
+                else:
+                    logger.info(f"No element templates found for tenant {tenant_type}")
+                    
+            except Exception as e:
+                logger.error(f"Failed to provision element templates to project {project.id}: {str(e)}")
+                # Don't fail project creation if template provisioning fails
+                # The project is still created, just without default elements
+            
             return project
             
         except Exception as e:

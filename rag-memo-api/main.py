@@ -42,8 +42,7 @@ from models import (
     GenerationStatus, EvaluationStatus, DocumentStatus, ProjectStatus, VisibilityType
 )
 
-# Import ElementExecution separately since it's in element.py
-from models.element import ElementExecution
+# ElementExecution has been removed - no longer needed
 
 # Import route modules
 from routes.documents import router as documents_router
@@ -100,7 +99,7 @@ async def lifespan(app_instance: FastAPI):
                 # v1.3 legacy models
                 User, APIKey, Document, Generation,
                 # v1.4 models
-                Project, Element, ElementGeneration, Evaluation, ElementExecution
+                Project, Element, ElementGeneration, Evaluation
             ]
         )
         logger.info("Database initialized successfully")
