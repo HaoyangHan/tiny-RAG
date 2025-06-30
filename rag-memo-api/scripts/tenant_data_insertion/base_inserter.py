@@ -1,8 +1,8 @@
 """
-Base Element Inserter for TinyRAG v1.4.2 Element Management System.
+Base Element Template Inserter for TinyRAG v1.4.2 Element Management System.
 
-This module provides the BaseElementInserter abstract class for implementing
-tenant-specific element insertion scripts with MongoDB integration.
+This module provides the BaseElementTemplateInserter abstract class for implementing
+tenant-specific element template insertion scripts with MongoDB integration.
 """
 
 import asyncio
@@ -16,8 +16,9 @@ import motor.motor_asyncio
 from beanie import init_beanie
 from bson import ObjectId
 
-# Import models
-from models.element import Element, ElementTemplate
+# Import models - using standalone ElementTemplate for provisioning
+from models.element_template import ElementTemplate as StandaloneElementTemplate
+from models.element import Element  # Keep for compatibility
 from models.enums import TenantType, TaskType, ElementType, ElementStatus
 from models.project import Project
 from database import get_database_url
@@ -34,31 +35,27 @@ logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
 
-class BaseElementInserter(ABC):
+class BaseElementTemplateInserter(ABC):
     """
-    Abstract base class for tenant-specific element insertion.
+    Abstract base class for tenant-specific element template insertion.
     
-    Provides common functionality for connecting to MongoDB, validating data,
-    and inserting elements with proper error handling and logging.
+    Creates standalone element templates that can be automatically provisioned
+    to new projects during creation.
     """
     
-    def __init__(self, tenant_type: TenantType, project_id: Optional[str] = None):
+    def __init__(self, tenant_type: TenantType, created_by: Optional[str] = None):
         """
-        Initialize the element inserter.
+        Initialize the element template inserter.
         
         Args:
             tenant_type: The tenant type for this inserter
-            project_id: Optional project ID, uses default if not provided
+            created_by: User ID who created the templates
         """
         self.tenant_type = tenant_type
-        self.project_id = project_id or DEFAULT_PROJECT_IDS.get(tenant_type)
-        self.user_id = DEFAULT_USER_ID
+        self.created_by = created_by or DEFAULT_USER_ID
         self.client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None
         self.database = None
-        self.inserted_elements: List[str] = []  # Track inserted element IDs
-        
-        if not self.project_id:
-            raise ValueError(f"No project ID configured for tenant type: {tenant_type}")
+        self.inserted_templates: List[str] = []  # Track inserted template IDs
     
     async def connect_to_database(self) -> None:
         """Connect to MongoDB and initialize Beanie."""
@@ -70,7 +67,7 @@ class BaseElementInserter(ABC):
             # Initialize Beanie with required models
             await init_beanie(
                 database=self.database,
-                document_models=[Element, ElementTemplate, Project]
+                document_models=[StandaloneElementTemplate, Element, Project]
             )
             logger.info("Successfully connected to database")
             
@@ -84,41 +81,12 @@ class BaseElementInserter(ABC):
             self.client.close()
             logger.info("Database connection closed")
     
-    async def validate_project_exists(self) -> bool:
+    async def check_duplicate_template(self, name: str) -> bool:
         """
-        Validate that the project exists and is accessible.
-        
-        Returns:
-            bool: True if project exists and is valid
-        """
-        try:
-            # Convert string ID to ObjectId if needed
-            project_oid = ObjectId(self.project_id) if isinstance(self.project_id, str) else self.project_id
-            project = await Project.get(project_oid)
-            
-            if not project:
-                logger.error(f"Project {self.project_id} not found")
-                return False
-                
-            if project.tenant_type != self.tenant_type:
-                logger.warning(
-                    f"Project {self.project_id} has tenant type {project.tenant_type}, "
-                    f"expected {self.tenant_type}"
-                )
-                
-            logger.info(f"Project '{project.name}' validated for tenant {self.tenant_type}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error validating project {self.project_id}: {str(e)}")
-            return False
-    
-    async def check_duplicate_element(self, name: str) -> bool:
-        """
-        Check if an element with the given name already exists in the project.
+        Check if a template with the given name already exists for this tenant.
         
         Args:
-            name: Element name to check
+            name: Template name to check
             
         Returns:
             bool: True if duplicate exists, False otherwise
@@ -127,63 +95,27 @@ class BaseElementInserter(ABC):
             return False
             
         try:
-            existing = await Element.find_one({
+            existing = await StandaloneElementTemplate.find_one({
                 "name": name,
-                "project_id": self.project_id,
-                "is_deleted": False
+                "tenant_type": self.tenant_type
             })
             
             if existing:
-                logger.warning(f"Element '{name}' already exists in project {self.project_id}")
+                logger.warning(f"Template '{name}' already exists for tenant {self.tenant_type}")
                 return True
                 
             return False
             
         except Exception as e:
-            logger.error(f"Error checking for duplicate element '{name}': {str(e)}")
+            logger.error(f"Error checking for duplicate template '{name}': {str(e)}")
             return False
-    
-    def create_element_template(
-        self,
-        content: str,
-        generation_prompt: Optional[str] = None,
-        retrieval_prompt: Optional[str] = None,
-        variables: List[str] = None,
-        execution_config: Optional[Dict[str, Any]] = None,
-        version: str = "1.0.0"
-    ) -> ElementTemplate:
-        """
-        Create an ElementTemplate instance.
-        
-        Args:
-            content: Legacy template content
-            generation_prompt: Full detailed prompt for generation
-            retrieval_prompt: Summarized prompt for retrieval
-            variables: Template variables
-            execution_config: Execution configuration
-            version: Template version
-            
-        Returns:
-            ElementTemplate: Created template instance
-        """
-        config = execution_config or DEFAULT_LLM_CONFIG.copy()
-        vars_list = variables or []
-        
-        return ElementTemplate(
-            content=content,
-            generation_prompt=generation_prompt,
-            retrieval_prompt=retrieval_prompt,
-            variables=vars_list,
-            execution_config=config,
-            version=version
-        )
     
     def create_element_tags(self, specific_tags: List[str]) -> List[str]:
         """
-        Create standardized tags for an element.
+        Create standardized tags for a template.
         
         Args:
-            specific_tags: Element-specific tags
+            specific_tags: Template-specific tags
             
         Returns:
             List[str]: Combined tags list
@@ -197,73 +129,77 @@ class BaseElementInserter(ABC):
         # Remove duplicates and normalize
         return list(set(tag.lower().strip() for tag in tags if tag.strip()))
     
-    async def insert_element(self, element_data: Dict[str, Any]) -> Optional[str]:
+    async def insert_template(self, template_data: Dict[str, Any]) -> Optional[str]:
         """
-        Insert a single element into the database.
+        Insert a single element template into the database.
         
         Args:
-            element_data: Element data dictionary
+            template_data: Template data dictionary
             
         Returns:
-            Optional[str]: Inserted element ID if successful
+            Optional[str]: Inserted template ID if successful
         """
         try:
             # Check for duplicates
-            if await self.check_duplicate_element(element_data["name"]):
-                logger.info(f"Skipping duplicate element: {element_data['name']}")
+            if await self.check_duplicate_template(template_data["name"]):
+                logger.info(f"Skipping duplicate template: {template_data['name']}")
                 return None
             
-            # Create element instance
-            element = Element(
-                name=element_data["name"],
-                description=element_data.get("description"),
-                project_id=self.project_id,
+            # Create standalone element template instance
+            template = StandaloneElementTemplate(
+                name=template_data["name"],
+                description=template_data.get("description", ""),
                 tenant_type=self.tenant_type,
-                task_type=element_data["task_type"],
-                element_type=element_data["element_type"],
-                status=element_data.get("status", ElementStatus.ACTIVE),
-                template=element_data["template"],
-                tags=element_data.get("tags", []),
-                owner_id=self.user_id
+                task_type=template_data["task_type"],
+                element_type=template_data["element_type"],
+                generation_prompt=template_data["generation_prompt"],
+                retrieval_prompt=template_data.get("retrieval_prompt"),
+                variables=template_data.get("variables", []),
+                execution_config=template_data.get("execution_config", DEFAULT_LLM_CONFIG.copy()),
+                is_system_default=template_data.get("is_system_default", True),
+                version=template_data.get("version", "1.0.0"),
+                tags=template_data.get("tags", []),
+                status=ElementStatus.ACTIVE,
+                created_by=self.created_by
             )
             
-            # Validate element
-            element.dict()  # This will raise validation errors if any
+            # Validate template
+            template.dict()  # This will raise validation errors if any
             
             if DRY_RUN:
-                logger.info(f"[DRY RUN] Would insert element: {element.name}")
-                return f"dry-run-{element.name}"
+                logger.info(f"[DRY RUN] Would insert template: {template.name}")
+                return f"dry-run-{template.name}"
             
-            # Insert element
-            await element.insert()
-            element_id = str(element.id)
-            self.inserted_elements.append(element_id)
+            # Insert template
+            await template.insert()
+            template_id = str(template.id)
+            self.inserted_templates.append(template_id)
             
-            logger.info(f"✅ Inserted element: {element.name} (ID: {element_id})")
-            return element_id
+            logger.info(f"✅ Inserted template: {template.name} (ID: {template_id})")
+            return template_id
             
         except Exception as e:
-            logger.error(f"❌ Failed to insert element {element_data.get('name', 'unknown')}: {str(e)}")
+            logger.error(f"❌ Failed to insert template {template_data.get('name', 'unknown')}: {str(e)}")
             return None
     
-    async def insert_elements(self, elements_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def insert_templates(self, templates_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Insert multiple elements and return summary.
+        Insert multiple element templates and return summary.
         
         Args:
-            elements_data: List of element data dictionaries
+            templates_data: List of template data dictionaries
             
         Returns:
             Dict[str, Any]: Insertion summary
         """
-        logger.info(f"Starting insertion of {len(elements_data)} elements for tenant {self.tenant_type}")
+        logger.info(f"Starting insertion of {len(templates_data)} templates for tenant {self.tenant_type}")
         
         success_count = 0
         failed_count = 0
         skipped_count = 0
         
-        for element_data in elements_data:
-            result = await self.insert_element(element_data)
+        for template_data in templates_data:
+            result = await self.insert_template(template_data)
             
             if result is None:
                 skipped_count += 1
@@ -272,15 +208,15 @@ class BaseElementInserter(ABC):
             else:
                 success_count += 1
         
-        failed_count = len(elements_data) - success_count - skipped_count
+        failed_count = len(templates_data) - success_count - skipped_count
         
         summary = {
             "tenant_type": self.tenant_type.value,
-            "total_elements": len(elements_data),
+            "total_templates": len(templates_data),
             "successful": success_count,
             "failed": failed_count,
             "skipped": skipped_count,
-            "inserted_ids": self.inserted_elements,
+            "inserted_ids": self.inserted_templates,
             "dry_run": DRY_RUN
         }
         
@@ -292,20 +228,20 @@ class BaseElementInserter(ABC):
         return summary
     
     @abstractmethod
-    def get_elements_data(self) -> List[Dict[str, Any]]:
+    def get_templates_data(self) -> List[Dict[str, Any]]:
         """
-        Get the list of elements to insert for this tenant.
+        Get the list of element templates to insert for this tenant.
         
         This method must be implemented by each tenant-specific subclass.
         
         Returns:
-            List[Dict[str, Any]]: List of element data dictionaries
+            List[Dict[str, Any]]: List of template data dictionaries
         """
         pass
     
     async def run(self) -> Dict[str, Any]:
         """
-        Main execution method to run the element insertion process.
+        Main execution method to run the template insertion process.
         
         Returns:
             Dict[str, Any]: Insertion summary
@@ -314,41 +250,67 @@ class BaseElementInserter(ABC):
             # Connect to database
             await self.connect_to_database()
             
-            # Validate project
-            if not await self.validate_project_exists():
-                raise ValueError(f"Project validation failed for {self.project_id}")
+            # Get templates data
+            templates_data = self.get_templates_data()
             
-            # Get elements data
-            elements_data = self.get_elements_data()
+            if not templates_data:
+                logger.warning("No templates data provided")
+                return {"error": "No templates data provided"}
             
-            if not elements_data:
-                logger.warning("No elements data provided")
-                return {"error": "No elements data provided"}
-            
-            # Insert elements
-            summary = await self.insert_elements(elements_data)
+            # Insert templates
+            summary = await self.insert_templates(templates_data)
             
             return summary
             
         except Exception as e:
-            logger.error(f"Element insertion failed: {str(e)}")
+            logger.error(f"Template insertion failed: {str(e)}")
             return {"error": str(e)}
             
         finally:
             await self.close_database_connection()
 
 
-async def run_inserter(inserter_class, tenant_type: TenantType, project_id: Optional[str] = None):
+# Keep the old class for backward compatibility but deprecate it
+class BaseElementInserter(BaseElementTemplateInserter):
     """
-    Utility function to run an inserter class.
+    Deprecated: Use BaseElementTemplateInserter instead.
+    
+    This class is kept for backward compatibility but should not be used
+    for new implementations.
+    """
+    
+    def __init__(self, tenant_type: TenantType, project_id: Optional[str] = None):
+        logger.warning(
+            "BaseElementInserter is deprecated. Use BaseElementTemplateInserter instead."
+        )
+        super().__init__(tenant_type, DEFAULT_USER_ID)
+        self.project_id = project_id or DEFAULT_PROJECT_IDS.get(tenant_type)
+    
+    def get_elements_data(self) -> List[Dict[str, Any]]:
+        """Deprecated method - use get_templates_data instead."""
+        return self.get_templates_data()
+
+
+async def run_template_inserter(inserter_class, tenant_type: TenantType, created_by: Optional[str] = None):
+    """
+    Utility function to run a template inserter class.
     
     Args:
         inserter_class: The inserter class to instantiate and run
         tenant_type: Tenant type for the inserter
-        project_id: Optional project ID
+        created_by: User ID who created the templates
     
     Returns:
         Dict[str, Any]: Insertion summary
     """
-    inserter = inserter_class(tenant_type, project_id)
-    return await inserter.run() 
+    inserter = inserter_class(tenant_type, created_by)
+    return await inserter.run()
+
+
+# Backward compatibility function
+async def run_inserter(inserter_class, tenant_type: TenantType, project_id: Optional[str] = None):
+    """
+    Deprecated: Use run_template_inserter instead.
+    """
+    logger.warning("run_inserter is deprecated. Use run_template_inserter instead.")
+    return await run_template_inserter(inserter_class, tenant_type, DEFAULT_USER_ID) 

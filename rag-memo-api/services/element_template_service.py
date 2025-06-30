@@ -116,11 +116,26 @@ class ElementTemplateService:
         Returns:
             List of element templates
         """
-        query = {"tenant_type": tenant_type}
+        # Use tenant_type.value to match the string value stored in database
+        query = {"tenant_type": tenant_type.value}
         if active_only:
-            query["status"] = ElementStatus.ACTIVE
+            # Use OR condition to handle both explicit active status and missing status (defaults to active)
+            query = {
+                "tenant_type": tenant_type.value,
+                "$or": [
+                    {"status": ElementStatus.ACTIVE.value},  # Use .value for string comparison
+                    {"status": {"$exists": False}}  # Templates without status field default to active
+                ]
+            }
         
         templates = await StandaloneElementTemplate.find(query).sort("name").to_list()
+        
+        # Ensure all templates have proper status set and fix missing status
+        for template in templates:
+            if not hasattr(template, 'status') or template.status is None:
+                template.status = ElementStatus.ACTIVE
+                await template.save()
+        
         return templates
     
     async def provision_templates_to_project(
@@ -436,8 +451,8 @@ class ElementTemplateService:
         """Update the template count for a tenant configuration."""
         try:
             template_count = await StandaloneElementTemplate.find({
-                "tenant_type": tenant_type,
-                "status": ElementStatus.ACTIVE
+                "tenant_type": tenant_type.value,  # Use .value for string comparison
+                "status": ElementStatus.ACTIVE.value  # Use .value for string comparison
             }).count()
             
             tenant_config = await TenantConfiguration.get_by_tenant_type(tenant_type)

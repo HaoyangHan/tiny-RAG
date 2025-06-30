@@ -16,7 +16,7 @@ from .config import LOGGING_CONFIG, DRY_RUN
 # Import all tenant inserters
 from .tenant_hr_elements import HRElementInserter
 from .tenant_coding_elements import CodingElementInserter  
-from .tenant_financial_elements import FinancialElementInserter
+from .tenant_financial_elements import FinancialElementTemplateInserter
 
 # Configure logging
 logging.config.dictConfig(LOGGING_CONFIG)
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 TENANT_INSERTERS = {
     TenantType.HR: HRElementInserter,
     TenantType.CODING: CodingElementInserter,
-    TenantType.FINANCIAL_REPORT: FinancialElementInserter,
+    TenantType.FINANCIAL_REPORT: FinancialElementTemplateInserter,
     # Add more tenant inserters as they are created:
     # TenantType.DEEP_RESEARCH: ResearchElementInserter,
     # TenantType.QA_GENERATION: QAElementInserter,

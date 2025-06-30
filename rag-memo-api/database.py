@@ -6,6 +6,13 @@ import os
 
 from models.document import Document
 from models.memo import Memo
+from models.element import Element
+from models.element_template import ElementTemplate as StandaloneElementTemplate
+from models.project import Project
+from models.tenant_configuration import TenantConfiguration
+from models.user import User
+from models.generation import Generation
+from models.evaluation import Evaluation
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +49,23 @@ class Database:
             # Create Motor client
             cls.client = AsyncIOMotorClient(mongodb_url)
             
-            # Initialize Beanie with the models
+            # Initialize Beanie with all required models
             await init_beanie(
                 database=cls.client[database_name],
                 document_models=[
                     Document,
-                    Memo
+                    Memo,
+                    Element,
+                    StandaloneElementTemplate,
+                    Project,
+                    TenantConfiguration,
+                    User,
+                    Generation,
+                    Evaluation
                 ]
             )
             
-            logger.info("Connected to MongoDB")
+            logger.info("Connected to MongoDB with all models initialized")
             
         except Exception as e:
             logger.error(f"Error connecting to MongoDB: {str(e)}")
