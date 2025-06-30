@@ -13,18 +13,27 @@ from models.base import BaseDocument
 from models.enums import TenantType, TaskType, ElementType, ElementStatus
 
 
-class ElementTemplate(BaseDocument):
+class ElementContent(BaseDocument):
     """
-    Element template content and configuration.
+    Element content and configuration.
     
-    Contains the actual template content, variables, and execution
+    Contains the actual element content, variables, and execution
     parameters for different element types.
     """
     
-    # Template content
+    # Content and Dual Prompt System
     content: str = Field(
-        description="Template content (prompt, config, etc.)"
+        description="Legacy template content (prompt, config, etc.)"
     )
+    generation_prompt: Optional[str] = Field(
+        None,
+        description="Full detailed prompt for generation with complete context"
+    )
+    retrieval_prompt: Optional[str] = Field(
+        None,
+        description="Summarized prompt for retrieval and indexing"
+    )
+    
     variables: List[str] = Field(
         default_factory=list,
         description="Template variables that can be substituted"
@@ -152,8 +161,22 @@ class Element(BaseDocument):
     )
     
     # Template Content
-    template: ElementTemplate = Field(
+    template: ElementContent = Field(
         description="Template content and configuration"
+    )
+    
+    # Source and Template Tracking (NEW)
+    is_default_element: bool = Field(
+        default=False,
+        description="Whether this element was created from a template vs user-created"
+    )
+    template_id: Optional[str] = Field(
+        None,
+        description="Source template ID if this element was created from a template"
+    )
+    insertion_batch_id: Optional[str] = Field(
+        None,
+        description="Batch ID for script-inserted elements (for removal tracking)"
     )
     
     # Execution Tracking
@@ -249,6 +272,64 @@ class Element(BaseDocument):
         """Get the total number of executions for this element."""
         return len(self.execution_history)
     
+    def set_from_template(self, template_id: str, batch_id: Optional[str] = None) -> None:
+        """Mark this element as created from a template."""
+        self.is_default_element = True
+        self.template_id = template_id
+        self.insertion_batch_id = batch_id
+        self.update_timestamp()
+    
+    def has_generation_prompt(self) -> bool:
+        """Check if element has a generation prompt."""
+        return bool(self.template.generation_prompt and self.template.generation_prompt.strip())
+    
+    def has_retrieval_prompt(self) -> bool:
+        """Check if element has a retrieval prompt."""
+        return bool(self.template.retrieval_prompt and self.template.retrieval_prompt.strip())
+    
+    def update_generation_prompt(self, prompt: str) -> None:
+        """Update the generation prompt."""
+        self.template.generation_prompt = prompt.strip()
+        self.update_timestamp()
+    
+    def update_retrieval_prompt(self, prompt: str) -> None:
+        """Update the retrieval prompt."""
+        self.template.retrieval_prompt = prompt.strip()
+        self.update_timestamp()
+    
+    def get_effective_prompt(self, use_generation: bool = True) -> str:
+        """Get the effective prompt for execution."""
+        if use_generation and self.has_generation_prompt():
+            return self.template.generation_prompt
+        elif self.has_retrieval_prompt():
+            return self.template.retrieval_prompt
+        else:
+            return self.template.content
+    
+    def is_script_inserted(self) -> bool:
+        """Check if this element was inserted by a script."""
+        return bool(self.insertion_batch_id)
+    
+    def get_element_summary(self) -> Dict[str, Any]:
+        """Get a summary of element information for display."""
+        return {
+            "id": str(self.id),
+            "name": self.name,
+            "project_id": self.project_id,
+            "tenant_type": self.tenant_type.value,
+            "element_type": self.element_type.value,
+            "status": self.status.value,
+            "is_default_element": self.is_default_element,
+            "template_id": self.template_id,
+            "insertion_batch_id": self.insertion_batch_id,
+            "has_generation_prompt": self.has_generation_prompt(),
+            "has_retrieval_prompt": self.has_retrieval_prompt(),
+            "usage_count": self.usage_statistics.get('usage_count', 0),
+            "execution_count": self.get_execution_count(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+    
     class Settings:
         name = "elements"
         indexes = [
@@ -262,5 +343,13 @@ class Element(BaseDocument):
             "name",
             "created_at",
             "updated_at",
-            "is_deleted"
+            "is_deleted",
+            # New indexes for template tracking
+            "is_default_element",
+            "template_id",
+            "insertion_batch_id",
+            # Compound indexes
+            ("project_id", "is_default_element"),
+            ("template_id", "project_id"),
+            ("insertion_batch_id", "tenant_type")
         ] 
