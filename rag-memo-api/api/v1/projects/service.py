@@ -75,7 +75,22 @@ class ProjectService:
             
             # Provision element templates for the tenant type
             try:
+                logger.info(f"🔧 DEBUG: Starting element template provisioning for project {project.id}")
+                logger.info(f"🔧 DEBUG: Tenant type: {tenant_type}")
+                logger.info(f"🔧 DEBUG: Tenant type value: {tenant_type.value}")
+                
+                # Test if element template service can find templates
+                logger.info("🔧 DEBUG: Testing ElementTemplateService.get_templates_by_tenant...")
+                test_templates = await self.element_template_service.get_templates_by_tenant(tenant_type, active_only=True)
+                logger.info(f"🔧 DEBUG: ElementTemplateService found {len(test_templates)} templates")
+                
+                if test_templates:
+                    for i, template in enumerate(test_templates[:3]):  # Log first 3 templates
+                        logger.info(f"🔧 DEBUG: Template {i+1}: {template.name} (status: {getattr(template, 'status', 'MISSING')})")
+                
                 batch_id = f"project_creation_{project.id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                logger.info(f"🔧 DEBUG: Calling provision_templates_to_project with batch_id: {batch_id}")
+                
                 provisioned_elements = await self.element_template_service.provision_templates_to_project(
                     project_id=str(project.id),
                     tenant_type=tenant_type,
@@ -83,20 +98,29 @@ class ProjectService:
                     force=False
                 )
                 
+                logger.info(f"🔧 DEBUG: provision_templates_to_project returned {len(provisioned_elements)} elements")
+                
                 # Update project element IDs
                 if provisioned_elements:
                     project.element_ids = [str(elem.id) for elem in provisioned_elements]
                     await project.save()
                     
                     logger.info(
-                        f"Provisioned {len(provisioned_elements)} element templates "
+                        f"✅ Provisioned {len(provisioned_elements)} element templates "
                         f"to project {project.id} for tenant {tenant_type}"
                     )
+                    
+                    # Log element details
+                    for elem in provisioned_elements:
+                        logger.info(f"🔧 DEBUG: Created element: {elem.name} (ID: {elem.id})")
                 else:
-                    logger.info(f"No element templates found for tenant {tenant_type}")
+                    logger.warning(f"❌ No element templates found for tenant {tenant_type}")
                     
             except Exception as e:
-                logger.error(f"Failed to provision element templates to project {project.id}: {str(e)}")
+                logger.error(f"❌ Failed to provision element templates to project {project.id}: {str(e)}")
+                logger.error(f"🔧 DEBUG: Exception type: {type(e).__name__}")
+                import traceback
+                logger.error(f"🔧 DEBUG: Full traceback: {traceback.format_exc()}")
                 # Don't fail project creation if template provisioning fails
                 # The project is still created, just without default elements
             

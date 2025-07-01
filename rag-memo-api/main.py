@@ -42,6 +42,9 @@ from models import (
     GenerationStatus, EvaluationStatus, DocumentStatus, ProjectStatus, VisibilityType
 )
 
+# Import standalone element template model for proper Beanie registration
+from models.element_template import ElementTemplate
+
 # ElementExecution has been removed - no longer needed
 
 # Import route modules
@@ -99,7 +102,9 @@ async def lifespan(app_instance: FastAPI):
                 # v1.3 legacy models
                 User, APIKey, Document, Generation,
                 # v1.4 models
-                Project, Element, ElementGeneration, Evaluation
+                Project, Element, ElementGeneration, Evaluation,
+                # Element template model (CRITICAL for auto-provisioning)
+                ElementTemplate
             ]
         )
         logger.info("Database initialized successfully")
@@ -393,7 +398,8 @@ async def health_check():
         "database": {
             "models_registered": [
                 "User", "APIKey", "Document", "Generation",  # v1.3
-                "Project", "Element", "ElementGeneration", "Evaluation"  # v1.4
+                "Project", "Element", "ElementGeneration", "Evaluation",  # v1.4
+                "ElementTemplate"  # Element templates for auto-provisioning
             ]
         },
         "llm_config": {
