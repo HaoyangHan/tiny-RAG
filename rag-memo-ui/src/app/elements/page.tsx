@@ -136,7 +136,7 @@ export default function ElementsPage() {
                 {element.status}
               </span>
             </div>
-            <span className="text-xs text-gray-500">{element.element_type}</span>
+            <span className="text-xs text-gray-600">{element.element_type}</span>
           </div>
 
           <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
@@ -149,24 +149,24 @@ export default function ElementsPage() {
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">
-                <ChartBarIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <ChartBarIcon className="h-4 w-4 text-gray-600 mr-1" />
                 <span className="text-sm font-medium text-gray-900">{element.execution_count || 0}</span>
               </div>
-              <p className="text-xs text-gray-500">Executions</p>
+              <p className="text-xs text-gray-600">Executions</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">
-                <ClockIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <ClockIcon className="h-4 w-4 text-gray-600 mr-1" />
                 <span className="text-sm font-medium text-gray-900">
                   {element.updated_at ? new Date(element.updated_at).toLocaleDateString() : 'Never'}
                 </span>
               </div>
-              <p className="text-xs text-gray-500">Last Updated</p>
+              <p className="text-xs text-gray-600">Last Updated</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-600">
               Created {new Date(element.created_at).toLocaleDateString()}
             </div>
             <div className="flex items-center space-x-2">
@@ -211,7 +211,7 @@ export default function ElementsPage() {
           <div className="text-center py-12">
             <CpuChipIcon className="mx-auto h-12 w-12 text-red-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">Error loading elements</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600">
               Failed to fetch elements. Please try again.
             </p>
             <div className="mt-6">
@@ -254,13 +254,13 @@ export default function ElementsPage() {
               {/* Search */}
               <div className="flex-1">
                 <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
                   <input
                     type="text"
                     placeholder="Search elements..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -269,7 +269,7 @@ export default function ElementsPage() {
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value as ElementType | '')}
-                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">All Types</option>
                 <option value={ElementType.PROMPT_TEMPLATE}>Prompt Template</option>
@@ -281,7 +281,7 @@ export default function ElementsPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as ElementStatus | '')}
-                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">All Status</option>
                 <option value={ElementStatus.ACTIVE}>Active</option>
@@ -301,9 +301,9 @@ export default function ElementsPage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <CpuChipIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <CpuChipIcon className="mx-auto h-12 w-12 text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">No elements found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-600">
               {searchQuery || selectedType || selectedStatus
                 ? 'Try adjusting your filters.'
                 : 'Get started by creating your first element.'
@@ -332,25 +332,25 @@ export default function ElementsPage() {
                 <div className="text-2xl font-bold text-blue-600">
                   {elements.filter(e => e.element_type === ElementType.PROMPT_TEMPLATE).length}
                 </div>
-                <div className="text-sm text-gray-500">Prompt Templates</div>
+                <div className="text-sm text-gray-600">Prompt Templates</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
                   {elements.filter(e => e.element_type === ElementType.AGENTIC_TOOL).length}
                 </div>
-                <div className="text-sm text-gray-500">Agentic Tools</div>
+                <div className="text-sm text-gray-600">Agentic Tools</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
                   {elements.filter(e => e.element_type === ElementType.MCP_CONFIG).length}
                 </div>
-                <div className="text-sm text-gray-500">MCP Configs</div>
+                <div className="text-sm text-gray-600">MCP Configs</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
                   {elements.reduce((sum, e) => sum + (e.execution_count || 0), 0)}
                 </div>
-                <div className="text-sm text-gray-500">Total Executions</div>
+                <div className="text-sm text-gray-600">Total Executions</div>
               </div>
             </div>
           </div>

@@ -190,7 +190,7 @@ export default function CreateProjectPage() {
           id="name"
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           placeholder="Enter a descriptive name for your project"
         />
       </div>
@@ -204,7 +204,7 @@ export default function CreateProjectPage() {
           rows={4}
           value={formData.description}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           placeholder="Describe what this RAG project will accomplish"
         />
       </div>
@@ -217,7 +217,7 @@ export default function CreateProjectPage() {
           id="tenant_type"
           value={formData.tenant_type}
           onChange={(e) => setFormData(prev => ({ ...prev, tenant_type: e.target.value as TenantType }))}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
         >
           <option value={TenantType.HR}>Human Resources</option>
           <option value={TenantType.CODING}>Software Development</option>
@@ -280,7 +280,7 @@ export default function CreateProjectPage() {
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="Add keywords to help organize your project"
           />
           <button
@@ -320,7 +320,7 @@ export default function CreateProjectPage() {
             value={newCollaborator}
             onChange={(e) => setNewCollaborator(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleAddCollaborator()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="Enter email address to invite collaborators"
           />
           <button

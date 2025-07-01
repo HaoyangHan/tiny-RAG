@@ -158,21 +158,21 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
-              <DocumentTextIcon className="h-4 w-4 text-gray-500 mr-1" />
+              <DocumentTextIcon className="h-4 w-4 text-gray-600 mr-1" />
               <span className="text-sm font-medium text-gray-900">{project.document_count || 0}</span>
             </div>
                           <p className="text-xs text-gray-600">Documents</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
-              <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
+              <CpuChipIcon className="h-4 w-4 text-gray-600 mr-1" />
               <span className="text-sm font-medium text-gray-900">{project.element_count || 0}</span>
             </div>
             <p className="text-xs text-gray-600">Elements</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
-              <SparklesIcon className="h-4 w-4 text-gray-500 mr-1" />
+              <SparklesIcon className="h-4 w-4 text-gray-600 mr-1" />
               <span className="text-sm font-medium text-gray-900">{project.generation_count || 0}</span>
             </div>
                           <p className="text-xs text-gray-600">Generations</p>
@@ -268,21 +268,21 @@ export default function ProjectsPage() {
           <div className="flex items-center space-x-6 ml-6">
             <div className="text-center">
               <div className="flex items-center justify-center">
-                <DocumentTextIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <DocumentTextIcon className="h-4 w-4 text-gray-600 mr-1" />
                 <span className="text-sm font-medium text-gray-900">{project.document_count || 0}</span>
               </div>
               <p className="text-xs text-gray-600">Docs</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center">
-                <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <CpuChipIcon className="h-4 w-4 text-gray-600 mr-1" />
                 <span className="text-sm font-medium text-gray-900">{project.element_count || 0}</span>
               </div>
               <p className="text-xs text-gray-600">Elements</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center">
-                <SparklesIcon className="h-4 w-4 text-gray-500 mr-1" />
+                <SparklesIcon className="h-4 w-4 text-gray-600 mr-1" />
                 <span className="text-sm font-medium text-gray-900">{project.generation_count || 0}</span>
               </div>
               <p className="text-xs text-gray-500">Gens</p>
@@ -343,7 +343,7 @@ export default function ProjectsPage() {
                     placeholder="Search projects..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function ProjectsPage() {
                 <select
                   value={filters.tenant_type}
                   onChange={(e) => setFilters({ ...filters, tenant_type: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 >
                   <option value="">All Types</option>
                   <option value="hr">Human Resources</option>
@@ -367,7 +367,7 @@ export default function ProjectsPage() {
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 >
                   <option value="">All Status</option>
                   <option value="active">Active</option>
@@ -378,7 +378,7 @@ export default function ProjectsPage() {
                 <select
                   value={filters.visibility}
                   onChange={(e) => setFilters({ ...filters, visibility: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 >
                   <option value="">All Visibility</option>
                   <option value="public">Public</option>
