@@ -168,7 +168,7 @@ export default function ProjectsPage() {
               <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
               <span className="text-sm font-medium text-gray-900">{project.element_count || 0}</span>
             </div>
-            <p className="text-xs text-gray-500">Elements</p>
+            <p className="text-xs text-gray-600">Elements</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
@@ -192,7 +192,7 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-gray-600">
           <div className="flex items-center">
             <CalendarIcon className="h-3 w-3 mr-1" />
             {new Date(project.created_at).toLocaleDateString()}
@@ -271,7 +271,7 @@ export default function ProjectsPage() {
                 <DocumentTextIcon className="h-4 w-4 text-gray-500 mr-1" />
                 <span className="text-sm font-medium text-gray-900">{project.document_count || 0}</span>
               </div>
-              <p className="text-xs text-gray-500">Docs</p>
+              <p className="text-xs text-gray-600">Docs</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center">
