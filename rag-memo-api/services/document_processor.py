@@ -187,19 +187,22 @@ class DocumentProcessor:
     async def _process_image_with_gpt4(self, image_data: bytes) -> str:
         """Process image using GPT-4 Vision API."""
         try:
-            # Convert image bytes to base64
+            from prompt_template import get_prompt_template
             import base64
+            
+            # Get centralized prompt template
+            template = get_prompt_template("image_description")
             image_base64 = base64.b64encode(image_data).decode('utf-8')
             
             response = self.openai_client.chat.completions.create(
-                model=self.vision_model,
+                model=template.model,
                 messages=[
                     {
                         "role": "user",
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Please describe this image in detail, including any text, diagrams, or important visual elements."
+                                "text": template.user_prompt_template
                             },
                             {
                                 "type": "image_url",
@@ -207,7 +210,9 @@ class DocumentProcessor:
                             }
                         ]
                     }
-                ]
+                ],
+                temperature=template.temperature,
+                max_tokens=template.max_tokens
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -217,18 +222,25 @@ class DocumentProcessor:
     async def _generate_table_summary(self, table_text: str) -> str:
         """Generate a summary of table content using GPT-4."""
         try:
+            from prompt_template import format_prompt
+            
+            # Use centralized prompt template
+            prompt_config = format_prompt("table_summary", table_text=table_text)
+            
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=prompt_config["model"],
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a table analysis expert. Provide a concise summary of the table content, highlighting key data points and patterns."
+                        "content": prompt_config["system_prompt"]
                     },
                     {
                         "role": "user",
-                        "content": f"Please summarize this table:\n{table_text}"
+                        "content": prompt_config["user_prompt"]
                     }
-                ]
+                ],
+                temperature=prompt_config["temperature"],
+                max_tokens=prompt_config["max_tokens"]
             )
             return response.choices[0].message.content
         except Exception as e:

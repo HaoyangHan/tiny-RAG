@@ -83,29 +83,32 @@ class MemoGenerator:
             # Prepare context from chunks
             context = "\n\n".join([chunk.text for chunk in relevant_chunks])
             
-            # Create messages for LLM
+            # Create messages for LLM using centralized prompt template
+            from prompt_template import format_prompt
+            
+            prompt_config = format_prompt(
+                "memo_section",
+                section_title=section_title,
+                context=context
+            )
+            
             messages = [
                 LLMMessage(
                     role="system",
-                    content="""You are an expert memo writer. Your task is to write a clear and concise section for a memo based on the provided context. Focus on extracting and synthesizing the most relevant information. Use proper citations when referencing specific information. Format citations as [citation:doc_id] where doc_id is the document identifier."""
+                    content=prompt_config["system_prompt"]
                 ),
                 LLMMessage(
                     role="user",
-                    content=f"""Write the '{section_title}' section for a memo.
-Use the following context to inform your writing:
-
-{context}
-
-Format the section with clear paragraphs and proper citations using the format [citation:doc_id]."""
+                    content=prompt_config["user_prompt"]
                 )
             ]
 
-            # Generate section content using LLM factory
+            # Generate section content using LLM factory with template config
             response = await llm_factory.generate_response(
                 messages=messages,
-                model=model,
-                temperature=0.7,
-                max_tokens=1000
+                model=model or prompt_config["model"],
+                temperature=prompt_config["temperature"],
+                max_tokens=prompt_config["max_tokens"]
             )
             
             content = response.content
