@@ -74,8 +74,7 @@ class ElementService:
                 content=template_content,
                 variables=variables,
                 execution_config=execution_config,
-                version="1.0.0",
-                changelog=["1.0.0: Initial version"]
+                version="1.0.0"
             )
             
             # Create element instance
@@ -398,8 +397,7 @@ class ElementService:
         self,
         element_id: str,
         user_id: str,
-        new_version: str,
-        changelog_entry: str
+        new_version: str
     ) -> bool:
         """
         Update element template version.
@@ -408,7 +406,6 @@ class ElementService:
             element_id: Element ID
             user_id: ID of the requesting user
             new_version: New version string
-            changelog_entry: Changelog entry for this version
             
         Returns:
             bool: True if successful, False otherwise
@@ -423,7 +420,7 @@ class ElementService:
             if element.owner_id != user_id:
                 return False
             
-            element.update_template_version(new_version, changelog_entry)
+            element.update_template_version(new_version)
             await element.save()
             
             logger.info(f"Updated element {element_id} version to {new_version}")

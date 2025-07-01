@@ -231,15 +231,17 @@ class ElementTemplateService:
         batch_id: str
     ) -> Element:
         """Create an element from a template."""
-        # Create element content
-        element_content = ElementContent(
+        # Import the embedded ElementTemplate class from element.py
+        from models.element import ElementTemplate as EmbeddedElementTemplate
+        
+        # Create element template using the embedded ElementTemplate class
+        element_template = EmbeddedElementTemplate(
             content=template.generation_prompt,  # Legacy field
             generation_prompt=template.generation_prompt,
             retrieval_prompt=template.retrieval_prompt,
             variables=template.variables.copy(),
             execution_config=template.execution_config.copy(),
-            version=template.version,
-            changelog=template.changelog.copy()
+            version=template.version
         )
         
         # Create element
@@ -251,7 +253,7 @@ class ElementTemplateService:
             task_type=template.task_type,
             element_type=template.element_type,
             status=ElementStatus.ACTIVE,
-            template=element_content,
+            template=element_template,
             tags=template.tags.copy(),
             owner_id=owner_id,
             is_default_element=True,
@@ -285,8 +287,7 @@ class ElementTemplateService:
         
         # Handle version update
         if 'version' in updates:
-            changelog_entry = updates.pop('changelog_entry', 'Template updated')
-            template.update_version(updates['version'], changelog_entry)
+            template.update_version(updates['version'])
         
         # Update fields
         for field, value in updates.items():
