@@ -109,7 +109,7 @@ async def create_element(
             element_status=element.status,
             template_version=element.template.version,
             tags=element.tags,
-            execution_count=element.get_execution_count(),
+            execution_count=await element.get_execution_count(),
             created_at=element.created_at.isoformat(),
             updated_at=element.updated_at.isoformat()
         )
@@ -152,8 +152,9 @@ async def list_elements(
             status=element_status
         )
         
-        element_responses = [
-            ElementResponse(
+        element_responses = []
+        for element in elements:
+            element_responses.append(ElementResponse(
                 id=str(element.id),
                 name=element.name,
                 description=element.description,
@@ -162,12 +163,10 @@ async def list_elements(
                 element_status=element.status,
                 template_version=element.template.version,
                 tags=element.tags,
-                execution_count=element.get_execution_count(),
+                execution_count=await element.get_execution_count(),
                 created_at=element.created_at.isoformat(),
                 updated_at=element.updated_at.isoformat()
-            )
-            for element in elements
-        ]
+            ))
         
         return {
             "items": element_responses,
@@ -217,8 +216,8 @@ async def get_element(
         template_version=element.template.version,
         execution_config=element.template.execution_config,
         tags=element.tags,
-        execution_count=element.get_execution_count(),
-        usage_statistics=element.usage_statistics,
+        execution_count=await element.get_execution_count(),
+        usage_statistics=await element.get_usage_statistics(),
         created_at=element.created_at.isoformat(),
         updated_at=element.updated_at.isoformat()
     )
@@ -304,7 +303,7 @@ async def update_element(
             element_status=element.status,
             template_version=element.template.version,
             tags=element.tags,
-            execution_count=element.get_execution_count(),
+            execution_count=await element.get_execution_count(),
             created_at=element.created_at.isoformat(),
             updated_at=element.updated_at.isoformat()
         )

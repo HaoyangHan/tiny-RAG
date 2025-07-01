@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import Field, validator
 from models.base import BaseDocument
-from models.enums import TenantType, TaskType, ElementType, ElementStatus
+from models.enums import TenantType, TaskType, ElementType, ElementStatus, GenerationStatus
 
 
 class ElementTemplate(BaseDocument):
@@ -240,6 +240,103 @@ class Element(BaseDocument):
             "created_at": self.created_at,
             "updated_at": self.updated_at
         }
+    
+    async def get_execution_count(self) -> int:
+        """Get the number of executions for this element."""
+        try:
+            # Import here to avoid circular imports
+            from models.element_generation import ElementGeneration
+            
+            # Count all successful executions for this element
+            count = await ElementGeneration.find({
+                "element_id": str(self.id),
+                "status": {"$in": [
+                    GenerationStatus.COMPLETED.value,
+                    GenerationStatus.EVALUATED.value
+                ]}
+            }).count()
+            
+            return count
+        except Exception:
+            # Fallback to 0 if there's any error
+            return 0
+    
+    async def get_usage_statistics(self) -> Dict[str, Any]:
+        """Get usage statistics for this element."""
+        try:
+            # Import here to avoid circular imports
+            from models.element_generation import ElementGeneration
+            
+            # Get all executions for this element
+            executions = await ElementGeneration.find({
+                "element_id": str(self.id)
+            }).to_list()
+            
+            if not executions:
+                return {
+                    "execution_count": 0,
+                    "last_executed": None,
+                    "average_execution_time": 0,
+                    "success_rate": 0.0,
+                    "total_tokens_used": 0,
+                    "average_cost": 0.0
+                }
+            
+            # Calculate statistics
+            total_executions = len(executions)
+            successful_executions = [
+                ex for ex in executions 
+                if ex.status in [GenerationStatus.COMPLETED, GenerationStatus.EVALUATED]
+            ]
+            
+            success_rate = len(successful_executions) / total_executions if total_executions > 0 else 0.0
+            
+            # Calculate average execution time from successful executions
+            execution_times = []
+            total_tokens = 0
+            total_cost = 0.0
+            last_executed = None
+            
+            for execution in successful_executions:
+                if execution.metrics and execution.metrics.generation_time_ms:
+                    execution_times.append(execution.metrics.generation_time_ms)
+                
+                if execution.metrics:
+                    total_tokens += execution.metrics.total_tokens
+                    if execution.metrics.estimated_cost:
+                        total_cost += execution.metrics.estimated_cost
+                
+                # Track the most recent execution
+                if not last_executed or execution.created_at > last_executed:
+                    last_executed = execution.created_at
+            
+            average_execution_time = (
+                sum(execution_times) / len(execution_times) 
+                if execution_times else 0
+            )
+            
+            average_cost = total_cost / len(successful_executions) if successful_executions else 0.0
+            
+            return {
+                "execution_count": total_executions,
+                "successful_executions": len(successful_executions),
+                "last_executed": last_executed.isoformat() if last_executed else None,
+                "average_execution_time": round(average_execution_time, 2),
+                "success_rate": round(success_rate, 3),
+                "total_tokens_used": total_tokens,
+                "average_cost": round(average_cost, 4)
+            }
+            
+        except Exception:
+            # Fallback to basic statistics if there's any error
+            return {
+                "execution_count": 0,
+                "last_executed": None,
+                "average_execution_time": 0,
+                "success_rate": 0.0,
+                "total_tokens_used": 0,
+                "average_cost": 0.0
+            }
     
     class Settings:
         name = "elements"
