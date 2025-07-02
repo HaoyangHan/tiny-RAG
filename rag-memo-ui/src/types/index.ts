@@ -172,7 +172,7 @@ export interface ElementCreateRequest {
   project_id: string;
   element_type: ElementType;
   template_content: string;
-  variables?: string[];
+  additional_instructions_template?: string;
   execution_config?: Record<string, any>;
   tags?: string[];
 }
@@ -195,7 +195,8 @@ export interface Generation {
   element_name?: string;
   project_id: string;
   status: GenerationStatus;
-  input_data: Record<string, any>;
+  additional_instructions?: string;
+  source_chunks?: Array<Record<string, any>>;
   output_text?: string;
   model_used?: string;
   tokens_used: number;

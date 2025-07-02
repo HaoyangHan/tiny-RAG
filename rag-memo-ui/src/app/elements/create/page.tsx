@@ -3,25 +3,22 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  ChevronLeftIcon,
   DocumentTextIcon,
+  CpuChipIcon,
   WrenchScrewdriverIcon,
   Cog6ToothIcon,
+  CheckIcon,
+  EyeIcon,
   PlusIcon,
   TrashIcon,
-  EyeIcon,
-  ChevronLeftIcon,
-  InformationCircleIcon,
-  CheckIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ElementType, ElementStatus } from '@/types';
 
-interface Variable {
-  name: string;
-  type: string;
-  description: string;
-  default_value?: string;
-}
+// Variable interface removed - using simplified additional instructions approach
 
 interface ElementFormData {
   name: string;
@@ -29,7 +26,7 @@ interface ElementFormData {
   type: ElementType;
   status: ElementStatus;
   template_content: string;
-  variables: Variable[];
+  additional_instructions_template: string;
   project_id: string;
 }
 
@@ -42,25 +39,21 @@ export default function CreateElementPage() {
     type: ElementType.PROMPT_TEMPLATE,
     status: ElementStatus.DRAFT,
     template_content: '',
-    variables: [],
+    additional_instructions_template: '',
     project_id: '1', // Mock project ID
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [newVariable, setNewVariable] = useState<Variable>({
-    name: '',
-    type: 'string',
-    description: '',
-  });
+  // Variable state removed - using simplified additional instructions approach
 
   const elementTypes = [
     {
       type: ElementType.PROMPT_TEMPLATE,
       name: 'Prompt Template',
-      description: 'Create templates for AI-powered text generation with variable substitution',
+      description: 'Create templates for AI-powered text generation with retrieval context and optional additional instructions',
       icon: DocumentTextIcon,
       color: 'bg-blue-50 border-blue-200 text-blue-800',
-      example: 'Based on the following context: {context}\n\nAnswer the user question: {question}\n\nProvide a helpful and accurate response.'
+      example: 'You are an expert analyst. Based on the retrieved document chunks below, provide a comprehensive analysis.\n\n**Retrieved Document Chunks:**\n{retrieved_chunks}\n\n{additional_instructions}\n\n**Generated Analysis:**'
     },
     {
       type: ElementType.AGENTIC_TOOL,
@@ -80,54 +73,54 @@ export default function CreateElementPage() {
     {
       type: ElementType.MCP_CONFIG,
       name: 'MCP Configuration',
-      description: 'Configure model connection protocols and AI provider settings',
+      description: 'Model Context Protocol configurations for structured AI interactions',
       icon: Cog6ToothIcon,
       color: 'bg-purple-50 border-purple-200 text-purple-800',
       example: JSON.stringify({
-        provider: 'openai',
-        model: 'gpt-4-turbo',
-        temperature: 0.7,
-        max_tokens: 2000,
-        system_prompt: 'You are a helpful assistant.'
+        protocol_version: '1.0',
+        server_info: {
+          name: 'document-analyzer',
+          version: '1.0.0'
+        },
+        capabilities: {
+          resources: true,
+          tools: true,
+          prompts: true
+        }
+      }, null, 2)
+    },
+    {
+      type: ElementType.RAG_CONFIG,
+      name: 'RAG Configuration',
+      description: 'Retrieval-Augmented Generation pipeline configurations',
+      icon: CpuChipIcon,
+      color: 'bg-orange-50 border-orange-200 text-orange-800',
+      example: JSON.stringify({
+        retrieval_config: {
+          top_k: 5,
+          similarity_threshold: 0.7,
+          rerank: true
+        },
+        generation_config: {
+          model: 'gpt-4-turbo',
+          temperature: 0.3,
+          max_tokens: 2000
+        }
       }, null, 2)
     }
   ];
 
   const handleTypeSelect = (type: ElementType) => {
     setSelectedType(type);
+    const selectedTypeInfo = elementTypes.find(t => t.type === type);
     setFormData(prev => ({
       ...prev,
       type,
-      template_content: elementTypes.find(t => t.type === type)?.example || '',
-      variables: type === ElementType.PROMPT_TEMPLATE ? [
-        { name: 'context', type: 'string', description: 'Relevant context information' },
-        { name: 'question', type: 'string', description: 'User question or query' }
-      ] : []
+      template_content: selectedTypeInfo?.example || ''
     }));
   };
 
-  const addVariable = () => {
-    setFormData(prev => ({
-      ...prev,
-      variables: [...prev.variables, { name: '', type: 'string', description: '' }]
-    }));
-  };
-
-  const updateVariable = (index: number, field: keyof Variable, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      variables: prev.variables.map((variable, i) => 
-        i === index ? { ...variable, [field]: value } : variable
-      )
-    }));
-  };
-
-  const removeVariable = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      variables: prev.variables.filter((_, i) => i !== index)
-    }));
-  };
+  // Variable functions removed - using simplified additional instructions approach
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -148,11 +141,10 @@ export default function CreateElementPage() {
   const generatePreview = () => {
     if (formData.type === ElementType.PROMPT_TEMPLATE) {
       let preview = formData.template_content;
-      formData.variables.forEach(variable => {
-        const placeholder = `{${variable.name}}`;
-        const replacement = variable.default_value || `[${variable.name.toUpperCase()}]`;
-        preview = preview.replace(new RegExp(placeholder, 'g'), replacement);
-      });
+      // Replace placeholders with example content
+      preview = preview.replace(/\{retrieved_chunks\}/g, '[Retrieved document chunks would appear here]');
+      preview = preview.replace(/\{additional_instructions\}/g, 
+        formData.additional_instructions_template || '[Optional additional instructions from user]');
       return preview;
     } else {
       try {
@@ -166,8 +158,7 @@ export default function CreateElementPage() {
   const isFormValid = () => {
     return formData.name.trim() && 
            formData.description.trim() && 
-           formData.template_content.trim() &&
-           (formData.type !== ElementType.PROMPT_TEMPLATE || formData.variables.length > 0);
+           formData.template_content.trim();
   };
 
   const selectedTypeInfo = elementTypes.find(t => t.type === selectedType);
@@ -295,7 +286,10 @@ export default function CreateElementPage() {
                   placeholder="Enter your template content here..."
                 />
                 <p className="mt-1 text-sm text-gray-700">
-                  Use {selectedType === ElementType.PROMPT_TEMPLATE ? '{{variable}}' : 'JSON'} syntax for dynamic content
+                  {selectedType === ElementType.PROMPT_TEMPLATE 
+                    ? 'Use {retrieved_chunks} and {additional_instructions} placeholders for dynamic content'
+                    : 'Use JSON syntax for configuration templates'
+                  }
                 </p>
               </div>
             </div>
@@ -303,56 +297,41 @@ export default function CreateElementPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Variables */}
+          {/* Additional Instructions Template */}
           {selectedType === ElementType.PROMPT_TEMPLATE && (
             <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Variables</h3>
+              <div className="flex items-center space-x-2 mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Additional Instructions Template</h3>
+                <InformationCircleIcon className="h-5 w-5 text-gray-400" />
+              </div>
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={newVariable.name}
-                    onChange={(e) => setNewVariable(prev => ({ ...prev, name: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                    placeholder="Variable name"
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Instructions Template (Optional)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={formData.additional_instructions_template}
+                    onChange={(e) => setFormData(prev => ({ ...prev, additional_instructions_template: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    placeholder="e.g., Additional focus areas: [emphasize financial risks, focus on growth trends, etc.]"
                   />
-                  <select
-                    value={newVariable.type}
-                    onChange={(e) => setNewVariable(prev => ({ ...prev, type: e.target.value }))}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  >
-                    <option value="string">String</option>
-                    <option value="number">Number</option>
-                    <option value="boolean">Boolean</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={addVariable}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  >
-                    Add
-                  </button>
+                  <p className="mt-1 text-sm text-gray-600">
+                    This template helps users understand what kind of additional instructions they can provide when using this element.
+                  </p>
                 </div>
                 
-                <div className="space-y-2">
-                  {formData.variables.map((variable, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                      <div>
-                        <span className="font-medium text-gray-900">{variable.name}</span>
-                        <span className="ml-2 text-sm text-gray-500">({variable.type})</span>
-                        {variable.description && (
-                          <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeVariable(index)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Remove
-                      </button>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-2">
+                    <InformationCircleIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-900">Simplified Generation Flow</h4>
+                      <p className="text-sm text-blue-800 mt-1">
+                        Elements now work with retrieved document chunks plus optional additional instructions. 
+                        No complex variables needed - just clean, consistent generation.
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -362,10 +341,60 @@ export default function CreateElementPage() {
           {showPreview && (
             <div className="bg-white shadow rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Preview</h3>
-              <div className="bg-gray-50 rounded-md p-4">
-                <pre className="text-sm text-gray-800 whitespace-pre-wrap">
-                  {formData.template_content || 'No content to preview'}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                  {generatePreview()}
                 </pre>
+              </div>
+            </div>
+          )}
+
+          {/* Element Type Info */}
+          {selectedTypeInfo && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className={`p-2 rounded-lg ${selectedTypeInfo.color}`}>
+                  <selectedTypeInfo.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">{selectedTypeInfo.name}</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">{selectedTypeInfo.description}</p>
+              
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Key Features:</h4>
+                  <ul className="mt-1 text-sm text-gray-600 space-y-1">
+                    {selectedType === ElementType.PROMPT_TEMPLATE && (
+                      <>
+                        <li>• Works with retrieved document chunks</li>
+                        <li>• Supports optional additional instructions</li>
+                        <li>• Optimized for RAG workflows</li>
+                        <li>• Simple and consistent generation</li>
+                      </>
+                    )}
+                    {selectedType === ElementType.AGENTIC_TOOL && (
+                      <>
+                        <li>• Function definitions for AI agents</li>
+                        <li>• Parameter specifications</li>
+                        <li>• External system integrations</li>
+                      </>
+                    )}
+                    {selectedType === ElementType.MCP_CONFIG && (
+                      <>
+                        <li>• Model Context Protocol setup</li>
+                        <li>• Structured AI interactions</li>
+                        <li>• Protocol compliance</li>
+                      </>
+                    )}
+                                         {selectedType === ElementType.RAG_CONFIG && (
+                       <>
+                         <li>• Retrieval configuration</li>
+                         <li>• Generation parameters</li>
+                         <li>• Pipeline optimization</li>
+                       </>
+                     )}
+                  </ul>
+                </div>
               </div>
             </div>
           )}
@@ -375,143 +404,84 @@ export default function CreateElementPage() {
   );
 
   return (
-    <DashboardLayout title="Create Element">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.push('/elements')}
-            className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-          >
-            <ChevronLeftIcon className="h-4 w-4 mr-1" />
-            Back to Elements
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {renderElementTypeSelection()}
-
-            {renderElementConfiguration()}
-
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => router.push('/elements')}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={!isFormValid() || isSubmitting}
-                className={`px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white ${
-                  isFormValid() && !isSubmitting
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2 inline-block" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Element'
-                )}
-              </button>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => router.push('/elements')}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Create New Element</h1>
+              <p className="text-sm text-gray-600">
+                Design reusable AI elements for your projects
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Help */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Help & Tips</h3>
-              
-              {selectedType === ElementType.PROMPT_TEMPLATE && (
-                <div className="space-y-3">
-                  <div className="flex">
-                    <InformationCircleIcon className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-800">
-                      <p className="font-medium">Variable Syntax</p>
-                      <p>Use {'{variable_name}'} to insert variables in your template.</p>
-                    </div>
-                  </div>
-                  <div className="flex">
-                    <InformationCircleIcon className="h-5 w-5 text-blue-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-800">
-                      <p className="font-medium">Best Practices</p>
-                      <p>Be specific about the context and expected output format.</p>
-                    </div>
-                  </div>
+        {/* Progress Steps */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-8">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                  1
                 </div>
-              )}
-
-              {selectedType === ElementType.AGENTIC_TOOL && (
-                <div className="space-y-3">
-                  <div className="flex">
-                    <InformationCircleIcon className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-800">
-                      <p className="font-medium">Tool Definition</p>
-                      <p>Define clear parameters and descriptions for AI agents to use.</p>
-                    </div>
-                  </div>
-                  <div className="flex">
-                    <InformationCircleIcon className="h-5 w-5 text-green-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-800">
-                      <p className="font-medium">JSON Format</p>
-                      <p>Use valid JSON with tool_name, description, and parameters.</p>
-                    </div>
-                  </div>
+                <span className="text-sm font-medium text-blue-600">Choose Type</span>
+              </div>
+              <div className="w-16 h-0.5 bg-gray-200"></div>
+              <div className="flex items-center space-x-2">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  selectedType ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  2
                 </div>
-              )}
-
-              {selectedType === ElementType.MCP_CONFIG && (
-                <div className="space-y-3">
-                  <div className="flex">
-                    <InformationCircleIcon className="h-5 w-5 text-purple-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-800">
-                      <p className="font-medium">Provider Settings</p>
-                      <p>Configure model parameters like temperature and max_tokens.</p>
-                    </div>
-                  </div>
-                  <div className="flex">
-                    <InformationCircleIcon className="h-5 w-5 text-purple-500 mr-2 mt-0.5" />
-                    <div className="text-sm text-gray-800">
-                      <p className="font-medium">System Prompts</p>
-                      <p>Set system prompts to define AI behavior and constraints.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Element Statistics */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Usage Statistics</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Executions</span>
-                  <span className="text-sm font-medium text-gray-900">0</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Success Rate</span>
-                  <span className="text-sm font-medium text-gray-900">—</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Avg. Execution Time</span>
-                  <span className="text-sm font-medium text-gray-900">—</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Total Cost</span>
-                  <span className="text-sm font-medium text-gray-900">$0.00</span>
-                </div>
+                <span className={`text-sm font-medium ${
+                  selectedType ? 'text-blue-600' : 'text-gray-400'
+                }`}>Configure</span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Content */}
+        {!selectedType ? renderElementTypeSelection() : renderElementConfiguration()}
+
+        {/* Footer */}
+        {selectedType && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setSelectedType(ElementType.PROMPT_TEMPLATE)}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Back to Type Selection
+              </button>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => router.push('/elements')}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!isFormValid() || isSubmitting}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isSubmitting && <LoadingSpinner size="sm" />}
+                  <span>{isSubmitting ? 'Creating...' : 'Create Element'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

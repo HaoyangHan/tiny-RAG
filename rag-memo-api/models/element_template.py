@@ -68,9 +68,14 @@ class ElementTemplate(BaseDocument):
     )
     
     # Template Configuration
-    variables: List[str] = Field(
-        default_factory=list,
-        description="Template variables that can be substituted"
+    # variables: List[str] = Field(
+    #     default_factory=list,
+    #     description="Template variables that can be substituted"
+    # )  # REMOVED: Simplified to additional_instructions approach
+    
+    additional_instructions_template: Optional[str] = Field(
+        None,
+        description="Optional template text for additional user instructions"
     )
     execution_config: Dict[str, Any] = Field(
         default_factory=dict,
