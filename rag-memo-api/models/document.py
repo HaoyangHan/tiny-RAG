@@ -32,12 +32,18 @@ class DocumentMetadata(BaseModel):
     extracted_metadata: Optional[Dict[str, Any]] = None
 
 class DocumentChunk(BaseModel):
-    """A chunk of text from a document."""
+    """A chunk of text from a document with comprehensive metadata."""
     text: str
     page_number: int
     chunk_index: int
     chunk_type: str = "text"  # One of: "text", "table", "image"
     embedding: Optional[List[float]] = None
+    
+    # Enhanced metadata fields
+    chunk_metadata: Optional[Dict[str, Any]] = None  # Comprehensive metadata from extractor
+    start_pos: Optional[int] = None
+    end_pos: Optional[int] = None
+    section: Optional[str] = None
 
 class Document(BeanieDocument):
     """Document model for storing uploaded documents and their chunks."""

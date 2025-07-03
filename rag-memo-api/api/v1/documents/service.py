@@ -120,8 +120,9 @@ class DocumentService:
                     document.metadata.processed = True
                     
                 else:
-                    # Enhanced processing with table and image extraction
-                    processor = DocumentProcessor(openai_api_key)
+                    # Enhanced processing with comprehensive metadata extraction
+                    from services.enhanced_document_processor import create_enhanced_document_processor
+                    processor = create_enhanced_document_processor(openai_api_key)
                     
                     # Create temporary file for processing
                     with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as temp_file:
@@ -133,69 +134,32 @@ class DocumentService:
                         document.status = DocumentStatus.PROCESSING
                         await document.save()
                         
-                        # Process document with enhanced capabilities
-                        if content_type == "application/pdf":
-                            # Use the enhanced PDF processor with table and image extraction
-                            await processor._process_pdf(temp_path, document)
-                            
-                            # Update metadata flags based on extracted content
-                            document.metadata.has_tables = len(document.tables) > 0
-                            document.metadata.has_images = len(document.images) > 0
-                            
-                            logger.info(f"PDF processing completed: {len(document.chunks)} chunks, "
-                                      f"{len(document.tables)} tables, {len(document.images)} images")
-                            
-                        elif content_type.startswith('text/'):
-                            # Handle text files with standard chunking
-                            text_content = file_content.decode('utf-8', errors='ignore')
-                            chunks = processor.text_splitter.split_text(text_content)
-                            
-                            # Create document chunks with embeddings
-                            for chunk_idx, chunk_text in enumerate(chunks):
-                                chunk = DocumentChunk(
-                                    text=chunk_text,
-                                    page_number=1,
-                                    chunk_index=chunk_idx,
-                                    chunk_type="text",
-                                    embedding=await processor._generate_embedding(chunk_text)
-                                )
-                                document.chunks.append(chunk)
-                            
-                            logger.info(f"Text processing completed: {len(document.chunks)} chunks")
-                            
-                        elif content_type.startswith('image/'):
-                            # Process standalone image files
-                            image_description = await processor._process_image_with_gpt4(file_content)
-                            
-                            # Create image data
-                            from models.document import ImageData
-                            image_data = ImageData(
-                                page_number=1,
-                                image_index=0,
-                                content=file_content,
-                                description=image_description
-                            )
-                            document.images.append(image_data)
-                            document.metadata.has_images = True
-                            
-                            # Create chunk for image description
-                            image_embedding = await processor._generate_embedding(image_description)
-                            chunk = DocumentChunk(
-                                text=image_description,
-                                page_number=1,
-                                chunk_index=0,
-                                chunk_type="image",
-                                embedding=image_embedding
-                            )
-                            document.chunks.append(chunk)
-                            
-                            logger.info(f"Image processing completed: {image_description[:100]}...")
-                            
-                        else:
-                            # Unsupported file type - store without processing
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = False
-                            logger.warning(f"Unsupported content type for processing: {content_type}")
+                        # Process document with enhanced capabilities and metadata extraction
+                        processed_document = await processor.process_document(
+                            file_path=temp_path,
+                            user_id=user_id,
+                            document_id=str(document.id)
+                        )
+                        
+                        # Update the document with processed results
+                        document.chunks = processed_document.chunks
+                        document.tables = processed_document.tables
+                        document.images = processed_document.images
+                        document.metadata.has_tables = processed_document.metadata.has_tables
+                        document.metadata.has_images = processed_document.metadata.has_images
+                        document.metadata.processed = processed_document.metadata.processed
+                        document.status = processed_document.status
+                        
+                        logger.info(f"Enhanced processing completed: {len(document.chunks)} chunks, "
+                                  f"{len(document.tables)} tables, {len(document.images)} images")
+                        
+                        # Log metadata extraction summary
+                        metadata_count = 0
+                        for chunk in document.chunks:
+                            if chunk.chunk_metadata:
+                                metadata_count += len(chunk.chunk_metadata)
+                        
+                        logger.info(f"Metadata extraction completed: {metadata_count} total metadata fields extracted")
                         
                         # Mark as completed if processed successfully
                         if document.status != DocumentStatus.COMPLETED:
