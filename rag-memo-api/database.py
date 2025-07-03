@@ -10,7 +10,7 @@ from models.element import Element
 from models.element_template import ElementTemplate as StandaloneElementTemplate
 from models.project import Project
 from models.tenant_configuration import TenantConfiguration
-from models.user import User
+from auth.models import User
 from models.generation import Generation
 from models.evaluation import Evaluation
 

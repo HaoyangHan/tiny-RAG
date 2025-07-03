@@ -11,6 +11,7 @@ class DocumentMetadata(BaseModel):
     upload_date: datetime = Field(default_factory=datetime.utcnow)
     processed: bool = False
     error: Optional[str] = None
+    content_hash: Optional[str] = None  # SHA256 hash for duplicate detection
 
 class DocumentChunk(BaseModel):
     """A chunk of text from a document."""

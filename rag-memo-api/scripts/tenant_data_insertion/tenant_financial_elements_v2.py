@@ -338,7 +338,25 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
 
 async def main():
     """Main function to insert financial element templates."""
-    inserter = FinancialElementTemplateInserterV2()
+    result = await run_template_inserter(
+        FinancialElementTemplateInserterV2,
+        TenantType.FINANCIAL_REPORT
+    )
+    
+    print("\n" + "="*60)
+    print("FINANCIAL REPORT V2 ELEMENT TEMPLATE INSERTION SUMMARY")
+    print("="*60)
+    print(f"Tenant Type: {result.get('tenant_type', 'Unknown')}")
+    print(f"Total Templates: {result.get('total_templates', 0)}")
+    print(f"Successful: {result.get('successful', 0)}")
+    print(f"Failed: {result.get('failed', 0)}")
+    print(f"Skipped: {result.get('skipped', 0)}")
+    print(f"Dry Run: {result.get('dry_run', False)}")
+    
+    if result.get('inserted_ids'):
+        print(f"\nInserted Template IDs:")
+        for template_id in result['inserted_ids']:
+            print(f"  - {template_id}")
     
     if result.get('error'):
         print(f"\nError: {result['error']}")

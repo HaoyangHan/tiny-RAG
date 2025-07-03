@@ -6,6 +6,7 @@ file upload, processing, project integration, and document analytics.
 """
 
 import logging
+import hashlib
 from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime
 from beanie import PydanticObjectId
@@ -29,6 +30,55 @@ class DocumentService:
     def __init__(self):
         """Initialize the document service."""
         self.legacy_service = None
+    
+    async def _check_duplicate_document(
+        self,
+        project_id: str,
+        file_content: bytes,
+        filename: str
+    ) -> Optional[Document]:
+        """
+        Check if a document with the same content already exists in the project.
+        
+        Args:
+            project_id: Project ID to check within
+            file_content: File content bytes for hash comparison
+            filename: Original filename
+            
+        Returns:
+            Document: Existing document if duplicate found, None otherwise
+        """
+        try:
+            # Generate content hash
+            content_hash = hashlib.sha256(file_content).hexdigest()
+            
+            # Check for existing documents in the same project with the same hash or filename
+            existing_docs = await Document.find(
+                And(
+                    Document.project_id == project_id,
+                    Document.is_deleted == False,
+                    Or(
+                        Document.filename == filename,
+                        # We'll store content_hash in metadata for comparison
+                        Document.metadata.content_hash == content_hash
+                    )
+                )
+            ).to_list()
+            
+            # Check for exact content match
+            for doc in existing_docs:
+                if hasattr(doc.metadata, 'content_hash') and doc.metadata.content_hash == content_hash:
+                    logger.info(f"Found duplicate document by content hash: {doc.id}")
+                    return doc
+                elif doc.filename == filename and doc.file_size == len(file_content):
+                    logger.info(f"Found potential duplicate document by filename and size: {doc.id}")
+                    return doc
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error checking for duplicate document: {str(e)}")
+            return None
     
     async def upload_document(
         self,
@@ -54,10 +104,12 @@ class DocumentService:
             Document: Created document instance
             
         Raises:
-            ValueError: If validation fails
+            ValueError: If validation fails or duplicate found
             Exception: If upload/processing fails
         """
         try:
+            logger.info(f"Starting document upload: {filename} ({len(file_content)} bytes) for project {project_id}")
+            
             # Verify project exists and user has access
             project = await Project.get(PydanticObjectId(project_id))
             if not project or project.is_deleted:
@@ -66,13 +118,22 @@ class DocumentService:
             if not project.is_accessible_by(user_id):
                 raise ValueError("Access denied to project")
             
-            # Create document metadata
+            # Check for duplicate documents
+            duplicate_doc = await self._check_duplicate_document(project_id, file_content, filename)
+            if duplicate_doc:
+                raise ValueError(f"Document already exists in project: {duplicate_doc.filename} (ID: {duplicate_doc.id})")
+            
+            # Generate content hash for future duplicate detection
+            content_hash = hashlib.sha256(file_content).hexdigest()
+            
+            # Create document metadata with content hash
             doc_metadata = DocumentMetadata(
                 filename=filename,
                 content_type=content_type,
                 size=len(file_content),
                 upload_date=datetime.utcnow(),
-                processed=False
+                processed=False,
+                content_hash=content_hash  # Add content hash for duplicate detection
             )
             
             # Create document instance
@@ -89,6 +150,7 @@ class DocumentService:
             
             # Save to database first
             await document.insert()
+            logger.info(f"Document saved to database with ID: {document.id}")
             
             try:
                 # Process document with chunking and embeddings
@@ -103,21 +165,14 @@ class DocumentService:
                     logger.warning("OpenAI API key not configured - basic processing only")
                     
                     # Basic processing without LLM
-                    import hashlib
-                    content_hash = hashlib.sha256(file_content).hexdigest()
-                    
-                    # Basic word count for text files
-                    if content_type.startswith('text/'):
-                        word_count = len(file_content.decode('utf-8', errors='ignore').split())
-                    else:
-                        word_count = 0
-                    
                     document.status = DocumentStatus.COMPLETED
                     document.metadata.processed = True
+                    logger.info("Document processed without embeddings (no OpenAI key)")
                     
                 else:
                     # Full processing with chunking and embeddings
                     processor = DocumentProcessor(openai_api_key)
+                    logger.info("Starting document processing with OpenAI embeddings")
                     
                     # Create temporary file for processing
                     with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as temp_file:
@@ -130,6 +185,7 @@ class DocumentService:
                             await processor._process_pdf(temp_path, document)
                             document.status = DocumentStatus.COMPLETED
                             document.metadata.processed = True
+                            logger.info(f"PDF processed successfully with {len(document.chunks)} chunks")
                         elif content_type.startswith('text/'):
                             # Handle text files
                             text_content = file_content.decode('utf-8', errors='ignore')
@@ -148,6 +204,7 @@ class DocumentService:
                             
                             document.status = DocumentStatus.COMPLETED
                             document.metadata.processed = True
+                            logger.info(f"Text file processed successfully with {len(document.chunks)} chunks")
                         else:
                             # Unsupported file type - store without processing
                             document.status = DocumentStatus.COMPLETED
@@ -165,7 +222,7 @@ class DocumentService:
                 project.add_document(str(document.id))
                 await project.save()
                 
-                logger.info(f"Uploaded and processed document {document.id} to project {project_id} with {len(document.chunks)} chunks")
+                logger.info(f"Successfully uploaded and processed document {document.id} to project {project_id} with {len(document.chunks)} chunks")
                 return document
                 
             except Exception as processing_error:
@@ -173,6 +230,7 @@ class DocumentService:
                 document.status = DocumentStatus.FAILED
                 document.metadata.error = str(processing_error)
                 await document.save()
+                logger.error(f"Document processing failed: {str(processing_error)}")
                 raise processing_error
                 
         except Exception as e:
@@ -322,37 +380,50 @@ class DocumentService:
     
     async def delete_document(self, document_id: str, user_id: str) -> bool:
         """
-        Soft delete a document.
+        Delete a document with access control.
         
         Args:
             document_id: Document ID to delete
             user_id: ID of the requesting user
             
         Returns:
-            bool: True if deleted successfully, False otherwise
+            bool: True if deleted successfully, False if not found
+            
+        Raises:
+            ValueError: If access denied
+            Exception: If deletion fails
         """
         try:
+            logger.info(f"Attempting to delete document {document_id} for user {user_id}")
+            
+            # Get document with access control
             document = await self.get_document(document_id, user_id)
             if not document:
+                logger.warning(f"Document {document_id} not found or access denied for user {user_id}")
                 return False
             
-            # Soft delete
+            # Mark as deleted (soft delete)
             document.is_deleted = True
             document.updated_at = datetime.utcnow()
             await document.save()
             
             # Remove from project's document list
-            project = await Project.get(PydanticObjectId(document.project_id))
-            if project:
-                project.remove_document(str(document.id))
-                await project.save()
+            if document.project_id:
+                try:
+                    project = await Project.get(PydanticObjectId(document.project_id))
+                    if project and hasattr(project, 'document_ids') and str(document.id) in project.document_ids:
+                        project.document_ids.remove(str(document.id))
+                        await project.save()
+                        logger.info(f"Removed document {document_id} from project {document.project_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove document from project: {str(e)}")
             
-            logger.info(f"Deleted document {document_id}")
+            logger.info(f"Successfully deleted document {document_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to delete document: {str(e)}")
-            return False
+            logger.error(f"Failed to delete document {document_id}: {str(e)}")
+            raise
     
     async def get_document_content(
         self,

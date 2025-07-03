@@ -133,11 +133,6 @@ class ElementTemplate(BaseDocument):
         """Validate and normalize tags."""
         return [tag.lower().strip() for tag in v if tag.strip()]
     
-    @validator('variables')
-    def validate_variables(cls, v: List[str]) -> List[str]:
-        """Validate and normalize variables."""
-        return [var.strip() for var in v if var.strip()]
-    
     @validator('version')
     def validate_version(cls, v: str) -> str:
         """Validate semantic version format."""
@@ -191,7 +186,8 @@ class ElementTemplate(BaseDocument):
             "tags": self.tags,
             "status": self.status.value,
             "has_retrieval_prompt": self.has_retrieval_prompt(),
-            "variables": self.variables,
+            # "variables": self.variables,  # REMOVED: variables field no longer exists
+            "additional_instructions_template": self.additional_instructions_template,
             "is_system_default": self.is_system_default,
             "created_at": self.created_at,
             "updated_at": self.updated_at
