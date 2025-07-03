@@ -138,7 +138,8 @@ class DocumentService:
                         processed_document = await processor.process_document(
                             file_path=temp_path,
                             user_id=user_id,
-                            document_id=str(document.id)
+                            document_id=str(document.id),
+                            project_id=project_id
                         )
                         
                         # Update the document with processed results
@@ -410,7 +411,12 @@ class DocumentService:
                         "text": chunk.text,
                         "page_number": chunk.page_number,
                         "chunk_index": chunk.chunk_index,
-                        "embedding": chunk.embedding  # Include full embedding vector
+                        "chunk_type": getattr(chunk, 'chunk_type', 'text'),
+                        "embedding": chunk.embedding,
+                        "chunk_metadata": getattr(chunk, 'chunk_metadata', {}),
+                        "start_pos": getattr(chunk, 'start_pos', None),
+                        "end_pos": getattr(chunk, 'end_pos', None),
+                        "section": getattr(chunk, 'section', None)
                     }
                     for chunk in document.chunks
                 ],

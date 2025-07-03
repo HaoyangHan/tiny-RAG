@@ -5,7 +5,7 @@ This module contains document management endpoints adapted for the v1.4 API stru
 maintaining compatibility with existing document functionality.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,10 @@ class DocumentChunkResponse(BaseModel):
     chunk_index: int = Field(description="Index of chunk within document")
     chunk_type: str = Field(default="text", description="Type of chunk: text, table, or image")
     embedding: Optional[List[float]] = Field(description="Vector embedding for the chunk")
+    chunk_metadata: Optional[Dict[str, Any]] = Field(description="Comprehensive metadata from extractor")
+    start_pos: Optional[int] = Field(description="Start position in document")
+    end_pos: Optional[int] = Field(description="End position in document")
+    section: Optional[str] = Field(description="Document section")
 
 
 class TableDataResponse(BaseModel):
@@ -130,7 +134,11 @@ async def list_documents(
                         page_number=chunk.page_number,
                         chunk_index=chunk.chunk_index,
                         chunk_type=getattr(chunk, 'chunk_type', 'text'),
-                        embedding=chunk.embedding
+                        embedding=chunk.embedding,
+                        chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                        start_pos=getattr(chunk, 'start_pos', None),
+                        end_pos=getattr(chunk, 'end_pos', None),
+                        section=getattr(chunk, 'section', None)
                     )
                     for chunk in doc.chunks
                 ],
@@ -240,7 +248,11 @@ async def upload_document(
                     page_number=chunk.page_number,
                     chunk_index=chunk.chunk_index,
                     chunk_type=getattr(chunk, 'chunk_type', 'text'),
-                    embedding=chunk.embedding
+                    embedding=chunk.embedding,
+                    chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                    start_pos=getattr(chunk, 'start_pos', None),
+                    end_pos=getattr(chunk, 'end_pos', None),
+                    section=getattr(chunk, 'section', None)
                 )
                 for chunk in document.chunks
             ],
@@ -321,7 +333,11 @@ async def get_document(
                     page_number=chunk.page_number,
                     chunk_index=chunk.chunk_index,
                     chunk_type=getattr(chunk, 'chunk_type', 'text'),
-                    embedding=chunk.embedding
+                    embedding=chunk.embedding,
+                    chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                    start_pos=getattr(chunk, 'start_pos', None),
+                    end_pos=getattr(chunk, 'end_pos', None),
+                    section=getattr(chunk, 'section', None)
                 )
                 for chunk in document.chunks
             ],

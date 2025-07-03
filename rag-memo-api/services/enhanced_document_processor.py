@@ -18,20 +18,61 @@ from datetime import datetime
 import tempfile
 import magic
 from pypdf import PdfReader
-import camelot
-import cv2
-import numpy as np
-from PIL import Image
-import io
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from openai import OpenAI
 
-from models.document import Document, DocumentChunk, DocumentMetadata, TableData, ImageData
-from services.metadata_extractor import create_metadata_extractor, BaseNode
+from models.document import Document, DocumentChunk, DocumentMetadata
 from prompt_template import get_prompt_template
 
 logger = logging.getLogger(__name__)
 
+# Define missing models for compatibility
+class TableData:
+    def __init__(self, page_number, table_index, content, summary, row_count=0, column_count=0):
+        self.page_number = page_number
+        self.table_index = table_index
+        self.content = content
+        self.summary = summary
+        self.row_count = row_count
+        self.column_count = column_count
+
+class ImageData:
+    def __init__(self, page_number, image_index, content, description):
+        self.page_number = page_number
+        self.image_index = image_index
+        self.content = content
+        self.description = description
+
+# Optional imports with fallbacks
+try:
+    import camelot
+    CAMELOT_AVAILABLE = True
+except ImportError:
+    logger.warning("Camelot not available - table extraction disabled")
+    CAMELOT_AVAILABLE = False
+
+try:
+    import cv2
+    import numpy as np
+    CV2_AVAILABLE = True
+except ImportError:
+    logger.warning("OpenCV not available - advanced image processing disabled")
+    CV2_AVAILABLE = False
+
+try:
+    from PIL import Image
+    import io
+    PIL_AVAILABLE = True
+except ImportError:
+    logger.warning("PIL not available - image processing disabled")
+    PIL_AVAILABLE = False
+
+try:
+    from services.metadata_extractor import create_metadata_extractor, BaseNode
+    METADATA_EXTRACTOR_AVAILABLE = True
+except ImportError:
+    logger.warning("Metadata extractor not available - using basic metadata only")
+    METADATA_EXTRACTOR_AVAILABLE = False
 
 class EnhancedDocumentProcessor:
     """
@@ -58,13 +99,16 @@ class EnhancedDocumentProcessor:
         )
         
         # Metadata extractor
-        self.metadata_extractor = create_metadata_extractor(
-            openai_client=self.openai_client
-        )
+        if METADATA_EXTRACTOR_AVAILABLE:
+            self.metadata_extractor = create_metadata_extractor(
+                openai_client=self.openai_client
+            )
+        else:
+            self.metadata_extractor = None
         
         logger.info("Enhanced document processor initialized with metadata extraction")
 
-    async def process_document(self, file_path: Path, user_id: str, document_id: str) -> Document:
+    async def process_document(self, file_path: Path, user_id: str, document_id: str, project_id: str = None) -> Document:
         """
         Process an uploaded document with enhanced metadata extraction.
         
@@ -72,6 +116,7 @@ class EnhancedDocumentProcessor:
             file_path: Path to the uploaded file
             user_id: ID of the user uploading the document
             document_id: ID of the document being processed
+            project_id: ID of the project (required for v1.4)
             
         Returns:
             Document: Processed document with enhanced metadata
@@ -86,14 +131,13 @@ class EnhancedDocumentProcessor:
             metadata = DocumentMetadata(
                 filename=filename,
                 content_type=content_type,
-                size=file_size,
-                has_tables=False,
-                has_images=False
+                size=file_size
             )
             
             # Create document instance
             document = Document(
                 user_id=user_id,
+                project_id=project_id,
                 filename=filename,
                 content_type=content_type,
                 file_size=file_size,
@@ -144,44 +188,43 @@ class EnhancedDocumentProcessor:
                 page_start_pos = len(full_text)
                 
                 # 1. Extract tables using Camelot
-                tables = camelot.read_pdf(str(file_path), pages=str(page_num + 1))
-                if len(tables) > 0:
-                    document.metadata.has_tables = True
-                    for table_idx, table in enumerate(tables):
-                        # Get table text for processing
-                        table_text = table.df.to_string()
-                        
-                        # Create optimized table chunk (summary + metadata in one LLM call)
-                        await self._create_enhanced_table_chunk(
-                            document=document,
-                            table_text=table_text,
-                            page_number=page_num + 1,
-                            document_id=document_id,
-                            start_pos=page_start_pos,
-                            section=f"Table {table_idx + 1}"
-                        )
-                        
-                        # Create table data for backward compatibility (use the summary from chunk)
-                        if document.chunks:
-                            latest_chunk = document.chunks[-1]
-                            table_summary = latest_chunk.text
-                        else:
-                            table_summary = "Table processing failed"
-                        
-                        table_data = TableData(
-                            page_number=page_num + 1,
-                            table_index=table_idx,
-                            content=table.df.values.tolist(),
-                            summary=table_summary,
-                            row_count=len(table.df),
-                            column_count=len(table.df.columns)
-                        )
-                        document.tables.append(table_data)
+                if CAMELOT_AVAILABLE:
+                    tables = camelot.read_pdf(str(file_path), pages=str(page_num + 1))
+                    if len(tables) > 0:
+                        for table_idx, table in enumerate(tables):
+                            # Get table text for processing
+                            table_text = table.df.to_string()
+                            
+                            # Create optimized table chunk (summary + metadata in one LLM call)
+                            await self._create_enhanced_table_chunk(
+                                document=document,
+                                table_text=table_text,
+                                page_number=page_num + 1,
+                                document_id=document_id,
+                                start_pos=page_start_pos,
+                                section=f"Table {table_idx + 1}"
+                            )
+                            
+                            # Create table data for backward compatibility (use the summary from chunk)
+                            if document.chunks:
+                                latest_chunk = document.chunks[-1]
+                                table_summary = latest_chunk.text
+                            else:
+                                table_summary = "Table processing failed"
+                            
+                            table_data = TableData(
+                                page_number=page_num + 1,
+                                table_index=table_idx,
+                                content=table.df.values.tolist(),
+                                summary=table_summary,
+                                row_count=len(table.df),
+                                column_count=len(table.df.columns)
+                            )
+                            document.tables.append(table_data)
                 
                 # 2. Extract images
                 images = self._extract_images_from_page(page)
                 if images:
-                    document.metadata.has_images = True
                     for img_idx, img_data in enumerate(images):
                         # Create optimized image chunk (description + metadata in one LLM call)
                         await self._create_enhanced_image_chunk(
@@ -276,7 +319,6 @@ class EnhancedDocumentProcessor:
                 description=image_description
             )
             document.images.append(image_data_obj)
-            document.metadata.has_images = True
             
         except Exception as e:
             logger.error(f"Error in enhanced image processing: {str(e)}")
@@ -331,16 +373,31 @@ class EnhancedDocumentProcessor:
         end_pos = start_pos + len(text)
         
         # Extract comprehensive metadata
-        chunk_metadata = self.metadata_extractor.extract_chunk_metadata(
-            text=text,
-            chunk_id=chunk_id,
-            document_id=document_id,
-            chunk_index=chunk_index,
-            start_pos=start_pos,
-            end_pos=end_pos,
-            page_number=page_number,
-            section=section
-        )
+        if self.metadata_extractor:
+            chunk_metadata = self.metadata_extractor.extract_chunk_metadata(
+                text=text,
+                chunk_id=chunk_id,
+                document_id=document_id,
+                chunk_index=chunk_index,
+                start_pos=start_pos,
+                end_pos=end_pos,
+                page_number=page_number,
+                section=section
+            )
+        else:
+            # Fallback metadata when extractor is not available
+            chunk_metadata = {
+                "chunk_id": chunk_id,
+                "document_id": document_id,
+                "chunk_index": chunk_index,
+                "text_length": len(text),
+                "start_pos": start_pos,
+                "end_pos": end_pos,
+                "page_number": page_number,
+                "section": section,
+                "extraction_timestamp": datetime.utcnow().isoformat(),
+                "extractor_version": "1.4.3_fallback"
+            }
         
         # Generate embedding
         embedding = await self._generate_embedding(text)
@@ -456,6 +513,10 @@ class EnhancedDocumentProcessor:
 
     def _extract_images_from_page(self, page) -> List[bytes]:
         """Extract images from a PDF page."""
+        if not PIL_AVAILABLE:
+            logger.warning("PIL not available - image extraction disabled")
+            return []
+            
         images = []
         for image in page.images:
             try:

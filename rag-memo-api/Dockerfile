@@ -1,5 +1,5 @@
 # Build stage
-FROM --platform=$BUILDPLATFORM python:3.11-slim-bullseye as builder
+FROM --platform=$BUILDPLATFORM python:3.11-slim-bookworm as builder
 
 WORKDIR /app
 
@@ -30,7 +30,7 @@ RUN pip install -r requirements.txt
 COPY rag-memo-api/ .
 
 # Production stage
-FROM --platform=$TARGETPLATFORM python:3.11-slim-bullseye
+FROM --platform=$TARGETPLATFORM python:3.11-slim-bookworm
 
 WORKDIR /app
 
