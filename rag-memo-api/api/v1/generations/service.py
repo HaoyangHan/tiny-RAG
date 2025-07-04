@@ -133,6 +133,7 @@ class ElementGenerationService:
         page_size: int = 20,
         project_id: Optional[str] = None,
         element_id: Optional[str] = None,
+        execution_id: Optional[str] = None,
         status: Optional[GenerationStatus] = None,
         search: Optional[str] = None
     ) -> Tuple[List[ElementGeneration], int]:
@@ -145,6 +146,7 @@ class ElementGenerationService:
             page_size: Number of items per page
             project_id: Filter by project ID
             element_id: Filter by element ID
+            execution_id: Filter by execution ID
             status: Filter by generation status
             search: Search in generation prompts and content
             
@@ -172,6 +174,9 @@ class ElementGenerationService:
             # Apply filters
             if element_id:
                 conditions.append(ElementGeneration.element_id == element_id)
+            
+            if execution_id:
+                conditions.append(ElementGeneration.metadata["execution_id"] == execution_id)
             
             if status:
                 conditions.append(ElementGeneration.status == status)
@@ -413,20 +418,24 @@ class ElementGenerationService:
             if not generation:
                 return None
             
+            element = await Element.get(PydanticObjectId(generation.element_id))
+            full_content = generation.get_full_content()
+            
             return {
-                "status": generation.status,
-                "chunk_count": generation.get_chunk_count(),
-                "total_content_length": generation.get_total_content_length(),
-                "metrics": {
-                    "total_tokens": generation.metrics.total_tokens,
-                    "prompt_tokens": generation.metrics.prompt_tokens,
-                    "completion_tokens": generation.metrics.completion_tokens,
-                    "cost_usd": generation.metrics.cost_usd,
-                    "generation_time_ms": generation.metrics.generation_time_ms
-                },
+                "id": str(generation.id),
+                "element_id": generation.element_id,
+                "project_id": generation.project_id,
+                "element_name": element.name if element else "Unknown Element",
+                "status": generation.status.value,
+                "model_used": generation.model_used,
+                "prompt": generation.template.generation_prompt if generation.template else "",
+                "output_text": full_content,
+                "tokens_used": generation.metrics.total_tokens if generation.metrics else 0,
+                "execution_time": generation.metrics.generation_time_ms / 1000 if generation.metrics and generation.metrics.generation_time_ms else 0,
+                "cost_usd": generation.metrics.estimated_cost if generation.metrics and generation.metrics.estimated_cost else 0.0,
                 "created_at": generation.created_at.isoformat(),
-                "completed_at": generation.completed_at.isoformat() if generation.completed_at else None,
-                "last_updated": generation.updated_at.isoformat()
+                "updated_at": generation.updated_at.isoformat(),
+                "error_message": generation.error_details.get("error") if generation.error_details else None
             }
             
         except Exception as e:

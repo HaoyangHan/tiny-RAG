@@ -37,7 +37,8 @@ class ElementGenerationService:
         user_id: str,
         project_id: str,
         additional_instructions: Optional[str] = None,
-        generation_config: Optional[Dict[str, Any]] = None
+        generation_config: Optional[Dict[str, Any]] = None,
+        execution_id: Optional[str] = None
     ) -> ElementGeneration:
         """
         Generate content for an element with template substitution.
@@ -48,6 +49,7 @@ class ElementGenerationService:
             project_id: ID of the project containing the element
             additional_instructions: Optional additional instructions from user
             generation_config: Optional generation configuration
+            execution_id: Optional execution ID for tracking bulk operations
             
         Returns:
             ElementGeneration: Generated content with metadata
@@ -63,6 +65,11 @@ class ElementGenerationService:
             if not project or not project.is_accessible_by(user_id):
                 raise ValueError("Access denied to project")
             
+            # Prepare metadata with execution_id if provided
+            metadata = {}
+            if execution_id:
+                metadata["execution_id"] = execution_id
+            
             # Create generation record
             generation = ElementGeneration(
                 element_id=element_id,
@@ -72,6 +79,7 @@ class ElementGenerationService:
                 task_type=element.task_type,
                 status=GenerationStatus.PENDING,
                 additional_instructions=additional_instructions,
+                metadata=metadata,
                 metrics=GenerationMetrics()
             )
             
@@ -299,7 +307,8 @@ class ElementGenerationService:
         project_id: str,
         user_id: str,
         element_ids: Optional[List[str]] = None,
-        additional_instructions: Optional[str] = None
+        additional_instructions: Optional[str] = None,
+        execution_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate content for multiple elements in bulk.
@@ -309,6 +318,7 @@ class ElementGenerationService:
             user_id: User ID
             element_ids: Specific element IDs to generate (if None, generate all)
             additional_instructions: Additional instructions for all elements
+            execution_id: Optional execution ID for tracking bulk operations
             
         Returns:
             Bulk generation results
@@ -341,7 +351,8 @@ class ElementGenerationService:
                 "successful": 0,
                 "failed": 0,
                 "generations": [],
-                "errors": []
+                "errors": [],
+                "execution_id": execution_id
             }
             
             for element in elements:
@@ -350,7 +361,8 @@ class ElementGenerationService:
                         element_id=str(element.id),
                         user_id=user_id,
                         project_id=project_id,
-                        additional_instructions=additional_instructions
+                        additional_instructions=additional_instructions,
+                        execution_id=execution_id
                     )
                     
                     results["generations"].append({

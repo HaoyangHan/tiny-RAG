@@ -525,7 +525,8 @@ class ProjectService:
                 project_id=project_id,
                 user_id=user_id,
                 element_ids=element_ids,
-                additional_instructions=additional_instructions
+                additional_instructions=additional_instructions,
+                execution_id=execution_id
             )
             
             logger.info(

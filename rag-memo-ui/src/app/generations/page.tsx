@@ -51,6 +51,9 @@ function GenerationsPageContent() {
       if (projectId) {
         params.project_id = projectId;
       }
+      if (executionId) {
+        params.execution_id = executionId;
+      }
       if (selectedStatus) {
         params.status = selectedStatus;
       }
@@ -76,7 +79,7 @@ function GenerationsPageContent() {
   // Fetch data when component mounts or filters change
   useEffect(() => {
     fetchGenerations();
-  }, [currentPage, selectedStatus, projectId]);
+  }, [currentPage, selectedStatus, projectId, executionId]);
 
   // Debounced search effect
   useEffect(() => {
@@ -124,8 +127,18 @@ function GenerationsPageContent() {
   };
 
   const filteredGenerations = generations.filter(generation => {
-    const matchesSearch = generation.element_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         generation.model_used?.toLowerCase().includes(searchQuery.toLowerCase());
+    // If no search query, include all generations
+    if (!searchQuery.trim()) {
+      return true;
+    }
+    
+    // Search in available fields
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = 
+      (generation.element_name?.toLowerCase().includes(searchLower)) ||
+      (generation.model_used?.toLowerCase().includes(searchLower)) ||
+      (generation.id?.toLowerCase().includes(searchLower)) ||
+      (generation.element_id?.toLowerCase().includes(searchLower));
     
     return matchesSearch;
   });
