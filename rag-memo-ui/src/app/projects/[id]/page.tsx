@@ -72,6 +72,9 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const [elementDetails, setElementDetails] = useState<Map<string, any>>(new Map());
   const [elementEditData, setElementEditData] = useState<Map<string, any>>(new Map());
   const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
+  
+  // Element generation state
+  const [isGeneratingElements, setIsGeneratingElements] = useState(false);
 
   // Function to toggle document expansion and fetch details
   const toggleDocumentExpansion = async (documentId: string) => {
@@ -216,6 +219,35 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
       alert(`Failed to delete document "${filename}". Please try again.`);
     } finally {
       setDeletingDocument(null);
+    }
+  };
+
+  // Function to handle "Generate All Elements" action
+  const handleGenerateAllElements = async () => {
+    if (!project?.id) {
+      alert('Project not found');
+      return;
+    }
+
+    const completedDocuments = allDocuments.filter(doc => doc.status === 'completed');
+    if (completedDocuments.length === 0) {
+      alert('No completed documents found. Please ensure all documents are processed before generating elements.');
+      return;
+    }
+
+    setIsGeneratingElements(true);
+    
+    try {
+      // Call the bulk element execution API
+      const result = await api.executeAllElements(project.id);
+      
+      // Redirect to the generations page to monitor progress
+      router.push(`/generations?project_id=${project.id}&execution_id=${result.execution_id}`);
+      
+    } catch (error: any) {
+      console.error('Failed to generate elements:', error);
+      alert('Failed to start element generation. Please try again.');
+      setIsGeneratingElements(false);
     }
   };
 
@@ -589,23 +621,57 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   );
 
   // Project documents render function with expandable details
-  const renderProjectDocuments = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900">Project Documents</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            {totalDocuments} total documents • Real-time status updates
-          </p>
+  const renderProjectDocuments = () => {
+    // Check if all documents are completed for enabling "Generate All Elements" button
+    const completedDocuments = allDocuments.filter(doc => doc.status === 'completed');
+    const allDocumentsCompleted = allDocuments.length > 0 && completedDocuments.length === allDocuments.length;
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Project Documents</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {totalDocuments} total documents • {completedDocuments.length} completed • Real-time status updates
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            {/* Generate All Elements Button */}
+            {allDocuments.length > 0 && (
+              <button
+                onClick={handleGenerateAllElements}
+                disabled={!allDocumentsCompleted || isGeneratingElements}
+                className={`inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md transition-colors ${
+                  allDocumentsCompleted && !isGeneratingElements
+                    ? 'text-white bg-green-600 hover:bg-green-700'
+                    : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                }`}
+                title={!allDocumentsCompleted ? 'All documents must be completed before generating elements' : 'Generate content for all project elements'}
+              >
+                {isGeneratingElements ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <CpuChipIcon className="-ml-1 mr-2 h-5 w-5" />
+                    Generate All Elements
+                  </>
+                )}
+              </button>
+            )}
+            
+            {/* Upload Documents Button */}
+            <button
+              onClick={() => router.push(`/projects/${project.id}/document-upload`)}
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            >
+              <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+              Upload Documents
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => router.push(`/projects/${project.id}/document-upload`)}
-          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-          Upload Documents
-        </button>
-      </div>
 
       {allDocumentsLoading ? (
         <div className="flex justify-center py-8">
@@ -836,6 +902,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
       )}
     </div>
   );
+};
 
   // Project elements render function with expandable details and editing
   const renderProjectElements = () => (

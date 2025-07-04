@@ -482,4 +482,59 @@ class ProjectService:
             
         except Exception as e:
             logger.error(f"Failed to get project counts for user {user_id}: {str(e)}")
-            return {"owned": 0, "collaborating": 0, "active": 0, "total": 0} 
+            return {"owned": 0, "collaborating": 0, "active": 0, "total": 0}
+    
+    async def execute_all_elements(
+        self,
+        project_id: str,
+        user_id: str,
+        element_ids: Optional[List[str]] = None,
+        execution_config: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Execute all elements in a project using the new element generation service.
+        
+        Args:
+            project_id: Project ID
+            user_id: User ID for access control
+            element_ids: Specific element IDs to execute (optional)
+            execution_config: Execution configuration (optional)
+            
+        Returns:
+            Execution ID for tracking progress
+        """
+        from services.element_generation_service import get_element_generation_service
+        
+        try:
+            # Validate project access
+            project = await self.get_project(project_id, user_id)
+            if not project:
+                raise ValueError("Project not found or access denied")
+            
+            # Get additional instructions from execution config
+            additional_instructions = execution_config.get('additional_instructions') if execution_config else None
+            
+            # Use the element generation service for bulk generation
+            element_generation_service = get_element_generation_service()
+            
+            # Generate unique execution ID for tracking
+            execution_id = f"bulk_{project_id}_{int(datetime.utcnow().timestamp())}"
+            
+            # Start bulk generation in background (in production, use task queue)
+            results = await element_generation_service.bulk_generate_elements(
+                project_id=project_id,
+                user_id=user_id,
+                element_ids=element_ids,
+                additional_instructions=additional_instructions
+            )
+            
+            logger.info(
+                f"Bulk execution completed for project {project_id}: "
+                f"{results['successful']}/{results['total_elements']} successful"
+            )
+            
+            return execution_id
+            
+        except Exception as e:
+            logger.error(f"Failed to execute all elements for project {project_id}: {e}")
+            raise 
