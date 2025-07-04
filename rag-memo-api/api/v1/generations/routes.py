@@ -9,7 +9,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from models import GenerationStatus
+from models import GenerationStatus, ElementGeneration
 from auth.models import User
 from auth.service import get_current_active_user
 from .service import ElementGenerationService
@@ -35,16 +35,27 @@ class GenerationResponse(BaseModel):
 class GenerationDetailResponse(GenerationResponse):
     """Response schema for detailed generation data."""
     
-    prompt: str = Field(description="Input prompt")
+    additional_instructions: Optional[str] = Field(description="Additional instructions provided")
     content: str = Field(description="Generated content")
     cost_usd: float = Field(description="Generation cost in USD")
     generation_time_ms: int = Field(description="Generation time in milliseconds")
     error_message: Optional[str] = Field(description="Error message if failed")
 
 
+class GenerationListResponse(BaseModel):
+    """Response schema for generation list with pagination."""
+    
+    items: List[GenerationResponse] = Field(description="List of generations")
+    total_count: int = Field(description="Total number of generations")
+    page: int = Field(description="Current page number")
+    page_size: int = Field(description="Number of items per page")
+    has_next: bool = Field(description="Whether there is a next page")
+    has_prev: bool = Field(description="Whether there is a previous page")
+
+
 @router.get(
     "/",
-    response_model=List[GenerationResponse],
+    response_model=GenerationListResponse,
     summary="List generations",
     description="Get a list of generations"
 )
@@ -56,7 +67,7 @@ async def list_generations(
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_active_user),
     generation_service: ElementGenerationService = Depends(get_generation_service)
-) -> List[GenerationResponse]:
+) -> GenerationListResponse:
     """List generations."""
     try:
         generations, total_count = await generation_service.list_generations(
@@ -74,16 +85,28 @@ async def list_generations(
                 element_id=generation.element_id,
                 project_id=generation.project_id,
                 status=generation.status,
-                model_used=generation.config.get("model"),
-                chunk_count=generation.get_chunk_count(),
-                token_usage=generation.metrics.total_tokens,
+                model_used=generation.model_used,
+                chunk_count=len(generation.generated_content),
+                token_usage=generation.metrics.total_tokens if generation.metrics else 0,
                 created_at=generation.created_at.isoformat(),
                 updated_at=generation.updated_at.isoformat()
             )
             for generation in generations
         ]
         
-        return generation_responses
+        # Calculate pagination metadata
+        total_pages = (total_count + page_size - 1) // page_size
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return GenerationListResponse(
+            items=generation_responses,
+            total_count=total_count,
+            page=page,
+            page_size=page_size,
+            has_next=has_next,
+            has_prev=has_prev
+        )
         
     except Exception as e:
         raise HTTPException(
@@ -112,19 +135,24 @@ async def get_generation(
             detail="Generation not found"
         )
     
+    # Get full content from generated chunks
+    full_content = ""
+    if generation.generated_content:
+        full_content = "\n\n".join([chunk.content for chunk in generation.generated_content])
+    
     return GenerationDetailResponse(
         id=str(generation.id),
         element_id=generation.element_id,
         project_id=generation.project_id,
         status=generation.status,
-        model_used=generation.config.get("model"),
-        chunk_count=generation.get_chunk_count(),
-        token_usage=generation.metrics.total_tokens,
-        prompt=generation.prompt,
-        content=generation.get_full_content(),
-        cost_usd=generation.metrics.cost_usd,
-        generation_time_ms=generation.metrics.generation_time_ms,
-        error_message=generation.error_message,
+        model_used=generation.model_used,
+        chunk_count=len(generation.generated_content),
+        token_usage=generation.metrics.total_tokens if generation.metrics else 0,
+        additional_instructions=generation.additional_instructions,
+        content=full_content,
+        cost_usd=generation.metrics.estimated_cost if generation.metrics and generation.metrics.estimated_cost else 0.0,
+        generation_time_ms=generation.metrics.generation_time_ms if generation.metrics and generation.metrics.generation_time_ms else 0,
+        error_message=generation.error_details.get("error_message") if generation.error_details else None,
         created_at=generation.created_at.isoformat(),
         updated_at=generation.updated_at.isoformat()
     ) 

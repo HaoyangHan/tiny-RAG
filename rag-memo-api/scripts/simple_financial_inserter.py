@@ -66,7 +66,7 @@ async def insert_financial_templates_v2():
 **Generated 'Client Overview' Section:**''',
             'retrieval_prompt': 'Information describing the company\'s business model, products, services, market position, and customers from financial filings.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.2,
                 'max_tokens': 2000
             },
@@ -99,7 +99,7 @@ async def insert_financial_templates_v2():
 **Generated 'Historical Financial Analysis' Section:**''',
             'retrieval_prompt': 'Historical financial performance data, including revenue, EBITDA, net income, and cash flow trends from MD&A sections.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.2,
                 'max_tokens': 2500
             },
@@ -132,7 +132,7 @@ async def insert_financial_templates_v2():
 **Generated 'Liquidity Analysis' Section:**''',
             'retrieval_prompt': 'Information regarding liquidity, capital resources, cash position, working capital, current ratio, and revolving credit facilities from financial filings.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.1,
                 'max_tokens': 2000
             },
@@ -164,7 +164,7 @@ async def insert_financial_templates_v2():
 **Generated 'Leverage' Section:**''',
             'retrieval_prompt': 'Information about debt structure, leverage ratios, total debt, and capital structure from the MD&A section and debt footnote.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.1,
                 'max_tokens': 2000
             },
@@ -196,7 +196,7 @@ async def insert_financial_templates_v2():
 **Generated 'Refinancing Risks' Section:**''',
             'retrieval_prompt': 'Information about debt maturity schedule, upcoming refinancing needs, and management commentary on future financing plans.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.1,
                 'max_tokens': 1800
             },
@@ -228,7 +228,7 @@ async def insert_financial_templates_v2():
 **Generated 'Debt Maturity Schedule' Section:**''',
             'retrieval_prompt': 'Detailed debt maturity information, including facility types, amounts, maturity dates, and interest rates from the debt footnote and financing sections.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.1,
                 'max_tokens': 2000
             },
@@ -260,7 +260,7 @@ async def insert_financial_templates_v2():
 **Generated 'Facility Request' Section:**''',
             'retrieval_prompt': 'Details of proposed transactions, including loan amount, purpose, use of proceeds, term, and pricing from prospectus or deal term sheets.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.1,
                 'max_tokens': 2000
             },
@@ -292,7 +292,7 @@ async def insert_financial_templates_v2():
 **Generated 'Obligor Assessment' Section:**''',
             'retrieval_prompt': 'Information on corporate structure, including subsidiaries, parent company guarantees, and specific legal entities acting as obligors.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.2,
                 'max_tokens': 1800
             },
@@ -325,7 +325,7 @@ async def insert_financial_templates_v2():
 **Generated 'Key Risks' Section:**''',
             'retrieval_prompt': 'The \'Risk Factors\' section and other risk disclosures from financial filings, detailing business and financial risks.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.3,
                 'max_tokens': 2500
             },
@@ -358,7 +358,7 @@ async def insert_financial_templates_v2():
 **Generated 'Stock Price Analysis' Section:**''',
             'retrieval_prompt': 'Information regarding stock performance, stock ticker, trading market, and comparison to market indices from market equity sections.',
             'execution_config': {
-                'model': 'gpt-4-turbo',
+                'model': 'gpt-4.1-nano-2025-04-14',
                 'temperature': 0.2,
                 'max_tokens': 2000
             },

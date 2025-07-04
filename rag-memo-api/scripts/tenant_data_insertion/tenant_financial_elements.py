@@ -53,7 +53,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information describing {company_name}'s business model, products, services, market position, and customers from the 'Business' section of its financial filings.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2000
                 },
@@ -86,7 +86,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Historical financial performance data, including revenue, EBITDA, net income, and cash flow trends for {company_name} from the MD&A and Selected Financial Data sections.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2500
                 },
@@ -119,7 +119,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information regarding {company_name}'s liquidity, capital resources, cash position, working capital, current ratio, and revolving credit facilities from its financial filings.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 2000
                 },
@@ -151,7 +151,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information about {company_name}'s debt structure, leverage ratios, total debt, and capital structure from the MD&A section and debt footnote.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 2000
                 },
@@ -183,7 +183,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information about debt maturity schedule, upcoming refinancing needs, and management commentary on future financing plans for {company_name}.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 1800
                 },
@@ -215,7 +215,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Detailed debt maturity information for {company_name}, including facility types, amounts, maturity dates, and interest rates from the debt footnote and financing sections.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 2000
                 },
@@ -247,7 +247,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Details of the proposed transaction for {company_name}, including loan amount, purpose, use of proceeds, term, and pricing from a prospectus or deal term sheet.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 2000
                 },
@@ -279,7 +279,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information on the corporate structure of {company_name}, including subsidiaries, parent company guarantees, and the specific legal entities acting as obligors.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 1800
                 },
@@ -312,7 +312,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "The 'Risk Factors' section from {company_name}'s 10-K and other filings, detailing risks to the business.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.3,
                     "max_tokens": 2500
                 },
@@ -345,7 +345,7 @@ class FinancialElementTemplateInserter(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information regarding {company_name}'s stock performance, stock ticker, trading market, and comparison to market indices from the 'Market for Registrant's Common Equity' section.",
                 "variables": ["company_name", "source_documents"],
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2000
                 },

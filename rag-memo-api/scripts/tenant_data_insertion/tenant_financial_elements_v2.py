@@ -48,7 +48,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information describing the company's business model, products, services, market position, and customers from the 'Business' section of its financial filings.",
                 "additional_instructions_template": "Focus areas: [e.g., emphasize geographic diversity, highlight key products, focus on market leadership, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2000
                 },
@@ -79,7 +79,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Historical financial performance data, including revenue, EBITDA, net income, and cash flow trends from the MD&A and Selected Financial Data sections.",
                 "additional_instructions_template": "Analysis focus: [e.g., emphasize cash flow trends, focus on margin analysis, highlight growth drivers, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2500
                 },
@@ -110,7 +110,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information regarding liquidity, capital resources, cash position, working capital, current ratio, and revolving credit facilities from financial filings.",
                 "additional_instructions_template": "Liquidity focus: [e.g., emphasize cash conversion cycle, focus on credit facilities, highlight seasonal patterns, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 2000
                 },
@@ -140,7 +140,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Information about debt structure, leverage ratios, total debt, and capital structure from the MD&A section and debt footnote.",
                 "additional_instructions_template": "Leverage focus: [e.g., emphasize debt covenant compliance, focus on leverage trajectory, highlight refinancing capacity, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.1,
                     "max_tokens": 2000
                 },
@@ -171,7 +171,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Stock performance information, trading data, dividend policy, and share repurchase programs from financial disclosures.",
                 "additional_instructions_template": "Stock analysis focus: [e.g., emphasize dividend sustainability, focus on share buyback impact, highlight trading volume patterns, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2000
                 },
@@ -202,7 +202,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "ESG information, sustainability initiatives, governance practices, and environmental policies from corporate disclosures.",
                 "additional_instructions_template": "ESG focus: [e.g., emphasize climate risk disclosures, focus on diversity metrics, highlight governance changes, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.3,
                     "max_tokens": 2000
                 },
@@ -233,7 +233,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Risk factor disclosures, business risks, financial risks, and regulatory risks from the 'Risk Factors' section of financial filings.",
                 "additional_instructions_template": "Risk focus: [e.g., emphasize operational risks, focus on regulatory changes, highlight market risks, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2500
                 },
@@ -264,7 +264,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Management biographies, executive compensation, strategic initiatives, and management commentary from proxy statements and MD&A sections.",
                 "additional_instructions_template": "Management focus: [e.g., emphasize leadership experience, focus on strategic vision, highlight succession planning, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.3,
                     "max_tokens": 2000
                 },
@@ -295,7 +295,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Industry descriptions, competitive landscape analysis, market trends, and business environment discussions from company filings.",
                 "additional_instructions_template": "Industry focus: [e.g., emphasize competitive advantages, focus on market trends, highlight regulatory environment, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.3,
                     "max_tokens": 2000
                 },
@@ -326,7 +326,7 @@ class FinancialElementTemplateInserterV2(BaseElementTemplateInserter):
                 "retrieval_prompt": "Forward-looking statements, financial guidance, business outlook, and management projections from earnings calls and forward-looking disclosure sections.",
                 "additional_instructions_template": "Projections focus: [e.g., emphasize growth targets, focus on margin guidance, highlight capital allocation plans, etc.]",
                 "execution_config": {
-                    "model": "gpt-4-turbo",
+                    "model": "gpt-4.1-nano-2025-04-14",
                     "temperature": 0.2,
                     "max_tokens": 2000
                 },

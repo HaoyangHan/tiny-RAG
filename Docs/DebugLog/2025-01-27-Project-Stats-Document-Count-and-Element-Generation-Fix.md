@@ -1,4 +1,4 @@
-# TinyRAG Project Stats & Element Generation Bug Fix - 2025-01-27
+# TinyRAG Project Stats & Element Generation Bug Fix - 2025-07-04
 
 ## **Bug Report**
 
@@ -24,6 +24,15 @@ Failed to start element generation. Please try again.
 Failed to execute elements: cannot import name 'get_database' from 'database'
 LLM generation failed: Unsupported model: gpt-4-turbo
 ```
+
+---
+
+## **CONTINUATION - 2025-07-04 Additional Fixes**
+
+### **Remaining Issues to Address:**
+1. ❌ **LLM Model Configuration**: Update element templates to use supported GPT_4_NANO model
+2. 🔍 **Document Count Display**: Investigate MongoDB document-project association
+3. ✅ **Service Integration**: Element generation API working correctly
 
 ---
 
