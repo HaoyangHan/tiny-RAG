@@ -39,7 +39,7 @@ class ElementResponse(BaseModel):
     description: Optional[str] = Field(description="Element description")
     project_id: str = Field(description="Associated project ID")
     element_type: ElementType = Field(description="Type of element")
-    element_status: ElementStatus = Field(description="Element status")
+    status: ElementStatus = Field(description="Element status")
     template_version: str = Field(description="Template version")
     tags: List[str] = Field(description="Element tags")
     execution_count: int = Field(description="Number of executions")
@@ -106,7 +106,7 @@ async def create_element(
             description=element.description,
             project_id=element.project_id,
             element_type=element.element_type,
-            element_status=element.status,
+            status=element.status,
             template_version=element.template.version,
             tags=element.tags,
             execution_count=await element.get_execution_count(),
@@ -160,7 +160,7 @@ async def list_elements(
                 description=element.description,
                 project_id=element.project_id,
                 element_type=element.element_type,
-                element_status=element.status,
+                status=element.status,
                 template_version=element.template.version,
                 tags=element.tags,
                 execution_count=await element.get_execution_count(),
@@ -210,9 +210,9 @@ async def get_element(
         description=element.description,
         project_id=element.project_id,
         element_type=element.element_type,
-        element_status=element.status,
+        status=element.status,
         template_content=element.template.content,
-        template_variables=element.template.variables,
+        template_variables=[],
         template_version=element.template.version,
         execution_config=element.template.execution_config,
         tags=element.tags,
@@ -300,7 +300,7 @@ async def update_element(
             description=element.description,
             project_id=element.project_id,
             element_type=element.element_type,
-            element_status=element.status,
+            status=element.status,
             template_version=element.template.version,
             tags=element.tags,
             execution_count=await element.get_execution_count(),

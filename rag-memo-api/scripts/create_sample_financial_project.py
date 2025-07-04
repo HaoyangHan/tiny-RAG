@@ -109,12 +109,17 @@ async def provision_financial_elements(project: Project):
         ElementTemplate.tenant_type == TenantType.FINANCIAL_REPORT
     ).to_list()
     
-    # Filter for V2 templates
-    v2_templates = [t for t in financial_templates if t.name.endswith("_V2")]
+    # Filter for V2 templates by version instead of name suffix
+    v2_templates = [t for t in financial_templates if t.version == "2.0.0"]
     
     if not v2_templates:
         print('⚠️  No financial element templates V2 found!')
+        print(f'📋 Found {len(financial_templates)} templates total. Available templates:')
+        for t in financial_templates[:5]:  # Show first 5 for debugging
+            print(f'  - {t.name} (v{t.version})')
         return
+    
+    print(f'✅ Found {len(v2_templates)} V2 templates to provision')
     
     provisioned_count = 0
     
@@ -123,15 +128,15 @@ async def provision_financial_elements(project: Project):
             # Check if element already exists for this project
             existing_element = await Element.find_one(
                 Element.project_id == str(project.id),
-                Element.name == template.name.replace("_V2", f"_Nike")  # Customize for Nike
+                Element.name == f"{template.name}_Nike"  # Customize for Nike
             )
             
             if existing_element:
-                print(f'⚠️  Element {template.name} already provisioned for this project')
+                print(f'⚠️  Element {template.name}_Nike already provisioned for this project')
                 continue
             
             # Create element from template
-            element_name = template.name.replace("_V2", "_Nike")
+            element_name = f"{template.name}_Nike"
             
             # Customize the generation prompt with Nike-specific context
             customized_prompt = template.generation_prompt.replace(

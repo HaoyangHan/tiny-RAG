@@ -338,7 +338,7 @@ class ElementService:
                 raise ValueError("Element is not ready for execution")
             
             # Validate required variables
-            template_variables = element.template.variables or []
+            template_variables = []  # Variables removed in v1.4.2 simplified approach
             missing_variables = [var for var in template_variables if var not in input_variables]
             
             if missing_variables:
