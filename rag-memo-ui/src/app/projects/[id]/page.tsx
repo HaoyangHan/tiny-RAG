@@ -62,6 +62,13 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const [elementsPage, setElementsPage] = useState(1);
   const elementsPageSize = 20;
 
+  // Generations tab pagination state
+  const [generationsPage, setGenerationsPage] = useState(1);
+  const generationsPageSize = 20;
+  const [allGenerations, setAllGenerations] = useState<Generation[]>([]);
+  const [totalGenerations, setTotalGenerations] = useState(0);
+  const [isLoadingGenerations, setIsLoadingGenerations] = useState(false);
+
   // Expansion state for documents and elements
   const [expandedDocuments, setExpandedDocuments] = useState<Set<string>>(new Set());
   const [expandedElements, setExpandedElements] = useState<Set<string>>(new Set());
@@ -75,6 +82,15 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   
   // Element generation state
   const [isGeneratingElements, setIsGeneratingElements] = useState(false);
+
+  // Tab definitions
+  const tabs = [
+    { id: 'overview', name: 'Overview', icon: FolderOpenIcon },
+    { id: 'documents', name: 'Documents', icon: DocumentTextIcon },
+    { id: 'elements', name: 'Elements', icon: CpuChipIcon },
+    { id: 'generations', name: 'Generations', icon: SparklesIcon },
+    { id: 'settings', name: 'Settings', icon: Cog6ToothIcon },
+  ];
 
   // Function to toggle document expansion and fetch details
   const toggleDocumentExpansion = async (documentId: string) => {
@@ -248,6 +264,30 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
       console.error('Failed to generate elements:', error);
       alert('Failed to start element generation. Please try again.');
       setIsGeneratingElements(false);
+    }
+  };
+
+  // Function to fetch generations for the project
+  const fetchGenerations = async (page: number = 1) => {
+    if (!project?.id) return;
+    
+    try {
+      setIsLoadingGenerations(true);
+      
+      const response = await api.getGenerations({
+        project_id: project.id,
+        page: page,
+        page_size: generationsPageSize
+      });
+      
+      setAllGenerations(response.items || []);
+      setTotalGenerations(response.total_count || 0);
+      setGenerationsPage(page);
+      
+    } catch (error) {
+      console.error('Failed to fetch generations:', error);
+    } finally {
+      setIsLoadingGenerations(false);
     }
   };
 
@@ -425,14 +465,6 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         return 'bg-yellow-100 text-yellow-800';
     }
   };
-
-  const tabs = [
-    { id: 'overview', name: 'Overview', icon: FolderOpenIcon },
-    { id: 'documents', name: 'Documents', icon: DocumentTextIcon },
-    { id: 'elements', name: 'Elements', icon: CpuChipIcon },
-    { id: 'generations', name: 'Generations', icon: SparklesIcon },
-    { id: 'settings', name: 'Settings', icon: Cog6ToothIcon },
-  ];
 
   // Project overview render function
   const renderProjectOverview = () => (
@@ -1253,6 +1285,212 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     </div>
   );
 
+  const renderProjectGenerations = () => {
+    // Fetch generations when this tab becomes active
+    useEffect(() => {
+      if (activeTab === 'generations' && project?.id) {
+        fetchGenerations(generationsPage);
+      }
+    }, [activeTab, generationsPage, project?.id]);
+
+    const totalGenerationPages = Math.ceil(totalGenerations / generationsPageSize);
+
+    const getStatusIcon = (status: string) => {
+      switch (status) {
+        case 'completed':
+          return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+        case 'failed':
+          return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
+        case 'processing':
+          return <ArrowPathIcon className="h-5 w-5 text-blue-500 animate-spin" />;
+        default:
+          return <ClockIcon className="h-5 w-5 text-gray-400" />;
+      }
+    };
+
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case 'completed':
+          return 'bg-green-100 text-green-800';
+        case 'failed':
+          return 'bg-red-100 text-red-800';
+        case 'processing':
+          return 'bg-blue-100 text-blue-800';
+        default:
+          return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    return (
+      <div className="bg-white shadow rounded-lg">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium text-gray-900">
+              Generations ({totalGenerations})
+            </h2>
+            <button
+              onClick={() => fetchGenerations(generationsPage)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              <ArrowPathIcon className="h-4 w-4 mr-2" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Loading State */}
+        {isLoadingGenerations ? (
+          <div className="text-center py-8">
+            <LoadingSpinner size="md" />
+            <p className="mt-2 text-gray-600">Loading generations...</p>
+          </div>
+        ) : (
+          <>
+            {/* Generations List */}
+            {allGenerations.length > 0 ? (
+              <div className="divide-y divide-gray-200">
+                {allGenerations.map((generation) => (
+                  <div key={generation.id} className="p-6 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {getStatusIcon(generation.status)}
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-900">
+                            Generation {generation.id.slice(-8)}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Element: {generation.element_id?.slice(-8) || 'Unknown'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(generation.status)}`}>
+                          {generation.status}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {formatDate(generation.created_at)}
+                        </span>
+                        <button
+                          onClick={() => router.push(`/generations/${generation.id}`)}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          <EyeIcon className="h-4 w-4 mr-2" />
+                          View
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Token and Cost Info */}
+                    {generation.tokens_used && (
+                      <div className="mt-4 grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-900">
+                            {generation.tokens_used || 0}
+                          </div>
+                          <div className="text-xs text-gray-500">Tokens</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-900">
+                            {generation.execution_time > 0 ? `${generation.execution_time}s` : '—'}
+                          </div>
+                          <div className="text-xs text-gray-500">Time</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm font-medium text-gray-900">
+                            ${generation.cost > 0 ? generation.cost.toFixed(4) : '—'}
+                          </div>
+                          <div className="text-xs text-gray-500">Cost</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No generations found</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Generate content from elements to see results here.
+                </p>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalGenerationPages > 1 && (
+              <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                <div className="flex-1 flex justify-between sm:hidden">
+                  <button
+                    onClick={() => fetchGenerations(Math.max(1, generationsPage - 1))}
+                    disabled={generationsPage <= 1}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => fetchGenerations(Math.min(totalGenerationPages, generationsPage + 1))}
+                    disabled={generationsPage >= totalGenerationPages}
+                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      Showing{' '}
+                      <span className="font-medium">
+                        {(generationsPage - 1) * generationsPageSize + 1}
+                      </span>{' '}
+                      to{' '}
+                      <span className="font-medium">
+                        {Math.min(generationsPage * generationsPageSize, totalGenerations)}
+                      </span>{' '}
+                      of{' '}
+                      <span className="font-medium">{totalGenerations}</span> results
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <button
+                        onClick={() => fetchGenerations(Math.max(1, generationsPage - 1))}
+                        disabled={generationsPage <= 1}
+                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeftPageIcon className="h-5 w-5" />
+                      </button>
+                      {Array.from({ length: totalGenerationPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => fetchGenerations(page)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            page === generationsPage
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => fetchGenerations(Math.min(totalGenerationPages, generationsPage + 1))}
+                        disabled={generationsPage >= totalGenerationPages}
+                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRightPageIcon className="h-5 w-5" />
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -1262,7 +1500,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
       case 'elements':
         return renderProjectElements();
       case 'generations':
-        return <div className="text-center py-8"><p className="text-gray-500">Generations view coming soon</p></div>;
+        return renderProjectGenerations();
       case 'settings':
         return <div className="text-center py-8"><p className="text-gray-500">Settings view coming soon</p></div>;
       default:
