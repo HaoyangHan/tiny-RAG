@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from services.llm_factory import get_llm_provider
-from services.document_service import DocumentService
+from api.v1.documents.service import DocumentService
 from models.element import Element
 from models.element_generation import ElementGeneration, GenerationStatus, GenerationMetrics
 from models.project import Project
@@ -388,10 +388,9 @@ def get_element_generation_service() -> ElementGenerationService:
     global _element_generation_service
     
     if _element_generation_service is None:
-        from services.document_service import DocumentService
-        from database import get_database
+        from api.v1.documents.service import DocumentService
         
-        document_service = DocumentService(get_database())
+        document_service = DocumentService()
         _element_generation_service = ElementGenerationService(document_service)
     
     return _element_generation_service 

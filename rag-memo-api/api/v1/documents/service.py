@@ -536,32 +536,101 @@ class DocumentService:
     
     async def _get_accessible_project_ids(self, user_id: str) -> List[str]:
         """
-        Get list of project IDs accessible to a user.
+        Get project IDs that the user has access to.
         
         Args:
-            user_id: ID of the user
+            user_id: User ID to check access for
             
         Returns:
-            List of accessible project ID strings
+            List of project IDs the user can access
         """
         try:
-            # Get projects where user is owner or collaborator AND not deleted
+            # Get projects where user is owner or collaborator
             projects = await Project.find(
                 And(
-                    Project.is_deleted == False,
                     Or(
                         Project.owner_id == user_id,
-                        In(user_id, Project.collaborators)
-                    )
+                        In(Project.collaborators, [user_id])
+                    ),
+                    Project.is_deleted == False
                 )
             ).to_list()
             
-            logger.info(f"Found {len(projects)} accessible projects for user {user_id}")
-            project_ids = [str(project.id) for project in projects]
-            logger.info(f"Accessible project IDs: {project_ids}")
-            
-            return project_ids
+            return [str(project.id) for project in projects]
             
         except Exception as e:
-            logger.error(f"Failed to get accessible projects: {str(e)}")
+            logger.error(f"Error getting accessible project IDs: {str(e)}")
+            return []
+
+    async def search_documents(
+        self,
+        user_id: str,
+        query: str,
+        document_ids: Optional[List[str]] = None,
+        top_k: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for relevant document chunks for element generation.
+        
+        Args:
+            user_id: User ID for access control
+            query: Search query
+            document_ids: Optional list of document IDs to search within
+            top_k: Number of top chunks to return
+            
+        Returns:
+            List of relevant document chunks
+        """
+        try:
+            # Build filter for user documents
+            filter_query = {"user_id": user_id, "is_deleted": False}
+            
+            if document_ids:
+                # Convert string IDs to ObjectIds for MongoDB
+                try:
+                    object_ids = [PydanticObjectId(doc_id) for doc_id in document_ids]
+                    filter_query["_id"] = {"$in": object_ids}
+                except Exception as e:
+                    logger.error(f"Error converting document IDs to ObjectIds: {e}")
+                    return []
+            
+            logger.info(f"Searching documents with filter: {filter_query}")
+            documents = await Document.find(filter_query).to_list()
+            logger.info(f"Found {len(documents)} documents for user")
+            
+            if not documents:
+                logger.warning("No documents found for search")
+                return []
+            
+            # Collect all chunks from documents
+            all_chunks = []
+            
+            for document in documents:
+                logger.info(f"Processing document {document.id}: {len(document.chunks) if document.chunks else 0} chunks")
+                
+                if not document.chunks:
+                    logger.warning(f"Document {document.id} has no chunks")
+                    continue
+                    
+                # For now, return chunks with basic scoring
+                # In a full implementation, you would use vector similarity
+                for chunk in document.chunks:
+                    chunk_result = {
+                        "document_id": str(document.id),
+                        "document_title": document.filename,
+                        "page_number": getattr(chunk, 'page_number', 1),
+                        "chunk_text": chunk.text,
+                        "chunk_index": getattr(chunk, 'chunk_index', 0),
+                        "similarity_score": 0.8  # Default score for now
+                    }
+                    all_chunks.append(chunk_result)
+            
+            # Sort by similarity score (in a real implementation, use vector similarity)
+            all_chunks.sort(key=lambda x: x['similarity_score'], reverse=True)
+            
+            # Return top_k chunks
+            return all_chunks[:top_k]
+            
+        except Exception as e:
+            logger.error(f"Error searching documents: {str(e)}")
             return [] 
