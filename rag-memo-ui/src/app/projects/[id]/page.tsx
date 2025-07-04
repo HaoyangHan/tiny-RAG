@@ -1381,29 +1381,27 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                       </div>
                     </div>
 
-                    {/* Token and Cost Info */}
-                    {generation.tokens_used && (
-                      <div className="mt-4 grid grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-900">
-                            {generation.tokens_used || 0}
-                          </div>
-                          <div className="text-xs text-gray-500">Tokens</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-900">
-                            {generation.execution_time > 0 ? `${generation.execution_time}s` : '—'}
-                          </div>
-                          <div className="text-xs text-gray-500">Time</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-sm font-medium text-gray-900">
-                            ${generation.cost > 0 ? generation.cost.toFixed(4) : '—'}
-                          </div>
-                          <div className="text-xs text-gray-500">Cost</div>
-                        </div>
-                      </div>
-                    )}
+                                         {/* Token and Cost Info */}
+                     <div className="mt-4 grid grid-cols-3 gap-4">
+                       <div className="text-center">
+                         <div className="text-sm font-medium text-gray-900">
+                           {(generation as any).token_usage || 0}
+                         </div>
+                         <div className="text-xs text-gray-500">Tokens</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-sm font-medium text-gray-900">
+                           {(generation as any).chunk_count || 0}
+                         </div>
+                         <div className="text-xs text-gray-500">Chunks</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-sm font-medium text-gray-900">
+                           {(generation as any).model_used || '—'}
+                         </div>
+                         <div className="text-xs text-gray-500">Model</div>
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>

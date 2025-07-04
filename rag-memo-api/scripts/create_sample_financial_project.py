@@ -54,7 +54,7 @@ async def create_sample_financial_project():
     
     # Create project configuration for financial analysis
     project_config = ProjectConfiguration(
-        default_model="gpt-4-turbo",
+        default_model="gpt-4.1-nano-2025-04-14",
         temperature=0.2,
         max_tokens=2000,
         retrieval_top_k=8,

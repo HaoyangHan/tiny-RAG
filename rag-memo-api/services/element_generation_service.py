@@ -10,7 +10,7 @@ from datetime import datetime
 from services.llm_factory import get_llm_provider
 from api.v1.documents.service import DocumentService
 from models.element import Element
-from models.element_generation import ElementGeneration, GenerationStatus, GenerationMetrics
+from models.element_generation import ElementGeneration, GenerationStatus, GenerationMetrics, GenerationChunk
 from models.project import Project
 
 logger = logging.getLogger(__name__)
@@ -111,22 +111,37 @@ class ElementGenerationService:
                 
                 # Step 3: Generate content using LLM
                 generation_start = datetime.utcnow()
-                generated_content = await self._generate_with_llm(
+                generated_text, token_usage = await self._generate_with_llm(
                     prompt=formatted_prompt,
                     config=generation_config or element.template.execution_config
                 )
                 generation_time = (datetime.utcnow() - generation_start).total_seconds()
                 
-                # Step 4: Update generation with results
+                # Step 4: Create GenerationChunk object
+                generation_chunk = GenerationChunk(
+                    content=generated_text,
+                    chunk_index=0,
+                    source_documents=[chunk.get('document_id', '') for chunk in source_chunks if chunk.get('document_id')],
+                    source_elements=[element_id],
+                    token_count=token_usage.get('total_tokens', 0) if token_usage else 0
+                )
+                
+                # Step 5: Update generation with results
                 generation.source_chunks = source_chunks
-                generation.generated_content = [generated_content]
+                generation.generated_content = [generation_chunk]
                 generation.status = GenerationStatus.COMPLETED
-                generation.completed_at = datetime.utcnow()
+                generation.model_used = (generation_config or element.template.execution_config).get('model', 'unknown')
                 
                 # Update metrics
                 generation.metrics.generation_time_ms = int(generation_time * 1000)
                 generation.metrics.processing_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
                 generation.metrics.documents_retrieved = len(source_chunks)
+                
+                if token_usage:
+                    generation.metrics.prompt_tokens = token_usage.get('prompt_tokens', 0)
+                    generation.metrics.completion_tokens = token_usage.get('completion_tokens', 0)
+                    generation.metrics.total_tokens = token_usage.get('total_tokens', 0)
+                    generation.metrics.estimated_cost = token_usage.get('estimated_cost', 0.0)
                 
                 await generation.save()
                 
@@ -271,7 +286,7 @@ class ElementGenerationService:
         self,
         prompt: str,
         config: Dict[str, Any]
-    ) -> str:
+    ) -> tuple[str, Dict[str, Any]]:
         """
         Generate content using LLM with the formatted prompt.
         
@@ -280,7 +295,7 @@ class ElementGenerationService:
             config: Generation configuration
             
         Returns:
-            Generated content
+            Tuple of (generated_content, token_usage)
         """
         try:
             # Extract configuration parameters
@@ -296,7 +311,28 @@ class ElementGenerationService:
                 max_tokens=max_tokens
             )
             
-            return response
+            # Extract token usage if available from response
+            token_usage = {}
+            if hasattr(response, 'usage') and response.usage:
+                token_usage = {
+                    'prompt_tokens': response.usage.prompt_tokens,
+                    'completion_tokens': response.usage.completion_tokens,
+                    'total_tokens': response.usage.total_tokens
+                }
+            elif isinstance(response, dict) and 'usage' in response:
+                token_usage = response.get('usage', {})
+            
+            # Extract text content
+            if isinstance(response, str):
+                generated_text = response
+            elif hasattr(response, 'content'):
+                generated_text = response.content
+            elif isinstance(response, dict) and 'content' in response:
+                generated_text = response['content']
+            else:
+                generated_text = str(response)
+            
+            return generated_text, token_usage
             
         except Exception as e:
             self.logger.error(f"LLM generation failed: {e}")
