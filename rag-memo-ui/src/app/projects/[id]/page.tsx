@@ -304,33 +304,65 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         setIsLoading(true);
         setError(null);
 
+        console.log('=== DEBUGGING PROJECT DATA FETCH ===');
+        console.log('Project ID:', params.id);
+        
+        // Test API client health and authentication
+        try {
+          const healthCheck = await api.checkHealth();
+          console.log('API Health check:', healthCheck);
+        } catch (healthError) {
+          console.error('API Health check failed:', healthError);
+        }
+        
+        // Test if API client has token
+        console.log('API client token status:', (api as any).token ? 'Token exists' : 'No token');
+
         // Fetch project details
         const projectData = await api.getProject(params.id);
+        console.log('Project data fetched:', projectData);
         setProject(projectData);
 
         // Fetch related data in parallel (only recent items for overview)
+        console.log('Fetching parallel data...');
         const [documentsResponse, elementsResponse, generationsResponse] = await Promise.allSettled([
           api.getDocuments({ project_id: params.id, page_size: 5 }),
           api.getElements({ project_id: params.id, page_size: 5 }),
           api.getGenerations({ project_id: params.id, page_size: 5, include_content: true })
         ]);
 
+        console.log('Documents response:', documentsResponse);
+        console.log('Elements response:', elementsResponse);
+        console.log('Generations response:', generationsResponse);
+
         // Handle documents response
         if (documentsResponse.status === 'fulfilled') {
+          console.log('Documents data:', documentsResponse.value);
           setRecentDocuments(documentsResponse.value.items || []);
+        } else {
+          console.error('Documents fetch failed:', documentsResponse.reason);
         }
 
         // Handle elements response
         if (elementsResponse.status === 'fulfilled') {
+          console.log('Elements data:', elementsResponse.value);
           setRecentElements(elementsResponse.value.items || []);
+        } else {
+          console.error('Elements fetch failed:', elementsResponse.reason);
         }
 
         // Handle generations response
         if (generationsResponse.status === 'fulfilled') {
+          console.log('Generations data:', generationsResponse.value);
+          console.log('Total generations count:', generationsResponse.value.total_count);
           setRecentGenerations(generationsResponse.value.items || []);
           // Also set total count for overview display
           setTotalGenerations(generationsResponse.value.total_count || 0);
+        } else {
+          console.error('Generations fetch failed:', generationsResponse.reason);
         }
+
+        console.log('=== END DEBUGGING ===');
 
       } catch (err) {
         console.error('Failed to fetch project data:', err);
@@ -381,6 +413,9 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
 
   // Use real generation count instead of potentially stale project.generation_count
   const realGenerationCount = totalGenerations || recentGenerations.length || 0;
+  
+  // Debug logging
+  console.log('Current state - totalGenerations:', totalGenerations, 'recentGenerations.length:', recentGenerations.length, 'realGenerationCount:', realGenerationCount);
 
   // Add useEffect to fetch generations when Generations tab is activated
   useEffect(() => {
