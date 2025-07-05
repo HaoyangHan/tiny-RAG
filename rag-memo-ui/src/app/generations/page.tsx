@@ -38,39 +38,37 @@ function GenerationsPageContent() {
 
   // Fetch generations from API
   const fetchGenerations = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
+    try {
       const params: any = {
         page: currentPage,
         page_size: pageSize,
+        include_content: true
       };
 
-      // Add filters based on URL parameters and user selections
-      if (projectId) {
-        params.project_id = projectId;
-      }
-      if (executionId) {
-        params.execution_id = executionId;
-      }
-      if (selectedStatus) {
-        params.status = selectedStatus;
-      }
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
+      if (projectId) params.project_id = projectId;
+      if (executionId) params.execution_id = executionId;
+      if (selectedStatus) params.status = selectedStatus;
 
+      console.log('=== GENERATIONS PAGE DEBUG ===');
       console.log('Fetching generations with params:', params);
-      const response: PaginatedResponse<Generation> = await api.getGenerations(params);
+
+      const data = await api.getGenerations(params);
       
-      setGenerations(response.items || []);
-      setTotalCount(response.total_count || 0);
-      
-    } catch (err: any) {
+      console.log('Generations API response:', data);
+      if (data.items && data.items.length > 0) {
+        console.log('First generation item:', data.items[0]);
+        console.log('Available fields:', Object.keys(data.items[0]));
+      }
+      console.log('=== END DEBUG ===');
+
+      setGenerations(data.items || []);
+      setTotalCount(data.total_count || 0);
+    } catch (err) {
       console.error('Failed to fetch generations:', err);
       setError('Failed to load generations. Please try again.');
-      setGenerations([]);
     } finally {
       setIsLoading(false);
     }
@@ -162,12 +160,12 @@ function GenerationsPageContent() {
         </div>
 
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {generation.element_name || 'Unknown Element'}
+          {generation.element_name || `Element ${generation.element_id?.slice(-8) || 'Unknown'}`}
         </h3>
 
-        {generation.status === GenerationStatus.COMPLETED && generation.output_text && (
+        {generation.status === GenerationStatus.COMPLETED && (generation.output_text || generation.content) && (
           <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-            {generation.output_text}
+            {generation.output_text || generation.content}
           </p>
         )}
 
@@ -187,7 +185,9 @@ function GenerationsPageContent() {
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
               <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
-              <span className="text-sm font-medium text-gray-900">{generation.tokens_used || 0}</span>
+              <span className="text-sm font-medium text-gray-900">
+                {generation.tokens_used || generation.token_usage || 0}
+              </span>
             </div>
             <p className="text-xs text-gray-500">Tokens</p>
           </div>
@@ -195,7 +195,13 @@ function GenerationsPageContent() {
             <div className="flex items-center justify-center mb-1">
               <ClockIcon className="h-4 w-4 text-gray-500 mr-1" />
               <span className="text-sm font-medium text-gray-900">
-                {generation.execution_time > 0 ? `${generation.execution_time}s` : '—'}
+                {(() => {
+                  const timeMs = (generation as any).execution_time || (generation as any).generation_time_ms;
+                  if (timeMs && timeMs > 0) {
+                    return `${(timeMs / 1000).toFixed(1)}s`;
+                  }
+                  return '—';
+                })()}
               </span>
             </div>
             <p className="text-xs text-gray-500">Time</p>
@@ -203,7 +209,10 @@ function GenerationsPageContent() {
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
               <span className="text-sm font-medium text-gray-900">
-                ${generation.cost > 0 ? generation.cost.toFixed(4) : '—'}
+                {(() => {
+                  const cost = (generation as any).cost || (generation as any).cost_usd;
+                  return cost && cost > 0 ? `$${cost.toFixed(4)}` : '$0.0000';
+                })()}
               </span>
             </div>
             <p className="text-xs text-gray-500">Cost</p>
@@ -214,10 +223,19 @@ function GenerationsPageContent() {
   );
 
   const completedGenerations = generations.filter(g => g.status === GenerationStatus.COMPLETED);
-  const totalTokens = generations.reduce((sum, g) => sum + (g.tokens_used || 0), 0);
-  const totalCost = generations.reduce((sum, g) => sum + (g.cost || 0), 0);
+  const totalTokens = generations.reduce((sum, g) => {
+    const tokens = (g as any).tokens_used || (g as any).token_usage || 0;
+    return sum + tokens;
+  }, 0);
+  const totalCost = generations.reduce((sum, g) => {
+    const cost = (g as any).cost || (g as any).cost_usd || 0;
+    return sum + cost;
+  }, 0);
   const avgExecutionTime = completedGenerations.length > 0 
-    ? completedGenerations.reduce((sum, g) => sum + (g.execution_time || 0), 0) / completedGenerations.length 
+    ? completedGenerations.reduce((sum, g) => {
+        const timeMs = (g as any).execution_time || (g as any).generation_time_ms || 0;
+        return sum + (timeMs / 1000); // Convert ms to seconds
+      }, 0) / completedGenerations.length 
     : 0;
 
   if (isLoading) {
