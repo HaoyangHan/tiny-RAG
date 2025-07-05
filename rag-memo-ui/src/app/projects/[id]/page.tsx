@@ -34,6 +34,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { Project, TenantType, ProjectStatus, Document, Element, Generation, ElementType, ElementStatus } from '@/types';
 import { api } from '@/services/api';
+import { useAuthStore } from '@/stores/authStore';
 
 interface ProjectDetailsProps {
   params: { id: string };
@@ -42,6 +43,9 @@ interface ProjectDetailsProps {
 export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Get authentication state
+  const { isAuthenticated, isLoading: authLoading, user } = useAuthStore();
   
   // State for project data
   const [project, setProject] = useState<Project | null>(null);
@@ -53,6 +57,12 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);  
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/');
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   // Documents tab pagination state
   const [documentsPage, setDocumentsPage] = useState(1);
@@ -306,6 +316,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
 
         console.log('=== DEBUGGING PROJECT DATA FETCH ===');
         console.log('Project ID:', params.id);
+        console.log('Auth status - isAuthenticated:', isAuthenticated, 'authLoading:', authLoading, 'user:', user);
         
         // Test API client health and authentication
         try {
@@ -372,10 +383,13 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
       }
     };
 
-    if (params.id) {
+    // Only fetch data if authentication is fully initialized and user is authenticated
+    if (!authLoading && isAuthenticated && params.id) {
       fetchProjectData();
+    } else if (!authLoading && !isAuthenticated) {
+      setIsLoading(false);
     }
-  }, [params.id]);
+  }, [params.id, authLoading, isAuthenticated, user]);
 
   // Separate query for full documents list in Documents tab
   const { data: allDocumentsData, isLoading: allDocumentsLoading, refetch: refetchAllDocuments } = useQuery({
@@ -425,7 +439,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   }, [activeTab, project?.id]);
 
   // Show loading spinner while fetching data
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-screen">

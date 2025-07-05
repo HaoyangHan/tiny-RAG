@@ -425,9 +425,15 @@ export class APIClient {
     page_size?: number;
   }): Promise<PaginatedResponse<Generation>> {
     try {
+      console.log('API Client - getGenerations called with params:', params);
+      console.log('API Client - current token:', this.token ? 'Token exists' : 'No token');
+      console.log('API Client - Authorization header:', this.axiosInstance.defaults.headers.Authorization);
+      
       const response = await this.axiosInstance.get<PaginatedResponse<Generation>>('/api/v1/generations', { params });
+      console.log('API Client - getGenerations response:', response.data);
       return response.data;
     } catch (error) {
+      console.error('API Client - getGenerations error:', error);
       throw this.handleError(error as AxiosError);
     }
   }
