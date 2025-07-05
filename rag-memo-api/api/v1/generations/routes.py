@@ -30,6 +30,10 @@ class GenerationResponse(BaseModel):
     token_usage: int = Field(description="Total tokens used")
     created_at: str = Field(description="Creation timestamp")
     updated_at: str = Field(description="Last update timestamp")
+    # Optional fields for enhanced responses
+    content: Optional[str] = Field(None, description="Generated content (optional)")
+    cost_usd: Optional[float] = Field(None, description="Generation cost in USD (optional)")
+    generation_time_ms: Optional[int] = Field(None, description="Generation time in milliseconds (optional)")
 
 
 class GenerationDetailResponse(GenerationResponse):
@@ -64,6 +68,7 @@ async def list_generations(
     element_id: Optional[str] = Query(None, description="Filter by element ID"),
     execution_id: Optional[str] = Query(None, description="Filter by execution ID"),
     status: Optional[GenerationStatus] = Query(None, description="Filter by status"),
+    include_content: bool = Query(False, description="Include generated content in response"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_active_user),
@@ -81,20 +86,35 @@ async def list_generations(
             status=status
         )
         
-        generation_responses = [
-            GenerationResponse(
-                id=str(generation.id),
-                element_id=generation.element_id,
-                project_id=generation.project_id,
-                status=generation.status,
-                model_used=generation.model_used,
-                chunk_count=len(generation.generated_content),
-                token_usage=generation.metrics.total_tokens if generation.metrics else 0,
-                created_at=generation.created_at.isoformat(),
-                updated_at=generation.updated_at.isoformat()
-            )
-            for generation in generations
-        ]
+        generation_responses = []
+        for generation in generations:
+            # Base response data
+            response_data = {
+                "id": str(generation.id),
+                "element_id": generation.element_id,
+                "project_id": generation.project_id,
+                "status": generation.status,
+                "model_used": generation.model_used,
+                "chunk_count": len(generation.generated_content),
+                "token_usage": generation.metrics.total_tokens if generation.metrics else 0,
+                "created_at": generation.created_at.isoformat(),
+                "updated_at": generation.updated_at.isoformat()
+            }
+            
+            # Optionally include content and metrics
+            if include_content:
+                # Get full content from generated chunks
+                full_content = ""
+                if generation.generated_content:
+                    full_content = "\n\n".join([chunk.content for chunk in generation.generated_content])
+                
+                response_data.update({
+                    "content": full_content,
+                    "cost_usd": generation.metrics.estimated_cost if generation.metrics and generation.metrics.estimated_cost else 0.0,
+                    "generation_time_ms": generation.metrics.generation_time_ms if generation.metrics and generation.metrics.generation_time_ms else 0
+                })
+            
+            generation_responses.append(GenerationResponse(**response_data))
         
         # Calculate pagination metadata
         total_pages = (total_count + page_size - 1) // page_size

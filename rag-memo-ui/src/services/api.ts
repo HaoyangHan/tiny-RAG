@@ -418,7 +418,9 @@ export class APIClient {
   async getGenerations(params?: {
     project_id?: string;
     element_id?: string;
+    execution_id?: string;
     status?: string;
+    include_content?: boolean;
     page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<Generation>> {

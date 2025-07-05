@@ -273,19 +273,25 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
     
     try {
       setIsLoadingGenerations(true);
+      console.log('Fetching generations for project:', project.id, 'page:', page);
       
       const response = await api.getGenerations({
         project_id: project.id,
         page: page,
-        page_size: generationsPageSize
+        page_size: generationsPageSize,
+        include_content: true
       });
       
+      console.log('Generations response:', response);
       setAllGenerations(response.items || []);
       setTotalGenerations(response.total_count || 0);
       setGenerationsPage(page);
       
     } catch (error) {
       console.error('Failed to fetch generations:', error);
+      // Set empty state on error to prevent showing stale data
+      setAllGenerations([]);
+      setTotalGenerations(0);
     } finally {
       setIsLoadingGenerations(false);
     }
@@ -306,7 +312,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         const [documentsResponse, elementsResponse, generationsResponse] = await Promise.allSettled([
           api.getDocuments({ project_id: params.id, page_size: 5 }),
           api.getElements({ project_id: params.id, page_size: 5 }),
-          api.getGenerations({ project_id: params.id, page_size: 5 })
+          api.getGenerations({ project_id: params.id, page_size: 5, include_content: true })
         ]);
 
         // Handle documents response
@@ -322,6 +328,8 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
         // Handle generations response
         if (generationsResponse.status === 'fulfilled') {
           setRecentGenerations(generationsResponse.value.items || []);
+          // Also set total count for overview display
+          setTotalGenerations(generationsResponse.value.total_count || 0);
         }
 
       } catch (err) {
@@ -367,6 +375,19 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   const allElements = allElementsData?.items || [];
   const totalElements = allElementsData?.total_count || 0;
   const totalElementPages = Math.ceil(totalElements / elementsPageSize);
+
+  // Calculate generations pagination
+  const totalGenerationPages = Math.ceil(totalGenerations / generationsPageSize);
+
+  // Use real generation count instead of potentially stale project.generation_count
+  const realGenerationCount = totalGenerations || recentGenerations.length || 0;
+
+  // Add useEffect to fetch generations when Generations tab is activated
+  useEffect(() => {
+    if (activeTab === 'generations' && project?.id) {
+      fetchGenerations(1);
+    }
+  }, [activeTab, project?.id]);
 
   // Show loading spinner while fetching data
   if (isLoading) {
@@ -521,7 +542,7 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                   onClick={() => setActiveTab('generations')}
                   className="text-2xl font-semibold text-gray-900 hover:text-purple-600 transition-colors duration-200 cursor-pointer"
                 >
-                  {project.generation_count}
+                  {realGenerationCount}
                 </button>
               </div>
             </div>
@@ -1286,13 +1307,6 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
   );
 
   const renderProjectGenerations = () => {
-    // Fetch generations when this tab becomes active
-    useEffect(() => {
-      if (activeTab === 'generations' && project?.id) {
-        fetchGenerations(generationsPage);
-      }
-    }, [activeTab, generationsPage, project?.id]);
-
     const totalGenerationPages = Math.ceil(totalGenerations / generationsPageSize);
 
     const getStatusIcon = (status: string) => {
@@ -1381,27 +1395,27 @@ export default function ProjectDetailsPage({ params }: ProjectDetailsProps) {
                       </div>
                     </div>
 
-                                         {/* Token and Cost Info */}
-                     <div className="mt-4 grid grid-cols-3 gap-4">
-                       <div className="text-center">
-                         <div className="text-sm font-medium text-gray-900">
-                           {(generation as any).token_usage || 0}
-                         </div>
-                         <div className="text-xs text-gray-500">Tokens</div>
-                       </div>
-                       <div className="text-center">
-                         <div className="text-sm font-medium text-gray-900">
-                           {(generation as any).chunk_count || 0}
-                         </div>
-                         <div className="text-xs text-gray-500">Chunks</div>
-                       </div>
-                       <div className="text-center">
-                         <div className="text-sm font-medium text-gray-900">
-                           {(generation as any).model_used || '—'}
-                         </div>
-                         <div className="text-xs text-gray-500">Model</div>
-                       </div>
-                     </div>
+                    {/* Token and Cost Info */}
+                    <div className="mt-4 grid grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {generation.token_usage || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">Tokens</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {generation.chunk_count || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">Chunks</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {generation.model_used || '—'}
+                        </div>
+                        <div className="text-xs text-gray-500">Model</div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

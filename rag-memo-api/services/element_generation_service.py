@@ -303,36 +303,22 @@ class ElementGenerationService:
             temperature = config.get('temperature', 0.7)
             max_tokens = config.get('max_tokens', 2000)
             
-            # Generate content
-            response = await self.llm_client.generate_text(
-                prompt=prompt,
+            # Create message for LLM
+            from services.llm_factory import LLMMessage
+            messages = [LLMMessage(role="user", content=prompt)]
+            
+            # Generate content using the factory directly to get full response
+            response = await self.llm_client.factory.generate_response(
+                messages=messages,
                 model=model,
                 temperature=temperature,
                 max_tokens=max_tokens
             )
             
-            # Extract token usage if available from response
-            token_usage = {}
-            if hasattr(response, 'usage') and response.usage:
-                token_usage = {
-                    'prompt_tokens': response.usage.prompt_tokens,
-                    'completion_tokens': response.usage.completion_tokens,
-                    'total_tokens': response.usage.total_tokens
-                }
-            elif isinstance(response, dict) and 'usage' in response:
-                token_usage = response.get('usage', {})
+            # Extract token usage from structured response
+            token_usage = response.usage or {}
             
-            # Extract text content
-            if isinstance(response, str):
-                generated_text = response
-            elif hasattr(response, 'content'):
-                generated_text = response.content
-            elif isinstance(response, dict) and 'content' in response:
-                generated_text = response['content']
-            else:
-                generated_text = str(response)
-            
-            return generated_text, token_usage
+            return response.content, token_usage
             
         except Exception as e:
             self.logger.error(f"LLM generation failed: {e}")
