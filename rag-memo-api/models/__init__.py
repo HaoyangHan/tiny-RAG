@@ -40,7 +40,7 @@ from .evaluation import (
 
 # Legacy models (preserved for backward compatibility)
 from .document import Document, DocumentMetadata, DocumentChunk
-from .generation import Generation
+from .generation import Generation, GenerationRequest
 from .memo import Memo
 
 # Auth models
@@ -120,6 +120,7 @@ __all__ = [
     "DocumentMetadata",
     "DocumentChunk",
     "Generation",
+    "GenerationRequest",
     "Memo",
     
     # Auth models

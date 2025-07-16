@@ -65,3 +65,25 @@ def get_document_processor() -> DocumentProcessor:
             detail="OpenAI API key not configured"
         )
     return DocumentProcessor(openai_api_key) 
+
+
+def get_llamaindex_document_processor():
+    """Get LlamaIndex document processor instance."""
+    from services.llamaindex_document_processor import create_llamaindex_document_processor
+    
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is required")
+    
+    return create_llamaindex_document_processor(openai_api_key)
+
+
+def get_llamaindex_rag_service():
+    """Get LlamaIndex RAG service instance."""
+    from services.llamaindex_rag_service import create_llamaindex_rag_service
+    
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is required")
+    
+    return create_llamaindex_rag_service(openai_api_key) 

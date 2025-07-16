@@ -6,8 +6,11 @@ file upload, processing, project integration, and document analytics.
 """
 
 import logging
+import tempfile
+import os
 from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime
+from pathlib import Path
 from beanie import PydanticObjectId
 from beanie.operators import In, And, Or
 
@@ -96,9 +99,6 @@ class DocumentService:
             
             try:
                 # Process document with chunking and embeddings
-                import tempfile
-                import os
-                from pathlib import Path
                 from services.document_processor import DocumentProcessor
                 
                 # Get OpenAI API key for processing

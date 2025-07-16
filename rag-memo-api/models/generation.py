@@ -3,6 +3,15 @@ from typing import List, Optional, Dict, Any
 from beanie import Document, Indexed
 from pydantic import BaseModel, Field
 
+
+class GenerationRequest(BaseModel):
+    """Request model for generation endpoints."""
+    project_id: str = Field(description="Project ID for the generation")
+    prompt: str = Field(description="Input prompt for generation")
+    max_tokens: Optional[int] = Field(default=1000, description="Maximum tokens for generation")
+    temperature: Optional[float] = Field(default=0.7, description="Temperature for generation")
+    model: Optional[str] = Field(default="gpt-4o-mini", description="Model to use for generation")
+
 class GenerationMetadata(BaseModel):
     """Metadata for a generation response."""
     retrieval_time: Optional[float] = None

@@ -2,9 +2,9 @@ from typing import List, Optional, Dict, Any, Tuple
 import logging
 from pathlib import Path
 import tempfile
-import magic
+# import magic  # Removed to avoid libmagic dependency
 from pypdf import PdfReader
-import camelot
+import fitz  # PyMuPDF
 import cv2
 import numpy as np
 from PIL import Image
@@ -15,6 +15,32 @@ from openai import OpenAI
 from models.document import Document, DocumentChunk, DocumentMetadata, TableData, ImageData
 
 logger = logging.getLogger(__name__)
+
+def get_content_type(file_path: Path) -> str:
+    """Get content type based on file extension."""
+    extension = file_path.suffix.lower()
+    content_type_map = {
+        '.pdf': 'application/pdf',
+        '.txt': 'text/plain',
+        '.md': 'text/markdown',
+        '.json': 'application/json',
+        '.xml': 'application/xml',
+        '.html': 'text/html',
+        '.htm': 'text/html',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.tiff': 'image/tiff',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.ppt': 'application/vnd.ms-powerpoint',
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    }
+    return content_type_map.get(extension, 'application/octet-stream')
 
 class DocumentProcessor:
     """Service for processing uploaded documents with enhanced table and image support."""
@@ -36,8 +62,8 @@ class DocumentProcessor:
     async def process_document(self, file_path: Path, user_id: str) -> Document:
         """Process an uploaded document with enhanced table and image detection."""
         try:
-            # Read file metadata
-            content_type = magic.from_file(str(file_path), mime=True)
+            # Read file metadata using file extension instead of magic
+            content_type = get_content_type(file_path)
             file_size = file_path.stat().st_size
             filename = file_path.name
             
@@ -94,25 +120,25 @@ class DocumentProcessor:
             
             # Process each page
             for page_num, page in enumerate(reader.pages):
-                # 1. Extract tables using Camelot
-                tables = camelot.read_pdf(str(file_path), pages=str(page_num + 1))
-                if len(tables) > 0:
+                # 1. Extract tables using PyMuPDF
+                tables = self._extract_tables_with_pymupdf(file_path, page_num + 1)
+                if tables:
                     document.metadata.has_tables = True
-                    for table_idx, table in enumerate(tables):
+                    for table_idx, table_data in enumerate(tables):
                         # Generate table summary using GPT-4
-                        table_text = table.df.to_string()
+                        table_text = self._format_table_for_summary(table_data)
                         table_summary = await self._generate_table_summary(table_text)
                         
                         # Create table data
-                        table_data = TableData(
+                        table_data_obj = TableData(
                             page_number=page_num + 1,
                             table_index=table_idx,
-                            content=table.df.values.tolist(),
+                            content=table_data,
                             summary=table_summary,
-                            row_count=len(table.df),
-                            column_count=len(table.df.columns)
+                            row_count=len(table_data),
+                            column_count=len(table_data[0]) if table_data else 0
                         )
-                        document.tables.append(table_data)
+                        document.tables.append(table_data_obj)
                         
                         # Generate and store embedding for table summary
                         table_embedding = await self._generate_embedding(table_summary)
@@ -246,6 +272,43 @@ class DocumentProcessor:
         except Exception as e:
             logger.error(f"Error generating table summary: {e}")
             return "Failed to summarize table"
+
+    def _extract_tables_with_pymupdf(self, file_path: Path, page_number: int) -> List[List[List[str]]]:
+        """Extract tables from PDF using PyMuPDF."""
+        try:
+            doc = fitz.open(str(file_path))
+            page = doc[page_number - 1]  # PyMuPDF uses 0-based indexing
+            
+            # Extract tables from the page using TableFinder
+            finder = page.find_tables()
+            tables = finder.tables
+            
+            # Convert tables to list format
+            table_list = []
+            for table in tables:
+                # Extract table data as list of lists
+                table_data = table.extract()
+                table_list.append(table_data)
+            
+            doc.close()
+            return table_list
+            
+        except Exception as e:
+            logger.error(f"Error extracting tables with PyMuPDF: {str(e)}")
+            return []
+
+    def _format_table_for_summary(self, table_data: List[List[str]]) -> str:
+        """Format table data for summary generation."""
+        if not table_data:
+            return "Empty table"
+        
+        # Convert table to string format
+        table_lines = []
+        for row in table_data:
+            row_str = " | ".join(str(cell) for cell in row)
+            table_lines.append(row_str)
+        
+        return "\n".join(table_lines)
 
     async def _generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text using OpenAI."""

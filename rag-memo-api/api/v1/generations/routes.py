@@ -8,12 +8,15 @@ LLM-generated content and their evaluation results.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from datetime import datetime
 
-from models import GenerationStatus
+from models import GenerationStatus, ElementGeneration, GenerationRequest
 from auth.models import User
-from auth.service import get_current_active_user
+from auth.service import get_current_active_user as get_current_user
 from .service import ElementGenerationService
 from .dependencies import get_generation_service
+from models import Document
+from dependencies import get_llamaindex_rag_service
 
 router = APIRouter()
 
@@ -54,7 +57,7 @@ async def list_generations(
     status: Optional[GenerationStatus] = Query(None, description="Filter by status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     generation_service: ElementGenerationService = Depends(get_generation_service)
 ) -> List[GenerationResponse]:
     """List generations."""
@@ -100,7 +103,7 @@ async def list_generations(
 )
 async def get_generation(
     generation_id: str,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user),
     generation_service: ElementGenerationService = Depends(get_generation_service)
 ) -> GenerationDetailResponse:
     """Get generation details."""
@@ -127,4 +130,82 @@ async def get_generation(
         error_message=generation.error_message,
         created_at=generation.created_at.isoformat(),
         updated_at=generation.updated_at.isoformat()
+    ) 
+
+
+@router.post("/generate-llamaindex", response_model=ElementGeneration)
+async def generate_with_llamaindex(
+    request: GenerationRequest,
+    current_user: User = Depends(get_current_user),
+    llamaindex_rag_service = Depends(get_llamaindex_rag_service)
+) -> ElementGeneration:
+    """Generate content using LlamaIndex RAG service."""
+    try:
+        # Create generation record
+        generation = ElementGeneration(
+            user_id=str(current_user.id),
+            project_id=request.project_id,
+            prompt=request.prompt,
+            status=GenerationStatus.PROCESSING,
+            created_at=datetime.utcnow()
+        )
+        await generation.insert()
+        
+        try:
+            # Get documents for the project
+            documents = await Document.find(
+                Document.project_id == request.project_id,
+                Document.is_deleted == False
+            ).to_list()
+            
+            if not documents:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No documents found for the specified project"
+                )
+            
+            # Create LlamaIndex index from documents
+            await llamaindex_rag_service.create_index_from_documents(documents)
+            
+            # Query documents
+            retrieved_context = await llamaindex_rag_service.query_documents(
+                query=request.prompt,
+                top_k=5
+            )
+            
+            # Generate response
+            generation_result = await llamaindex_rag_service.generate_response(
+                query=request.prompt,
+                context=retrieved_context,
+                prompt_template="rag_generation"
+            )
+            
+            # Update generation record
+            generation.response = generation_result["response"]
+            generation.context = generation_result["context"]
+            generation.citations = generation_result["citations"]
+            generation.metadata = generation_result["metadata"]
+            generation.status = GenerationStatus.COMPLETED
+            generation.completed_at = datetime.utcnow()
+            
+            await generation.save()
+            
+            return generation
+            
+        except Exception as e:
+            # Update generation record with error
+            generation.status = GenerationStatus.FAILED
+            generation.error = str(e)
+            generation.completed_at = datetime.utcnow()
+            await generation.save()
+            
+            raise HTTPException(
+                status_code=500,
+                detail=f"Generation failed: {str(e)}"
+            )
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error in LlamaIndex generation: {str(e)}"
     ) 

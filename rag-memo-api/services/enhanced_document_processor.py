@@ -18,8 +18,10 @@ from typing import List, Optional, Dict, Any, Tuple
 from pathlib import Path
 from datetime import datetime
 import tempfile
-import json
-from concurrent.futures import ThreadPoolExecutor
+# import magic  # Removed to avoid libmagic dependency
+from pypdf import PdfReader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from openai import OpenAI
 
 # Core imports with proper error handling
 import logging
@@ -27,12 +29,42 @@ import logging
 # Define logger early
 logger = logging.getLogger(__name__)
 
-try:
-    import magic
-    MAGIC_AVAILABLE = True
-except ImportError:
-    logger.warning("python-magic not available - using fallback content type detection")
-    MAGIC_AVAILABLE = False
+
+def get_content_type(file_path: Path) -> str:
+    """Get content type based on file extension."""
+    extension = file_path.suffix.lower()
+    content_type_map = {
+        '.pdf': 'application/pdf',
+        '.txt': 'text/plain',
+        '.md': 'text/markdown',
+        '.json': 'application/json',
+        '.xml': 'application/xml',
+        '.html': 'text/html',
+        '.htm': 'text/html',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.tiff': 'image/tiff',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        '.ppt': 'application/vnd.ms-powerpoint',
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    }
+    return content_type_map.get(extension, 'application/octet-stream')
+
+# Define missing models for compatibility
+class TableData:
+    def __init__(self, page_number, table_index, content, summary, row_count=0, column_count=0):
+        self.page_number = page_number
+        self.table_index = table_index
+        self.content = content
+        self.summary = summary
+        self.row_count = row_count
+        self.column_count = column_count
 
 try:
     from pypdf import PdfReader
@@ -72,11 +104,11 @@ except ImportError:
 
 # Optional imports with fallbacks
 try:
-    import camelot
-    CAMELOT_AVAILABLE = True
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
 except ImportError:
-    logger.warning("Camelot not available - table extraction disabled")
-    CAMELOT_AVAILABLE = False
+    logger.warning("PyMuPDF not available - table extraction disabled")
+    PYMUPDF_AVAILABLE = False
 
 try:
     import cv2
@@ -168,12 +200,8 @@ class EnhancedDocumentProcessor:
         start_time = time.time()
         
         try:
-            # Read file metadata
-            if MAGIC_AVAILABLE:
-                content_type = magic.from_file(str(file_path), mime=True)
-            else:
-                content_type = self._detect_content_type_fallback(file_path)
-            
+            # Read file metadata using file extension instead of magic
+            content_type = get_content_type(file_path)
             file_size = file_path.stat().st_size
             filename = file_path.name
             
@@ -305,21 +333,40 @@ class EnhancedDocumentProcessor:
             for page_num, page in enumerate(reader.pages):
                 page_start_pos = len(full_text)
                 
-                # 1. Collect table extraction tasks
-                if CAMELOT_AVAILABLE:
-                    try:
-                        tables = camelot.read_pdf(str(file_path), pages=str(page_num + 1))
-                        for table_idx, table in enumerate(tables):
-                            table_text = table.df.to_string()
-                            table_tasks.append({
-                                'table_text': table_text,
-                                'page_number': page_num + 1,
-                                'table_index': table_idx,
-                                'table_df': table.df,
-                                'start_pos': page_start_pos
-                            })
-                    except Exception as e:
-                        logger.warning(f"Failed to extract tables from page {page_num + 1}: {e}")
+                # 1. Extract tables using PyMuPDF
+                if PYMUPDF_AVAILABLE:
+                    tables = self._extract_tables_with_pymupdf(file_path, page_num + 1)
+                    if tables:
+                        for table_idx, table_data in enumerate(tables):
+                            # Get table text for processing
+                            table_text = self._format_table_for_summary(table_data)
+                            
+                            # Create optimized table chunk (summary + metadata in one LLM call)
+                            await self._create_enhanced_table_chunk(
+                                document=document,
+                                table_text=table_text,
+                                page_number=page_num + 1,
+                                document_id=document_id,
+                                start_pos=page_start_pos,
+                                section=f"Table {table_idx + 1}"
+                            )
+                            
+                            # Create table data for backward compatibility (use the summary from chunk)
+                            if document.chunks:
+                                latest_chunk = document.chunks[-1]
+                                table_summary = latest_chunk.text
+                            else:
+                                table_summary = "Table processing failed"
+                            
+                            table_data_obj = TableData(
+                                page_number=page_num + 1,
+                                table_index=table_idx,
+                                content=table_data,
+                                summary=table_summary,
+                                row_count=len(table_data),
+                                column_count=len(table_data[0]) if table_data else 0
+                            )
+                            document.tables.append(table_data_obj)
                 
                 # 2. Collect image extraction tasks
                 if PIL_AVAILABLE:
@@ -577,182 +624,38 @@ class EnhancedDocumentProcessor:
         for i in range(0, len(texts), self.batch_size):
             batch_texts = texts[i:i + self.batch_size]
             
-            try:
-                response = self.openai_client.embeddings.create(
-                    model=self.embedding_model,
-                    input=batch_texts
-                )
-                
-                batch_embeddings = [data.embedding for data in response.data]
-                all_embeddings.extend(batch_embeddings)
-                
-            except Exception as e:
-                logger.error(f"Error generating embeddings for batch {i//self.batch_size + 1}: {e}")
-                # Add empty embeddings for failed batch
-                all_embeddings.extend([[] for _ in batch_texts])
-        
-        # Record performance
-        batch_time = time.time() - start_time
-        self.performance_metrics["embedding_batch_times"].append(batch_time)
-        
-        logger.info(f"⚡ Generated {len(all_embeddings)} embeddings in {batch_time:.2f}s "
-                   f"({len(all_embeddings)/batch_time:.1f} embeddings/sec)")
-        
-        return all_embeddings
-
-    async def _create_optimized_table_chunk(self, document: Document, table_text: str,
-                                          page_number: int, table_index: int, table_df,
-                                          document_id: str, start_pos: int) -> None:
-        """Create optimized table chunk with concurrent processing."""
-        
+        images = []
         try:
-            # Generate summary and metadata concurrently with embedding
-            summary_task = self._generate_table_summary_with_metadata(table_text)
+            # Get image list from page
+            image_list = page.get_images()
             
-            # Get summary and metadata
-            summary, chunk_metadata = await summary_task
-            
-            # Generate embedding
-            embedding = await self._generate_embedding_single(summary)
-            
-            # Create table data for backward compatibility
-            if MODELS_AVAILABLE:
-                table_data = TableData(
-                    page_number=page_number,
-                    table_index=table_index,
-                    content=table_df.values.tolist(),
-                    summary=summary,
-                    row_count=len(table_df),
-                    column_count=len(table_df.columns)
-                )
-            else:
-                table_data = {
-                    "page_number": page_number,
-                    "table_index": table_index,
-                    "content": table_df.values.tolist(),
-                    "summary": summary,
-                    "row_count": len(table_df),
-                    "column_count": len(table_df.columns)
-                }
-            
-            document.tables.append(table_data)
-            
-            # Create chunk
-            chunk_id = str(uuid.uuid4())
-            chunk_index = len(document.chunks)
-            
-            if MODELS_AVAILABLE:
-                chunk = DocumentChunk(
-                    text=summary,
-                    page_number=page_number,
-                    chunk_index=chunk_index,
-                    chunk_type="table",
-                    embedding=embedding,
-                    chunk_metadata=chunk_metadata,
-                    start_pos=start_pos,
-                    end_pos=start_pos + len(summary),
-                    section=f"Table {table_index + 1}"
-                )
-            else:
-                chunk = {
-                    "text": summary,
-                    "page_number": page_number,
-                    "chunk_index": chunk_index,
-                    "chunk_type": "table",
-                    "embedding": embedding,
-                    "chunk_metadata": chunk_metadata,
-                    "start_pos": start_pos,
-                    "end_pos": start_pos + len(summary),
-                    "section": f"Table {table_index + 1}"
-                }
-            
-            document.chunks.append(chunk)
-            
+            for img_index, img in enumerate(image_list):
+                try:
+                    # Get image data
+                    xref = img[0]  # Image xref
+                    pix = fitz.Pixmap(page.parent, xref)
+                    
+                    # Convert to bytes
+                    if pix.n - pix.alpha < 4:  # GRAY or RGB
+                        img_data = pix.tobytes("png")
+                    else:  # CMYK: convert to RGB first
+                        pix1 = fitz.Pixmap(fitz.csRGB, pix)
+                        img_data = pix1.tobytes("png")
+                        pix1 = None
+                    
+                    # Verify it's a valid image
+                    img_pil = Image.open(io.BytesIO(img_data))
+                    images.append(img_data)
+                    
+                    pix = None  # Free pixmap
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to extract image {img_index}: {e}")
+                    
         except Exception as e:
-            logger.error(f"Error creating optimized table chunk: {e}")
-
-    async def _create_optimized_image_chunk(self, document: Document, image_data: bytes,
-                                          page_number: int, image_index: int,
-                                          document_id: str, start_pos: int) -> None:
-        """Create optimized image chunk with concurrent processing."""
-        
-        try:
-            # Generate description and metadata concurrently with embedding
-            description_task = self._process_image_with_gpt4_and_metadata(image_data)
+            logger.error(f"Error extracting images from page: {e}")
             
-            # Get description and metadata
-            description, chunk_metadata = await description_task
-            
-            # Generate embedding
-            embedding = await self._generate_embedding_single(description)
-            
-            # Create image data for backward compatibility
-            if MODELS_AVAILABLE:
-                image_data_obj = ImageData(
-                    page_number=page_number,
-                    image_index=image_index,
-                    content=image_data,
-                    description=description
-                )
-            else:
-                image_data_obj = {
-                    "page_number": page_number,
-                    "image_index": image_index,
-                    "content": image_data,
-                    "description": description
-                }
-            
-            document.images.append(image_data_obj)
-            
-            # Create chunk
-            chunk_id = str(uuid.uuid4())
-            chunk_index = len(document.chunks)
-            
-            if MODELS_AVAILABLE:
-                chunk = DocumentChunk(
-                    text=description,
-                    page_number=page_number,
-                    chunk_index=chunk_index,
-                    chunk_type="image",
-                    embedding=embedding,
-                    chunk_metadata=chunk_metadata,
-                    start_pos=start_pos,
-                    end_pos=start_pos + len(description),
-                    section=f"Image {image_index + 1}"
-                )
-            else:
-                chunk = {
-                    "text": description,
-                    "page_number": page_number,
-                    "chunk_index": chunk_index,
-                    "chunk_type": "image",
-                    "embedding": embedding,
-                    "chunk_metadata": chunk_metadata,
-                    "start_pos": start_pos,
-                    "end_pos": start_pos + len(description),
-                    "section": f"Image {image_index + 1}"
-                }
-            
-            document.chunks.append(chunk)
-            
-        except Exception as e:
-            logger.error(f"Error creating optimized image chunk: {e}")
-
-    async def _generate_embedding_single(self, text: str) -> List[float]:
-        """Generate single embedding (used for non-batch operations)."""
-        try:
-            if not OPENAI_AVAILABLE:
-                return []
-                
-            response = self.openai_client.embeddings.create(
-                model=self.embedding_model,
-                input=text
-            )
-            return response.data[0].embedding
-            
-        except Exception as e:
-            logger.error(f"Error generating single embedding: {e}")
-            return []
+        return images
 
     async def _process_image_with_gpt4(self, image_data: bytes) -> str:
         """Process image using GPT-4 Vision API with centralized prompts."""
@@ -936,6 +839,43 @@ class EnhancedDocumentProcessor:
         except Exception as e:
             logger.error(f"Error generating table summary: {e}")
             return f"Table summary generation failed: {str(e)}"
+    
+    def _extract_tables_with_pymupdf(self, file_path: Path, page_number: int) -> List[List[List[str]]]:
+        """Extract tables from PDF using PyMuPDF."""
+        try:
+            doc = fitz.open(str(file_path))
+            page = doc[page_number - 1]  # PyMuPDF uses 0-based indexing
+            
+            # Extract tables from the page using TableFinder
+            finder = page.find_tables()
+            tables = finder.tables
+            
+            # Convert tables to list format
+            table_list = []
+            for table in tables:
+                # Extract table data as list of lists
+                table_data = table.extract()
+                table_list.append(table_data)
+            
+            doc.close()
+            return table_list
+            
+        except Exception as e:
+            logger.error(f"Error extracting tables with PyMuPDF: {str(e)}")
+            return []
+
+    def _format_table_for_summary(self, table_data: List[List[str]]) -> str:
+        """Format table data for summary generation."""
+        if not table_data:
+            return "Empty table"
+        
+        # Convert table to string format
+        table_lines = []
+        for row in table_data:
+            row_str = " | ".join(str(cell) for cell in row)
+            table_lines.append(row_str)
+        
+        return "\n".join(table_lines)
     
     async def _generate_table_summary_with_metadata(self, table_text: str) -> tuple[str, Dict[str, Any]]:
         """Generate table summary AND metadata in single LLM call."""

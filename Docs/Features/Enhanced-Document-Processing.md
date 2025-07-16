@@ -298,7 +298,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 
 # Model Configuration
 LLM_MODEL=gpt-4o-mini                    # For table summaries
-VISION_MODEL=gpt-4-vision-preview        # For image processing
+VISION_MODEL=gpt-4-vision-preview       # For image processing
 EMBEDDING_MODEL=text-embedding-3-small   # For embeddings
 ```
 

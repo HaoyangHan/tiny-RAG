@@ -5,14 +5,18 @@ This module contains document management endpoints adapted for the v1.4 API stru
 maintaining compatibility with existing document functionality.
 """
 
+import tempfile
+import uuid
 from typing import List, Optional, Dict, Any
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile
 from pydantic import BaseModel, Field
 
 from auth.models import User
-from auth.service import get_current_active_user
+from auth.service import get_current_active_user as get_current_user
 from .service import DocumentService
-from models import DocumentStatus
+from models import DocumentStatus, Document
+from dependencies import get_llamaindex_document_processor
 
 router = APIRouter()
 
@@ -94,7 +98,7 @@ async def list_documents(
     status: Optional[str] = Query(None, description="Filter by processing status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> DocumentListResponse:
     """List documents."""
     try:
@@ -203,7 +207,7 @@ async def list_documents(
 async def upload_document(
     file: UploadFile = File(...),
     project_id: Optional[str] = Query(None, description="Project ID to associate with"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> DocumentResponse:
     """Upload a document."""
     try:
@@ -296,6 +300,90 @@ async def upload_document(
         )
 
 
+@router.post("/upload-llamaindex", response_model=DocumentResponse)
+async def upload_document_llamaindex(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    project_id: Optional[str] = Query(None, description="Project ID for v1.4"),
+    llamaindex_processor = Depends(get_llamaindex_document_processor)
+) -> DocumentResponse:
+    """Upload and process a document using LlamaIndex ingestion pipeline."""
+    try:
+        # Create temporary file with original filename extension
+        file_extension = Path(file.filename).suffix if file.filename else ""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_path = Path(temp_file.name)
+
+        # Process document with LlamaIndex processor
+        document = await llamaindex_processor.process_document(
+            temp_path,
+            str(current_user.id),
+            str(uuid.uuid4()),  # Generate document ID
+            project_id
+        )
+
+        # Clean up temporary file
+        temp_path.unlink()
+
+        # Convert to response format
+        return DocumentResponse(
+            id=str(document.id),
+            filename=document.filename,
+            project_id=document.project_id,
+            content_type=document.content_type,
+            file_size=document.file_size,
+            status=document.status,
+            chunks=[
+                DocumentChunkResponse(
+                    text=chunk.text,
+                    page_number=chunk.page_number,
+                    chunk_index=chunk.chunk_index,
+                    chunk_type=getattr(chunk, 'chunk_type', 'text'),
+                    embedding=chunk.embedding,
+                    chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                    start_pos=getattr(chunk, 'start_pos', None),
+                    end_pos=getattr(chunk, 'end_pos', None),
+                    section=getattr(chunk, 'section', None)
+                )
+                for chunk in document.chunks
+            ],
+            tables=[
+                TableDataResponse(
+                    page_number=table.page_number,
+                    table_index=table.table_index,
+                    content=table.content,
+                    summary=table.summary,
+                    row_count=getattr(table, 'row_count', 0),
+                    column_count=getattr(table, 'column_count', 0)
+                )
+                for table in document.tables
+            ],
+            images=[
+                ImageDataResponse(
+                    page_number=image.page_number,
+                    image_index=image.image_index,
+                    description=image.description
+                )
+                for image in document.images
+            ],
+            chunk_count=len(document.chunks),
+            table_count=len(document.tables),
+            image_count=len(document.images),
+            has_tables=bool(document.tables),
+            has_images=bool(document.images),
+            created_at=document.created_at.isoformat(),
+            updated_at=document.updated_at.isoformat()
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing document with LlamaIndex: {str(e)}"
+        )
+
+
 @router.get(
     "/{document_id}",
     response_model=DocumentResponse,
@@ -304,7 +392,7 @@ async def upload_document(
 )
 async def get_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> DocumentResponse:
     """Get document details."""
     try:
@@ -386,7 +474,7 @@ async def get_document(
 )
 async def get_document_content(
     document_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> dict:
     """Get document content with full chunk details."""
     try:
@@ -421,7 +509,7 @@ async def get_document_content(
 )
 async def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> None:
     """Delete a document."""
     # TODO: Adapt existing document deletion functionality
