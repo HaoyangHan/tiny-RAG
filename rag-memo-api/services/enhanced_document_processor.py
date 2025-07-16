@@ -22,6 +22,7 @@ import tempfile
 from pypdf import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from openai import OpenAI
+import json
 
 # Core imports with proper error handling
 import logging
@@ -950,6 +951,83 @@ class EnhancedDocumentProcessor:
         except Exception as e:
             logger.error(f"Error generating table summary with metadata: {e}")
             return f"Table processing failed: {str(e)}", {}
+
+    async def _generate_text_summary_with_metadata(self, text: str) -> tuple[str, Dict[str, Any]]:
+        """Generate text summary AND metadata in single LLM call."""
+        try:
+            if PROMPT_TEMPLATE_AVAILABLE:
+                template = get_prompt_template("text_summary_with_metadata")
+                model = template.model
+                system_prompt = template.system_prompt
+                user_prompt = template.user_prompt_template.format(text=text)
+                max_tokens = template.max_tokens
+                temperature = template.temperature
+            else:
+                # Fallback combined prompt
+                model = "gpt-4"
+                system_prompt = "You are an expert at analyzing text content and extracting metadata. Always respond in JSON format."
+                user_prompt = f"""Analyze this text and provide both a summary and metadata in JSON format:
+                {{
+                    "summary": "concise summary of the text content and key insights",
+                    "metadata": {{
+                        "text_type": "narrative/technical/instructional/descriptive/etc",
+                        "word_count": estimated_words,
+                        "sentence_count": estimated_sentences,
+                        "key_topics": ["topic1", "topic2"],
+                        "key_entities": ["entity1", "entity2"],
+                        "sentiment": "positive/negative/neutral",
+                        "complexity": "simple/moderate/complex",
+                        "language": "en/es/fr/etc",
+                        "readability": "easy/moderate/difficult"
+                    }}
+                }}
+
+                Text content:
+                {text}"""
+                max_tokens = 800
+                temperature = 0.1
+            
+            response = self.openai_client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": user_prompt
+                    }
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature
+            )
+            
+            # Parse JSON response
+            response_text = response.choices[0].message.content.strip()
+            
+            try:
+                parsed_response = json.loads(response_text)
+                summary = parsed_response.get("summary", "")
+                metadata = parsed_response.get("metadata", {})
+                
+                # Add basic metadata fields
+                metadata.update({
+                    "extraction_timestamp": datetime.utcnow().isoformat(),
+                    "extractor_version": "1.4.3_optimized",
+                    "processing_time": 0.0  # Will be filled by caller
+                })
+                
+                return summary, metadata
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing JSON response: {e}")
+                # Fallback: treat as summary only
+                return response_text, {}
+            
+        except Exception as e:
+            logger.error(f"Error generating text summary with metadata: {e}")
+            return f"Text processing failed: {str(e)}", {}
 
     async def _generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text using OpenAI."""

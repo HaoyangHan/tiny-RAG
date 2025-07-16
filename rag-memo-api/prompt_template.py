@@ -109,7 +109,7 @@ Return ONLY a valid JSON object with this exact structure:
     "key_phrases": ["important phrase", "key concept"],
     "language": "en",
     "readability_score": 0.6,
-    "information_density": 0.8,
+    "information_density": 0.8,  
     "text_length": 250,
     "word_count": 45,
     "sentence_count": 3
@@ -197,6 +197,77 @@ JSON:""",
             temperature=0.4,
             max_tokens=1200,
             model="gpt-4-vision-preview"
+        )
+    
+    @staticmethod
+    def get_text_summary_with_metadata_prompt() -> PromptTemplate:
+        """Prompt for generating text summaries WITH metadata in one call."""
+        return PromptTemplate(
+            name="text_summary_with_metadata",
+            description="Generate text summary and extract metadata in single call",
+            system_prompt="""You are an expert text analyst and metadata extraction system. Your task is to analyze the provided text and return BOTH a summary AND comprehensive metadata in a single JSON response.
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "summary": "Your markdown-formatted text summary here",
+  "metadata": {
+    "text_type": "narrative/technical/instructional/descriptive/etc",
+    "word_count": 150,
+    "sentence_count": 8,
+    "key_topics": ["topic1", "topic2", "topic3"],
+    "key_entities": ["entity1", "entity2"],
+    "sentiment": "positive/negative/neutral",
+    "complexity": "simple/moderate/complex",
+    "language": "en/es/fr/etc",
+    "readability": "easy/moderate/difficult",
+    "keywords": [
+      {"term": "string", "score": 0.8, "frequency": 3, "context": "string"}
+    ],
+    "entities": [
+      {"text": "string", "label": "person", "confidence": 0.9, "start_pos": 10, "end_pos": 20}
+    ],
+    "dates": [
+      {"date": "2024-01-15", "text": "January 15, 2024", "confidence": 0.95, "date_type": "publication", "format": "Long"}
+    ],
+    "topics": [
+      {"topic_id": "tech", "topic_words": ["AI", "machine learning"], "probability": 0.8}
+    ],
+    "sentiment": {
+      "sentiment": "neutral",
+      "confidence": 0.7,
+      "scores": {"positive": 0.3, "negative": 0.1, "neutral": 0.6}
+    },
+    "key_phrases": ["important phrase", "key concept"],
+    "language": "en",
+    "readability_score": 0.6,
+    "information_density": 0.8,
+    "text_length": 500,
+    "word_count": 85,
+    "sentence_count": 5
+  }
+}
+
+Summary Guidelines:
+- One-sentence overview describing the text's main purpose
+- Bulleted list highlighting key points, insights, and conclusions
+- Format in valid Markdown
+
+Metadata Guidelines:
+- Extract 5-15 keywords based on importance
+- Identify entities: person, organization, location, date, money, percent, product, event, misc
+- Parse dates in ISO format (YYYY-MM-DD)
+- Provide 2-5 main topics
+- All scores between 0.0-1.0
+- Be precise and avoid hallucination""",
+            user_prompt_template="""Analyze this text and provide both summary and metadata:
+
+{text}
+
+JSON:""",
+            variables=["text"],
+            temperature=0.3,
+            max_tokens=1200,
+            model="gpt-4o-mini"
         )
 
 
@@ -379,6 +450,7 @@ class PromptTemplateManager:
         # Combined Processing (summary + metadata in one call)
         self._templates["table_summary_with_metadata"] = DocumentProcessingPrompts.get_table_summary_with_metadata_prompt()
         self._templates["image_description_with_metadata"] = DocumentProcessingPrompts.get_image_description_with_metadata_prompt()
+        self._templates["text_summary_with_metadata"] = DocumentProcessingPrompts.get_text_summary_with_metadata_prompt()
         
         # Memo Generation
         self._templates["memo_section"] = MemoGenerationPrompts.get_memo_section_prompt()

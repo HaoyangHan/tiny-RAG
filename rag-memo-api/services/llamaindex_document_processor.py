@@ -122,9 +122,7 @@ class LlamaIndexDocumentProcessor:
                 file_size=file_size,
                 status="processing",
                 metadata=metadata,
-                chunks=[],
-                tables=[],
-                images=[]
+                chunks=[]
             )
             
             # Process document based on content type
@@ -367,39 +365,28 @@ class LlamaIndexDocumentProcessor:
         chunk_index = len(document.chunks)
         end_pos = start_pos + len(text)
         
-        # Extract comprehensive metadata using enhanced processor
-        if hasattr(self.enhanced_processor, 'metadata_extractor') and self.enhanced_processor.metadata_extractor:
-            chunk_metadata = self.enhanced_processor.metadata_extractor.extract_chunk_metadata(
-                text=text,
-                chunk_id=chunk_id,
-                document_id=document_id,
-                chunk_index=chunk_index,
-                start_pos=start_pos,
-                end_pos=end_pos,
-                page_number=page_number,
-                section=section
-            )
-        else:
-            # Fallback metadata when extractor is not available
-            chunk_metadata = {
-                "chunk_id": chunk_id,
-                "document_id": document_id,
-                "chunk_index": chunk_index,
-                "text_length": len(text),
-                "start_pos": start_pos,
-                "end_pos": end_pos,
-                "page_number": page_number,
-                "section": section,
-                "extraction_timestamp": datetime.utcnow().isoformat(),
-                "extractor_version": "1.4.3_llamaindex_enhanced"
-            }
+        # Generate both summary and comprehensive metadata in one LLM call
+        summary, chunk_metadata = await self.enhanced_processor._generate_text_summary_with_metadata(text)
         
         # Calculate processing time
         processing_time = time.time() - start_time
         chunk_metadata["processing_time"] = processing_time
         
-        # Generate embedding
-        embedding = await self._generate_embedding(text)
+        # Add required chunk metadata fields
+        chunk_metadata.update({
+            "chunk_id": chunk_id,
+            "document_id": document_id,
+            "chunk_index": chunk_index,
+            "start_pos": start_pos,
+            "end_pos": end_pos,
+            "page_number": page_number,
+            "section": section,
+            "summary": summary  # Store summary in metadata
+        })
+        
+        # Generate embedding from summary (or text if summary is empty)
+        embedding_text = summary if summary else text
+        embedding = await self._generate_embedding(embedding_text)
         
         # Create enhanced document chunk
         chunk = DocumentChunk(
@@ -453,8 +440,11 @@ class LlamaIndexDocumentProcessor:
             chunk_index = len(document.chunks)
             end_pos = start_pos + len(summary)
             
+            # Add summary to metadata
+            chunk_metadata["summary"] = summary
+            
             chunk = DocumentChunk(
-                text=summary,
+                text=table_text,
                 page_number=page_number,
                 chunk_index=chunk_index,
                 chunk_type="table",
@@ -510,8 +500,11 @@ class LlamaIndexDocumentProcessor:
             chunk_index = len(document.chunks)
             end_pos = start_pos + len(description)
             
+            # Add description to metadata
+            chunk_metadata["summary"] = description
+            
             chunk = DocumentChunk(
-                text=description,
+                text=description,  # Use description as text instead of raw image data
                 page_number=page_number,
                 chunk_index=chunk_index,
                 chunk_type="image",
