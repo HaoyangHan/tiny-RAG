@@ -205,14 +205,14 @@ export default function DocumentsPage() {
               {/* Search Input */}
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-500" />
                 </div>
                 <input
                   type="text"
                   placeholder="Search documents..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 />
               </div>
 
@@ -220,7 +220,7 @@ export default function DocumentsPage() {
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               >
                 <option value="">All Projects</option>
                 {projects.map((project) => (
@@ -234,7 +234,7 @@ export default function DocumentsPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               >
                 <option value="">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -264,11 +264,11 @@ export default function DocumentsPage() {
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <DocumentTextIcon className="h-6 w-6 text-gray-400" />
+                  <DocumentTextIcon className="h-6 w-6 text-gray-500" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Documents</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Total Documents</dt>
                     <dd className="text-lg font-medium text-gray-900">{totalDocuments}</dd>
                   </dl>
                 </div>
@@ -287,7 +287,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Processed</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Processed</dt>
                     <dd className="text-lg font-medium text-gray-900">
                       {documents.filter(d => d.status === 'completed').length}
                     </dd>
@@ -308,7 +308,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Processing</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Processing</dt>
                     <dd className="text-lg font-medium text-gray-900">
                       {documents.filter(d => d.status === 'processing').length}
                     </dd>
@@ -329,7 +329,7 @@ export default function DocumentsPage() {
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Projects</dt>
+                    <dt className="text-sm font-medium text-gray-600 truncate">Projects</dt>
                     <dd className="text-lg font-medium text-gray-900">{projects.length}</dd>
                   </dl>
                 </div>
@@ -373,7 +373,7 @@ export default function DocumentsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <DocumentTextIcon className="h-8 w-8 text-gray-400" />
+                        <DocumentTextIcon className="h-8 w-8 text-gray-500" />
                         <div>
                           <div className="flex items-center space-x-2">
                             <h4 className="text-lg font-medium text-gray-900">
@@ -381,7 +381,7 @@ export default function DocumentsPage() {
                             </h4>
                             {getStatusIcon(document.status)}
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                             <span>{document.filename}</span>
                             <span>•</span>
                             <span>{formatFileSize(document.file_size || 0)}</span>
@@ -413,7 +413,7 @@ export default function DocumentsPage() {
                             e.stopPropagation();
                             // View document details logic
                           }}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-gray-500 hover:text-gray-700"
                           title="View document"
                         >
                           <EyeIcon className="h-5 w-5" />
@@ -433,9 +433,9 @@ export default function DocumentsPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-500" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No documents found</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-600">
                 {searchTerm || selectedProject || selectedStatus
                   ? 'Try adjusting your search criteria or filters.'
                   : 'Upload your first document to get started with TinyRAG.'}
@@ -487,7 +487,7 @@ export default function DocumentsPage() {
                   <button
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
                     Previous
                   </button>
@@ -500,7 +500,7 @@ export default function DocumentsPage() {
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           currentPage === page
                             ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
                         }`}
                       >
                         {page}
@@ -510,7 +510,7 @@ export default function DocumentsPage() {
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
                     Next
                   </button>

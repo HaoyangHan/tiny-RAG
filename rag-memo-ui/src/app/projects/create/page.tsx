@@ -150,7 +150,7 @@ export default function CreateProjectPage() {
                   ) : (
                     <span
                       className={`text-sm font-medium ${
-                        step.id === currentStep ? 'text-blue-600' : 'text-gray-500'
+                        step.id === currentStep ? 'text-blue-600' : 'text-gray-600'
                       }`}
                     >
                       {step.id}
@@ -160,12 +160,12 @@ export default function CreateProjectPage() {
                 <div className="ml-4 min-w-0 flex flex-col">
                   <span
                     className={`text-sm font-medium ${
-                      step.id <= currentStep ? 'text-blue-600' : 'text-gray-500'
+                      step.id <= currentStep ? 'text-blue-600' : 'text-gray-600'
                     }`}
                   >
                     {step.name}
                   </span>
-                  <span className="text-sm text-gray-500">{step.description}</span>
+                  <span className="text-sm text-gray-600">{step.description}</span>
                 </div>
               </div>
               {stepIdx !== steps.length - 1 && (
@@ -190,7 +190,7 @@ export default function CreateProjectPage() {
           id="name"
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           placeholder="Enter a descriptive name for your project"
         />
       </div>
@@ -204,7 +204,7 @@ export default function CreateProjectPage() {
           rows={4}
           value={formData.description}
           onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           placeholder="Describe what this RAG project will accomplish"
         />
       </div>
@@ -217,7 +217,7 @@ export default function CreateProjectPage() {
           id="tenant_type"
           value={formData.tenant_type}
           onChange={(e) => setFormData(prev => ({ ...prev, tenant_type: e.target.value as TenantType }))}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
         >
           <option value={TenantType.HR}>Human Resources</option>
           <option value={TenantType.CODING}>Software Development</option>
@@ -226,7 +226,7 @@ export default function CreateProjectPage() {
           <option value={TenantType.QA_GENERATION}>Q&A Generation</option>
           <option value={TenantType.RAW_RAG}>General RAG Tasks</option>
         </select>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-600">
           This determines the collaboration features and resource limits for your project.
         </p>
       </div>
@@ -280,7 +280,7 @@ export default function CreateProjectPage() {
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="Add keywords to help organize your project"
           />
           <button
@@ -320,7 +320,7 @@ export default function CreateProjectPage() {
             value={newCollaborator}
             onChange={(e) => setNewCollaborator(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleAddCollaborator()}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             placeholder="Enter email address to invite collaborators"
           />
           <button
@@ -397,9 +397,9 @@ export default function CreateProjectPage() {
         <div className="flex">
           <InformationCircleIcon className="h-5 w-5 text-yellow-400 mr-2 mt-0.5" />
           <div className="text-sm text-yellow-800">
-            <p className="font-medium">Next Steps</p>
+            <p className="font-medium">What happens next?</p>
             <p className="mt-1">
-              After creating your project, you'll be able to upload documents, create elements, and start generating content.
+              After creating your project, the system will automatically provision element templates based on your selected tenant type ({formData.tenant_type}). You'll immediately see these ready-to-use elements in your project.
             </p>
           </div>
         </div>

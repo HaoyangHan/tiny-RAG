@@ -129,13 +129,13 @@ class UserService:
                     )
                 ).to_list()
                 
-                # Get generations in user's projects
+                # Get user generations (limit to recent for performance)
                 user_generations = await ElementGeneration.find(
                     And(
-                        ElementGeneration.is_deleted == False,
-                        In(ElementGeneration.project_id, project_ids)
+                        ElementGeneration.user_id == user_id,
+                        ElementGeneration.is_deleted == False
                     )
-                ).to_list()
+                ).limit(100).to_list()
                 
                 # Get evaluations in user's projects
                 user_evaluations = await Evaluation.find(
@@ -157,7 +157,7 @@ class UserService:
             
             # Calculate total usage statistics
             total_tokens = sum(g.metrics.total_tokens for g in user_generations if g.metrics)
-            total_cost = sum(g.metrics.cost_usd for g in user_generations if g.metrics)
+            total_cost = sum(g.metrics.estimated_cost for g in user_generations if g.metrics and g.metrics.estimated_cost)
             
             # Calculate average evaluation score
             completed_evaluations = [e for e in user_evaluations if e.overall_score is not None]
@@ -165,6 +165,16 @@ class UserService:
                 sum(e.overall_score for e in completed_evaluations) / len(completed_evaluations)
                 if completed_evaluations else 0.0
             )
+            
+            generation_count = len(user_generations)
+            recent_generation_count = len(recent_generations)
+            
+            generation_stats = {
+                "total": generation_count,
+                "recent": recent_generation_count,
+                "total_tokens": total_tokens,
+                "total_cost_usd": round(total_cost, 4)
+            }
             
             return {
                 "projects": {
@@ -178,12 +188,7 @@ class UserService:
                     "recent": len(recent_elements),
                     "by_type": self._count_by_attribute(user_elements, 'element_type')
                 },
-                "generations": {
-                    "total": len(user_generations),
-                    "recent": len(recent_generations),
-                    "total_tokens": total_tokens,
-                    "total_cost_usd": round(total_cost, 4)
-                },
+                "generations": generation_stats,
                 "evaluations": {
                     "total": len(user_evaluations),
                     "recent": len(recent_evaluations),

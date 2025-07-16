@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   SparklesIcon,
   MagnifyingGlassIcon,
@@ -16,74 +16,81 @@ import {
   CalendarIcon,
 } from '@heroicons/react/24/outline';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Generation, GenerationStatus } from '@/types';
+import { Generation, GenerationStatus, PaginatedResponse } from '@/types';
+import { api } from '@/services/api';
 
-export default function GenerationsPage() {
+function GenerationsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<GenerationStatus | ''>('');
   const [dateRange, setDateRange] = useState('all');
+  const [generations, setGenerations] = useState<Generation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
-  // Mock generations data - replace with actual API call
-  const generations: Generation[] = [
-    {
-      id: '1',
-      element_id: '1',
-      element_name: 'Customer FAQ Template',
-      status: GenerationStatus.COMPLETED,
-      input_data: {
-        context: 'Product return policy allows returns within 30 days...',
-        question: 'Can I return my product after 2 weeks?'
-      },
-      output_text: 'Yes, you can return your product after 2 weeks. Our return policy allows returns within 30 days of purchase...',
-      model_used: 'gpt-4-turbo',
-      tokens_used: 245,
-      execution_time: 2.3,
-      cost: 0.012,
-      project_id: '1',
-      created_at: '2024-12-25T14:20:00Z',
-      updated_at: '2024-12-25T14:20:00Z',
-      error_message: null
-    },
-    {
-      id: '2',
-      element_id: '2',
-      element_name: 'Documentation Search Tool',
-      status: GenerationStatus.PROCESSING,
-      input_data: {
-        query: 'API authentication methods',
-        category: 'technical'
-      },
-      output_text: null,
-      model_used: 'gpt-4-turbo',
-      tokens_used: 0,
-      execution_time: 0,
-      cost: 0,
-      project_id: '2',
-      created_at: '2024-12-25T14:22:00Z',
-      updated_at: '2024-12-25T14:22:00Z',
-      error_message: null
-    },
-    {
-      id: '3',
-      element_id: '1',
-      element_name: 'Customer FAQ Template',
-      status: GenerationStatus.FAILED,
-      input_data: {
-        context: '',
-        question: 'What is your refund policy?'
-      },
-      output_text: null,
-      model_used: 'gpt-4-turbo',
-      tokens_used: 0,
-      execution_time: 0,
-      cost: 0,
-      project_id: '1',
-      created_at: '2024-12-25T14:18:00Z',
-      updated_at: '2024-12-25T14:18:00Z',
-      error_message: 'Context cannot be empty'
+  // Get URL parameters
+  const projectId = searchParams?.get('project_id');
+  const executionId = searchParams?.get('execution_id');
+
+  // Fetch generations from API
+  const fetchGenerations = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const params: any = {
+        page: currentPage,
+        page_size: pageSize,
+        include_content: true
+      };
+
+      if (projectId) params.project_id = projectId;
+      if (executionId) params.execution_id = executionId;
+      if (selectedStatus) params.status = selectedStatus;
+
+      console.log('=== GENERATIONS PAGE DEBUG ===');
+      console.log('Fetching generations with params:', params);
+
+      const data = await api.getGenerations(params);
+      
+      console.log('Generations API response:', data);
+      if (data.items && data.items.length > 0) {
+        console.log('First generation item:', data.items[0]);
+        console.log('Available fields:', Object.keys(data.items[0]));
+      }
+      console.log('=== END DEBUG ===');
+
+      setGenerations(data.items || []);
+      setTotalCount(data.total_count || 0);
+    } catch (err) {
+      console.error('Failed to fetch generations:', err);
+      setError('Failed to load generations. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  // Fetch data when component mounts or filters change
+  useEffect(() => {
+    fetchGenerations();
+  }, [currentPage, selectedStatus, projectId, executionId]);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage === 1) {
+        fetchGenerations();
+      } else {
+        setCurrentPage(1); // This will trigger fetchGenerations via the dependency array
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const handleGenerationClick = (generationId: string) => {
     router.push(`/generations/${generationId}`);
@@ -118,13 +125,20 @@ export default function GenerationsPage() {
   };
 
   const filteredGenerations = generations.filter(generation => {
-    const matchesSearch = generation.element_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         generation.model_used.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = !selectedStatus || generation.status === selectedStatus;
+    // If no search query, include all generations
+    if (!searchQuery.trim()) {
+      return true;
+    }
     
-    // Date filtering logic would go here
+    // Search in available fields
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = 
+      (generation.element_name?.toLowerCase().includes(searchLower)) ||
+      (generation.model_used?.toLowerCase().includes(searchLower)) ||
+      (generation.id?.toLowerCase().includes(searchLower)) ||
+      (generation.element_id?.toLowerCase().includes(searchLower));
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const GenerationCard = ({ generation }: { generation: Generation }) => (
@@ -146,12 +160,12 @@ export default function GenerationsPage() {
         </div>
 
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {generation.element_name}
+          {generation.element_name || `Element ${generation.element_id?.slice(-8) || 'Unknown'}`}
         </h3>
 
-        {generation.status === GenerationStatus.COMPLETED && generation.output_text && (
+        {generation.status === GenerationStatus.COMPLETED && (generation.output_text || generation.content) && (
           <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-            {generation.output_text}
+            {generation.output_text || generation.content}
           </p>
         )}
 
@@ -171,7 +185,9 @@ export default function GenerationsPage() {
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
               <CpuChipIcon className="h-4 w-4 text-gray-500 mr-1" />
-              <span className="text-sm font-medium text-gray-900">{generation.tokens_used}</span>
+              <span className="text-sm font-medium text-gray-900">
+                {generation.tokens_used || generation.token_usage || 0}
+              </span>
             </div>
             <p className="text-xs text-gray-500">Tokens</p>
           </div>
@@ -179,7 +195,13 @@ export default function GenerationsPage() {
             <div className="flex items-center justify-center mb-1">
               <ClockIcon className="h-4 w-4 text-gray-500 mr-1" />
               <span className="text-sm font-medium text-gray-900">
-                {generation.execution_time > 0 ? `${generation.execution_time}s` : '—'}
+                {(() => {
+                  const timeMs = (generation as any).execution_time || (generation as any).generation_time_ms;
+                  if (timeMs && timeMs > 0) {
+                    return `${(timeMs / 1000).toFixed(1)}s`;
+                  }
+                  return '—';
+                })()}
               </span>
             </div>
             <p className="text-xs text-gray-500">Time</p>
@@ -187,7 +209,10 @@ export default function GenerationsPage() {
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
               <span className="text-sm font-medium text-gray-900">
-                ${generation.cost > 0 ? generation.cost.toFixed(4) : '—'}
+                {(() => {
+                  const cost = (generation as any).cost || (generation as any).cost_usd;
+                  return cost && cost > 0 ? `$${cost.toFixed(4)}` : '$0.0000';
+                })()}
               </span>
             </div>
             <p className="text-xs text-gray-500">Cost</p>
@@ -198,11 +223,33 @@ export default function GenerationsPage() {
   );
 
   const completedGenerations = generations.filter(g => g.status === GenerationStatus.COMPLETED);
-  const totalTokens = generations.reduce((sum, g) => sum + g.tokens_used, 0);
-  const totalCost = generations.reduce((sum, g) => sum + g.cost, 0);
+  const totalTokens = generations.reduce((sum, g) => {
+    const tokens = (g as any).tokens_used || (g as any).token_usage || 0;
+    return sum + tokens;
+  }, 0);
+  const totalCost = generations.reduce((sum, g) => {
+    const cost = (g as any).cost || (g as any).cost_usd || 0;
+    return sum + cost;
+  }, 0);
   const avgExecutionTime = completedGenerations.length > 0 
-    ? completedGenerations.reduce((sum, g) => sum + g.execution_time, 0) / completedGenerations.length 
+    ? completedGenerations.reduce((sum, g) => {
+        const timeMs = (g as any).execution_time || (g as any).generation_time_ms || 0;
+        return sum + (timeMs / 1000); // Convert ms to seconds
+      }, 0) / completedGenerations.length 
     : 0;
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Generations">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading generations...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Generations">
@@ -211,8 +258,30 @@ export default function GenerationsPage() {
         <div className="mb-6">
           <p className="text-gray-600">
             Monitor and manage all AI generations across your projects.
+            {projectId && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                Filtered by Project: {projectId}
+              </span>
+            )}
+            {executionId && (
+              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                Execution: {executionId}
+              </span>
+            )}
           </p>
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-700">{error}</p>
+            <button 
+              onClick={fetchGenerations}
+              className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
@@ -228,7 +297,7 @@ export default function GenerationsPage() {
                       Total Generations
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {generations.length}
+                      {totalCount}
                     </dd>
                   </dl>
                 </div>
@@ -310,7 +379,7 @@ export default function GenerationsPage() {
                     placeholder="Search generations..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -319,7 +388,7 @@ export default function GenerationsPage() {
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as GenerationStatus | '')}
-                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="">All Status</option>
                 <option value={GenerationStatus.COMPLETED}>Completed</option>
@@ -331,13 +400,21 @@ export default function GenerationsPage() {
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
-                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="block px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
               </select>
+
+              {/* Refresh Button */}
+              <button
+                onClick={fetchGenerations}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Refresh
+              </button>
             </div>
           </div>
         </div>
@@ -348,6 +425,31 @@ export default function GenerationsPage() {
             {filteredGenerations.map((generation) => (
               <GenerationCard key={generation.id} generation={generation} />
             ))}
+            
+            {/* Pagination */}
+            {totalCount > pageSize && (
+              <div className="flex justify-center mt-8">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-3 py-2 text-sm text-gray-700">
+                    Page {currentPage} of {Math.ceil(totalCount / pageSize)}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-12">
@@ -363,5 +465,22 @@ export default function GenerationsPage() {
         )}
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function GenerationsPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout title="Generations">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading generations...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <GenerationsPageContent />
+    </Suspense>
   );
 } 

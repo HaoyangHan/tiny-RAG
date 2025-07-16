@@ -12,6 +12,7 @@ from beanie import PydanticObjectId
 from beanie.operators import In, And, Or, Eq
 
 from models import Project, TenantType, ProjectStatus, VisibilityType
+from services.element_template_service import ElementTemplateService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ class ProjectService:
     retrieval, updates, deletion, and collaboration management.
     """
     
+    def __init__(self):
+        """Initialize project service with dependencies."""
+        self.element_template_service = ElementTemplateService()
+    
     async def create_project(
         self,
         name: str,
@@ -34,7 +39,7 @@ class ProjectService:
         owner_id: str
     ) -> Project:
         """
-        Create a new project.
+        Create a new project with automatic element template provisioning.
         
         Args:
             name: Project name
@@ -45,7 +50,7 @@ class ProjectService:
             owner_id: ID of the project owner
             
         Returns:
-            Project: Created project instance
+            Project: Created project instance with provisioned elements
             
         Raises:
             ValueError: If validation fails
@@ -67,6 +72,58 @@ class ProjectService:
             await project.insert()
             
             logger.info(f"Created project {project.id} for user {owner_id}")
+            
+            # Provision element templates for the tenant type
+            try:
+                logger.info(f"🔧 DEBUG: Starting element template provisioning for project {project.id}")
+                logger.info(f"🔧 DEBUG: Tenant type: {tenant_type}")
+                logger.info(f"🔧 DEBUG: Tenant type value: {tenant_type.value}")
+                
+                # Test if element template service can find templates
+                logger.info("🔧 DEBUG: Testing ElementTemplateService.get_templates_by_tenant...")
+                test_templates = await self.element_template_service.get_templates_by_tenant(tenant_type, active_only=True)
+                logger.info(f"🔧 DEBUG: ElementTemplateService found {len(test_templates)} templates")
+                
+                if test_templates:
+                    for i, template in enumerate(test_templates[:3]):  # Log first 3 templates
+                        logger.info(f"🔧 DEBUG: Template {i+1}: {template.name} (status: {getattr(template, 'status', 'MISSING')})")
+                
+                batch_id = f"project_creation_{project.id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                logger.info(f"🔧 DEBUG: Calling provision_templates_to_project with batch_id: {batch_id}")
+                
+                provisioned_elements = await self.element_template_service.provision_templates_to_project(
+                    project_id=str(project.id),
+                    tenant_type=tenant_type,
+                    batch_id=batch_id,
+                    force=False
+                )
+                
+                logger.info(f"🔧 DEBUG: provision_templates_to_project returned {len(provisioned_elements)} elements")
+                
+                # Update project element IDs
+                if provisioned_elements:
+                    project.element_ids = [str(elem.id) for elem in provisioned_elements]
+                    await project.save()
+                    
+                    logger.info(
+                        f"✅ Provisioned {len(provisioned_elements)} element templates "
+                        f"to project {project.id} for tenant {tenant_type}"
+                    )
+                    
+                    # Log element details
+                    for elem in provisioned_elements:
+                        logger.info(f"🔧 DEBUG: Created element: {elem.name} (ID: {elem.id})")
+                else:
+                    logger.warning(f"❌ No element templates found for tenant {tenant_type}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Failed to provision element templates to project {project.id}: {str(e)}")
+                logger.error(f"🔧 DEBUG: Exception type: {type(e).__name__}")
+                import traceback
+                logger.error(f"🔧 DEBUG: Full traceback: {traceback.format_exc()}")
+                # Don't fail project creation if template provisioning fails
+                # The project is still created, just without default elements
+            
             return project
             
         except Exception as e:
@@ -425,4 +482,60 @@ class ProjectService:
             
         except Exception as e:
             logger.error(f"Failed to get project counts for user {user_id}: {str(e)}")
-            return {"owned": 0, "collaborating": 0, "active": 0, "total": 0} 
+            return {"owned": 0, "collaborating": 0, "active": 0, "total": 0}
+    
+    async def execute_all_elements(
+        self,
+        project_id: str,
+        user_id: str,
+        element_ids: Optional[List[str]] = None,
+        execution_config: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Execute all elements in a project using the new element generation service.
+        
+        Args:
+            project_id: Project ID
+            user_id: User ID for access control
+            element_ids: Specific element IDs to execute (optional)
+            execution_config: Execution configuration (optional)
+            
+        Returns:
+            Execution ID for tracking progress
+        """
+        from services.element_generation_service import get_element_generation_service
+        
+        try:
+            # Validate project access
+            project = await self.get_project(project_id, user_id)
+            if not project:
+                raise ValueError("Project not found or access denied")
+            
+            # Get additional instructions from execution config
+            additional_instructions = execution_config.get('additional_instructions') if execution_config else None
+            
+            # Use the element generation service for bulk generation
+            element_generation_service = get_element_generation_service()
+            
+            # Generate unique execution ID for tracking
+            execution_id = f"bulk_{project_id}_{int(datetime.utcnow().timestamp())}"
+            
+            # Start bulk generation in background (in production, use task queue)
+            results = await element_generation_service.bulk_generate_elements(
+                project_id=project_id,
+                user_id=user_id,
+                element_ids=element_ids,
+                additional_instructions=additional_instructions,
+                execution_id=execution_id
+            )
+            
+            logger.info(
+                f"Bulk execution completed for project {project_id}: "
+                f"{results['successful']}/{results['total_elements']} successful"
+            )
+            
+            return execution_id
+            
+        except Exception as e:
+            logger.error(f"Failed to execute all elements for project {project_id}: {e}")
+            raise 

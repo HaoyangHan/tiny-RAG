@@ -1,83 +1,93 @@
 """
-Document service for TinyRAG v1.4.
+Document Service for TinyRAG v1.4.3
+===================================
 
-This module contains the business logic for document management including
-file upload, processing, project integration, and document analytics.
+This module provides document management services including
+file upload, processing, project integration, and metadata extraction.
+
+Author: TinyRAG Development Team
+Version: 1.4.3
+Last Updated: January 2025
 """
 
 import logging
 import tempfile
 import os
+import hashlib
 from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime
 from pathlib import Path
 from beanie import PydanticObjectId
 from beanie.operators import In, And, Or
 
-from models import Document, Project, DocumentStatus
-from models.document import DocumentMetadata, DocumentChunk
+from models.document import Document, DocumentStatus, DocumentMetadata
+from models.project import Project
+from services.document_processor import DocumentProcessor
+from services.enhanced_document_processor import create_enhanced_document_processor
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentService:
     """
-    Service class for document management operations in v1.4.
+    Service class for document management operations.
     
-    Handles all business logic related to documents including file upload,
-    processing, project integration, and analytics while maintaining
-    compatibility with existing document processing logic.
+    Provides comprehensive document processing with enhanced metadata extraction,
+    table and image processing, and project integration.
     """
     
-    def __init__(self):
-        """Initialize the document service."""
-        self.legacy_service = None
-    
+    @staticmethod
     async def upload_document(
-        self,
-        project_id: str,
         file_content: bytes,
         filename: str,
         content_type: str,
         user_id: str,
-        metadata: Optional[Dict[str, Any]] = None
+        project_id: str,
+        metadata: Optional[DocumentMetadata] = None
     ) -> Document:
         """
-        Upload and process a document for a project with enhanced table and image extraction.
+        Upload and process a document with enhanced capabilities.
         
         Args:
-            project_id: Associated project ID
-            file_content: File content bytes
+            file_content: Raw file content
             filename: Original filename
-            content_type: MIME content type
-            user_id: ID of the uploading user
+            content_type: MIME type of the file
+            user_id: ID of the user uploading the document
+            project_id: ID of the project to associate with
             metadata: Optional document metadata
             
         Returns:
             Document: Created document instance with processed content, tables, and images
             
         Raises:
-            ValueError: If validation fails
+            ValueError: If validation fails or duplicate found
             Exception: If upload/processing fails
         """
         try:
-            # Verify project exists and user has access
-            project = await Project.get(PydanticObjectId(project_id))
-            if not project or project.is_deleted:
-                raise ValueError("Project not found")
+            # Generate content hash for duplicate detection
+            content_hash = hashlib.sha256(file_content).hexdigest()
             
-            if not project.is_accessible_by(user_id):
-                raise ValueError("Access denied to project")
+            # Check for duplicate documents
+            existing_document = await Document.find_one(
+                And(
+                    Document.content_hash == content_hash,
+                    Document.user_id == user_id
+                )
+            )
+            
+            if existing_document:
+                raise ValueError(f"Document with identical content already exists: {existing_document.id}")
             
             # Create document metadata
-            doc_metadata = DocumentMetadata(
+            document_metadata = metadata or DocumentMetadata(
                 filename=filename,
                 content_type=content_type,
                 size=len(file_content),
                 upload_date=datetime.utcnow(),
                 processed=False,
                 has_tables=False,
-                has_images=False
+                has_images=False,
+                content_hash=content_hash  # Add content hash for duplicate detection
             )
             
             # Create document instance
@@ -85,126 +95,117 @@ class DocumentService:
                 user_id=user_id,
                 project_id=project_id,
                 filename=filename,
-                file_size=len(file_content),
                 content_type=content_type,
+                file_size=len(file_content),
                 status=DocumentStatus.UPLOADING,
-                metadata=doc_metadata,
+                metadata=document_metadata,
                 chunks=[],
                 tables=[],
                 images=[]
             )
             
-            # Save to database first
-            await document.insert()
+            # Save document initially
+            await document.save()
             
-            try:
-                # Process document with chunking and embeddings
-                from services.document_processor import DocumentProcessor
+            # Get OpenAI API key for enhanced processing
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            
+            if not openai_api_key:
+                logger.warning("OpenAI API key not configured - basic processing only")
                 
-                # Get OpenAI API key for processing
-                openai_api_key = os.getenv("OPENAI_API_KEY")
-                if not openai_api_key:
-                    logger.warning("OpenAI API key not configured - basic processing only")
-                    
-                    # Basic processing without LLM
-                    import hashlib
-                    content_hash = hashlib.sha256(file_content).hexdigest()
-                    
-                    # Basic word count for text files
-                    if content_type.startswith('text/'):
-                        word_count = len(file_content.decode('utf-8', errors='ignore').split())
-                    else:
-                        word_count = 0
-                    
-                    document.status = DocumentStatus.COMPLETED
-                    document.metadata.processed = True
-                    
-                else:
-                    # Enhanced processing with comprehensive metadata extraction
-                    from services.enhanced_document_processor import create_enhanced_document_processor
-                    processor = create_enhanced_document_processor(openai_api_key)
-                    
-                    # Create temporary file for processing
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as temp_file:
-                        temp_file.write(file_content)
-                        temp_path = Path(temp_file.name)
-                    
-                    try:
-                        # Update status to processing
-                        document.status = DocumentStatus.PROCESSING
-                        await document.save()
-                        
-                        # Process document with enhanced capabilities and metadata extraction
-                        processed_document = await processor.process_document(
-                            file_path=temp_path,
-                            user_id=user_id,
-                            document_id=str(document.id),
-                            project_id=project_id
-                        )
-                        
-                        # Update the document with processed results
-                        document.chunks = processed_document.chunks
-                        document.tables = processed_document.tables
-                        document.images = processed_document.images
-                        document.metadata.has_tables = processed_document.metadata.has_tables
-                        document.metadata.has_images = processed_document.metadata.has_images
-                        document.metadata.processed = processed_document.metadata.processed
-                        document.status = processed_document.status
-                        
-                        logger.info(f"Enhanced processing completed: {len(document.chunks)} chunks, "
-                                  f"{len(document.tables)} tables, {len(document.images)} images")
-                        
-                        # Log metadata extraction summary
-                        metadata_count = 0
-                        for chunk in document.chunks:
-                            if chunk.chunk_metadata:
-                                metadata_count += len(chunk.chunk_metadata)
-                        
-                        logger.info(f"Metadata extraction completed: {metadata_count} total metadata fields extracted")
-                        
-                        # Mark as completed if processed successfully
-                        if document.status != DocumentStatus.COMPLETED:
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = True
-                        
-                    finally:
-                        # Clean up temporary file
-                        if temp_path.exists():
-                            temp_path.unlink()
+                # Basic processing without LLM
+                document.status = DocumentStatus.COMPLETED
+                document.metadata.processed = True
+                logger.info("Document processed without embeddings (no OpenAI key)")
                 
-                # Save all updates
-                await document.save()
+            else:
+                # Enhanced processing with comprehensive metadata extraction
+                from services.enhanced_document_processor import create_enhanced_document_processor
+                processor = create_enhanced_document_processor(openai_api_key)
                 
-                # Add to project's document list
+                # Create temporary file for processing
+                with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as temp_file:
+                    temp_file.write(file_content)
+                    temp_path = Path(temp_file.name)
+                
+                try:
+                    # Update status to processing
+                    document.status = DocumentStatus.PROCESSING
+                    await document.save()
+                    
+                    # Process document with enhanced capabilities and metadata extraction
+                    processed_document = await processor.process_document(
+                        file_path=temp_path,
+                        user_id=user_id,
+                        document_id=str(document.id),
+                        project_id=project_id
+                    )
+                    
+                    # Update the document with processed results
+                    document.chunks = processed_document.chunks
+                    document.tables = processed_document.tables
+                    document.images = processed_document.images
+                    document.metadata.has_tables = processed_document.metadata.has_tables
+                    document.metadata.has_images = processed_document.metadata.has_images
+                    document.metadata.processed = processed_document.metadata.processed
+                    document.status = processed_document.status
+                    
+                    logger.info(f"Enhanced processing completed: {len(document.chunks)} chunks, "
+                              f"{len(document.tables)} tables, {len(document.images)} images")
+                    
+                    # Log metadata extraction summary
+                    metadata_count = 0
+                    for chunk in document.chunks:
+                        if chunk.chunk_metadata:
+                            metadata_count += len(chunk.chunk_metadata)
+                    
+                    logger.info(f"Metadata extraction completed: {metadata_count} total metadata fields extracted")
+                    
+                    # Mark as completed if processed successfully
+                    if document.status != DocumentStatus.COMPLETED:
+                        document.status = DocumentStatus.COMPLETED
+                        document.metadata.processed = True
+                        
+                finally:
+                    # Clean up temporary file
+                    if temp_path.exists():
+                        temp_path.unlink()
+            
+            # Save final document state
+            await document.save()
+            
+            # Add document to project
+            project = await Project.get(project_id)
+            if project:
                 project.add_document(str(document.id))
                 await project.save()
-                
-                # Log comprehensive processing results
-                logger.info(
-                    f"Document upload completed: {document.id} -> Project {project_id}\n"
-                    f"  - Chunks: {len(document.chunks)} (text: {len([c for c in document.chunks if c.chunk_type == 'text'])}, "
-                    f"table: {len([c for c in document.chunks if c.chunk_type == 'table'])}, "
-                    f"image: {len([c for c in document.chunks if c.chunk_type == 'image'])})\n"
-                    f"  - Tables: {len(document.tables)}\n"
-                    f"  - Images: {len(document.images)}\n"
-                    f"  - Status: {document.status}"
-                )
-                
-                return document
-                
-            except Exception as processing_error:
-                # Update status to failed
-                document.status = DocumentStatus.FAILED
-                document.metadata.error = str(processing_error)
-                document.metadata.processed = False
-                await document.save()
-                
-                logger.error(f"Document processing failed for {document.id}: {str(processing_error)}")
-                raise processing_error
-                
+            
+            # Log comprehensive processing results
+            logger.info(
+                f"Document upload completed: {document.id} -> Project {project_id}\n"
+                f"  - Chunks: {len(document.chunks)} (text: {len([c for c in document.chunks if c.chunk_type == 'text'])}, "
+                f"table: {len([c for c in document.chunks if c.chunk_type == 'table'])}, "
+                f"image: {len([c for c in document.chunks if c.chunk_type == 'image'])})\n"
+                f"  - Tables: {len(document.tables)}\n"
+                f"  - Images: {len(document.images)}\n"
+                f"  - Status: {document.status}"
+            )
+            
+            return document
+            
+        except Exception as processing_error:
+            # Update status to failed
+            document.status = DocumentStatus.FAILED
+            document.metadata.error = str(processing_error)
+            document.metadata.processed = False
+            await document.save()
+            
+            logger.error(f"Document processing failed for {document.id}: {str(processing_error)}")
+            raise processing_error
+            
         except Exception as e:
-            logger.error(f"Failed to upload document: {str(e)}")
-            raise
+            logger.error(f"Document upload failed: {str(e)}")
+            raise e
     
     async def get_document(self, document_id: str, user_id: str) -> Optional[Document]:
         """
@@ -349,37 +350,50 @@ class DocumentService:
     
     async def delete_document(self, document_id: str, user_id: str) -> bool:
         """
-        Soft delete a document.
+        Delete a document with access control.
         
         Args:
             document_id: Document ID to delete
             user_id: ID of the requesting user
             
         Returns:
-            bool: True if deleted successfully, False otherwise
+            bool: True if deleted successfully, False if not found
+            
+        Raises:
+            ValueError: If access denied
+            Exception: If deletion fails
         """
         try:
+            logger.info(f"Attempting to delete document {document_id} for user {user_id}")
+            
+            # Get document with access control
             document = await self.get_document(document_id, user_id)
             if not document:
+                logger.warning(f"Document {document_id} not found or access denied for user {user_id}")
                 return False
             
-            # Soft delete
+            # Mark as deleted (soft delete)
             document.is_deleted = True
             document.updated_at = datetime.utcnow()
             await document.save()
             
             # Remove from project's document list
-            project = await Project.get(PydanticObjectId(document.project_id))
-            if project:
-                project.remove_document(str(document.id))
-                await project.save()
+            if document.project_id:
+                try:
+                    project = await Project.get(PydanticObjectId(document.project_id))
+                    if project and hasattr(project, 'document_ids') and str(document.id) in project.document_ids:
+                        project.document_ids.remove(str(document.id))
+                        await project.save()
+                        logger.info(f"Removed document {document_id} from project {document.project_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to remove document from project: {str(e)}")
             
-            logger.info(f"Deleted document {document_id}")
+            logger.info(f"Successfully deleted document {document_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to delete document: {str(e)}")
-            return False
+            logger.error(f"Failed to delete document {document_id}: {str(e)}")
+            raise
     
     async def get_document_content(
         self,
@@ -497,32 +511,101 @@ class DocumentService:
     
     async def _get_accessible_project_ids(self, user_id: str) -> List[str]:
         """
-        Get list of project IDs accessible to a user.
+        Get project IDs that the user has access to.
         
         Args:
-            user_id: ID of the user
+            user_id: User ID to check access for
             
         Returns:
-            List of accessible project ID strings
+            List of project IDs the user can access
         """
         try:
-            # Get projects where user is owner or collaborator AND not deleted
+            # Get projects where user is owner or collaborator
             projects = await Project.find(
                 And(
-                    Project.is_deleted == False,
                     Or(
                         Project.owner_id == user_id,
-                        In(user_id, Project.collaborators)
-                    )
+                        In(Project.collaborators, [user_id])
+                    ),
+                    Project.is_deleted == False
                 )
             ).to_list()
             
-            logger.info(f"Found {len(projects)} accessible projects for user {user_id}")
-            project_ids = [str(project.id) for project in projects]
-            logger.info(f"Accessible project IDs: {project_ids}")
-            
-            return project_ids
+            return [str(project.id) for project in projects]
             
         except Exception as e:
-            logger.error(f"Failed to get accessible projects: {str(e)}")
+            logger.error(f"Error getting accessible project IDs: {str(e)}")
+            return []
+
+    async def search_documents(
+        self,
+        user_id: str,
+        query: str,
+        document_ids: Optional[List[str]] = None,
+        top_k: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for relevant document chunks for element generation.
+        
+        Args:
+            user_id: User ID for access control
+            query: Search query
+            document_ids: Optional list of document IDs to search within
+            top_k: Number of top chunks to return
+            
+        Returns:
+            List of relevant document chunks
+        """
+        try:
+            # Build filter for user documents
+            filter_query = {"user_id": user_id, "is_deleted": False}
+            
+            if document_ids:
+                # Convert string IDs to ObjectIds for MongoDB
+                try:
+                    object_ids = [PydanticObjectId(doc_id) for doc_id in document_ids]
+                    filter_query["_id"] = {"$in": object_ids}
+                except Exception as e:
+                    logger.error(f"Error converting document IDs to ObjectIds: {e}")
+                    return []
+            
+            logger.info(f"Searching documents with filter: {filter_query}")
+            documents = await Document.find(filter_query).to_list()
+            logger.info(f"Found {len(documents)} documents for user")
+            
+            if not documents:
+                logger.warning("No documents found for search")
+                return []
+            
+            # Collect all chunks from documents
+            all_chunks = []
+            
+            for document in documents:
+                logger.info(f"Processing document {document.id}: {len(document.chunks) if document.chunks else 0} chunks")
+                
+                if not document.chunks:
+                    logger.warning(f"Document {document.id} has no chunks")
+                    continue
+                    
+                # For now, return chunks with basic scoring
+                # In a full implementation, you would use vector similarity
+                for chunk in document.chunks:
+                    chunk_result = {
+                        "document_id": str(document.id),
+                        "document_title": document.filename,
+                        "page_number": getattr(chunk, 'page_number', 1),
+                        "chunk_text": chunk.text,
+                        "chunk_index": getattr(chunk, 'chunk_index', 0),
+                        "similarity_score": 0.8  # Default score for now
+                    }
+                    all_chunks.append(chunk_result)
+            
+            # Sort by similarity score (in a real implementation, use vector similarity)
+            all_chunks.sort(key=lambda x: x['similarity_score'], reverse=True)
+            
+            # Return top_k chunks
+            return all_chunks[:top_k]
+            
+        except Exception as e:
+            logger.error(f"Error searching documents: {str(e)}")
             return [] 

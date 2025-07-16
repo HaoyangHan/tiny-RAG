@@ -170,7 +170,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               required
               value={formData.full_name}
               onChange={handleInputChange}
-              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 ${
                 validationErrors.full_name ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Enter your full name"
@@ -197,7 +197,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               required
               value={formData.email}
               onChange={handleInputChange}
-              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 ${
                 validationErrors.email ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Enter your email address"
@@ -224,7 +224,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               required
               value={formData.username}
               onChange={handleInputChange}
-              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+              className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 ${
                 validationErrors.username ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Choose a username"
@@ -251,7 +251,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               required
               value={formData.password}
               onChange={handleInputChange}
-              className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+              className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 ${
                 validationErrors.password ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Create a password"
@@ -289,7 +289,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
               required
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+              className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 ${
                 validationErrors.confirmPassword ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Confirm your password"

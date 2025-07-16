@@ -25,7 +25,9 @@ from .enums import (
 
 # Core models
 from .project import Project, ProjectConfiguration
-from .element import Element, ElementTemplate, ElementExecution
+from .element import Element, ElementTemplate as ElementContent
+from .element_template import ElementTemplate
+from .tenant_configuration import TenantConfiguration
 from .element_generation import (
     ElementGeneration,
     GenerationChunk,
@@ -66,6 +68,8 @@ ALL_MODELS = [
     # Core v1.4 models
     Project,
     Element,
+    ElementTemplate,
+    TenantConfiguration,
     ElementGeneration,
     Evaluation,
     
@@ -80,7 +84,7 @@ ALL_MODELS = [
 ]
 
 # Export groups
-V14_MODELS = [Project, Element, ElementGeneration, Evaluation]
+V14_MODELS = [Project, Element, ElementTemplate, TenantConfiguration, ElementGeneration, Evaluation]
 LEGACY_MODELS = [Document, Generation, Memo]
 AUTH_MODELS = [User, APIKey]
 
@@ -105,8 +109,9 @@ __all__ = [
     "Project",
     "ProjectConfiguration",
     "Element",
+    "ElementContent",
     "ElementTemplate",
-    "ElementExecution",
+    "TenantConfiguration",
     "ElementGeneration",
     "GenerationChunk",
     "GenerationMetrics",

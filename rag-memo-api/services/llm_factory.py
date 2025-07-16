@@ -249,4 +249,35 @@ class LLMFactory:
         return await llm.generate(messages, temperature, max_tokens)
 
 # Global factory instance
-llm_factory = LLMFactory() 
+llm_factory = LLMFactory()
+
+class LLMClientWrapper:
+    """Wrapper class to provide a simplified interface for LLM interactions."""
+    
+    def __init__(self, factory: LLMFactory):
+        self.factory = factory
+    
+    async def generate_text(
+        self,
+        prompt: str,
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None
+    ) -> str:
+        """Generate text from a simple prompt string."""
+        # Convert prompt to LLMMessage format
+        messages = [LLMMessage(role="user", content=prompt)]
+        
+        # Use the factory to generate response
+        response = await self.factory.generate_response(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        return response.content
+
+def get_llm_provider(provider: Optional[str] = None) -> LLMClientWrapper:
+    """Get a wrapped LLM client with simplified interface."""
+    return LLMClientWrapper(llm_factory) 

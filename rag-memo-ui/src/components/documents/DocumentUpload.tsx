@@ -46,15 +46,17 @@ export default function DocumentUpload() {
       }`}
     >
       <input {...getInputProps()} />
-      <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
-      <p className="mt-2 text-sm text-gray-600">
-        {isDragActive
-          ? 'Drop the files here...'
-          : 'Drag and drop PDF files here, or click to select files'}
-      </p>
-      <p className="mt-1 text-xs text-gray-500">
-        Maximum file size: 10MB
-      </p>
+      <DocumentIcon className="mx-auto h-12 w-12 text-gray-500" />
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-900 mb-2">
+          Select files
+        </label>
+        <div className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mt-2">
+            Choose up to 10 files • PDF, TXT, DOCX supported • Max 50MB each
+          </p>
+        </div>
+      </div>
       <Button
         variant="primary"
         size="sm"

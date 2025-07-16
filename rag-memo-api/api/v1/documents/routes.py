@@ -512,8 +512,28 @@ async def delete_document(
     current_user: User = Depends(get_current_user)
 ) -> None:
     """Delete a document."""
-    # TODO: Adapt existing document deletion functionality
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document deletion adapted for v1.4 not implemented yet"
-    ) 
+    try:
+        document_service = DocumentService()
+        success = await document_service.delete_document(
+            document_id=document_id,
+            user_id=str(current_user.id)
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found or access denied"
+            )
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete document: {str(e)}"
+        ) 

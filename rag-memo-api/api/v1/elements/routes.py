@@ -6,7 +6,7 @@ prompt templates, MCP configurations, and agentic tools.
 """
 
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from pydantic import BaseModel, Field
 
 from models import ElementType, ElementStatus, TaskType, TenantType
@@ -77,7 +77,7 @@ class TemplateValidationResponse(BaseModel):
 @router.post(
     "/",
     response_model=ElementResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=http_status.HTTP_201_CREATED,
     summary="Create element",
     description="Create a new element"
 )
@@ -109,19 +109,19 @@ async def create_element(
             status=element.status,
             template_version=element.template.version,
             tags=element.tags,
-            execution_count=element.get_execution_count(),
+            execution_count=await element.get_execution_count(),
             created_at=element.created_at.isoformat(),
             updated_at=element.updated_at.isoformat()
         )
         
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create element: {str(e)}"
         )
 
@@ -135,7 +135,7 @@ async def create_element(
 async def list_elements(
     project_id: Optional[str] = Query(None, description="Filter by project ID"),
     element_type: Optional[ElementType] = Query(None, description="Filter by element type"),
-    status: Optional[ElementStatus] = Query(None, description="Filter by element status"),
+    element_status: Optional[ElementStatus] = Query(None, description="Filter by element status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_active_user),
@@ -149,11 +149,12 @@ async def list_elements(
             page_size=page_size,
             project_id=project_id,
             element_type=element_type,
-            status=status
+            status=element_status
         )
         
-        element_responses = [
-            ElementResponse(
+        element_responses = []
+        for element in elements:
+            element_responses.append(ElementResponse(
                 id=str(element.id),
                 name=element.name,
                 description=element.description,
@@ -162,12 +163,10 @@ async def list_elements(
                 status=element.status,
                 template_version=element.template.version,
                 tags=element.tags,
-                execution_count=element.get_execution_count(),
+                execution_count=await element.get_execution_count(),
                 created_at=element.created_at.isoformat(),
                 updated_at=element.updated_at.isoformat()
-            )
-            for element in elements
-        ]
+            ))
         
         return {
             "items": element_responses,
@@ -180,7 +179,7 @@ async def list_elements(
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list elements: {str(e)}"
         )
 
@@ -201,7 +200,7 @@ async def get_element(
     
     if not element:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=http_status.HTTP_404_NOT_FOUND,
             detail="Element not found"
         )
     
@@ -213,12 +212,12 @@ async def get_element(
         element_type=element.element_type,
         status=element.status,
         template_content=element.template.content,
-        template_variables=element.template.variables,
+        template_variables=[],
         template_version=element.template.version,
         execution_config=element.template.execution_config,
         tags=element.tags,
-        execution_count=element.get_execution_count(),
-        usage_statistics=element.usage_statistics,
+        execution_count=await element.get_execution_count(),
+        usage_statistics=await element.get_usage_statistics(),
         created_at=element.created_at.isoformat(),
         updated_at=element.updated_at.isoformat()
     )
@@ -245,7 +244,7 @@ async def execute_element(
         
         if not execution:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Element not found or access denied"
             )
         
@@ -259,12 +258,12 @@ async def execute_element(
         
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to execute element: {str(e)}"
         )
 
@@ -291,7 +290,7 @@ async def update_element(
         
         if not element:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Element not found or access denied"
             )
         
@@ -304,26 +303,26 @@ async def update_element(
             status=element.status,
             template_version=element.template.version,
             tags=element.tags,
-            execution_count=element.get_execution_count(),
+            execution_count=await element.get_execution_count(),
             created_at=element.created_at.isoformat(),
             updated_at=element.updated_at.isoformat()
         )
         
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update element: {str(e)}"
         )
 
 
 @router.delete(
     "/{element_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=http_status.HTTP_204_NO_CONTENT,
     summary="Delete element",
     description="Delete an element"
 )
@@ -341,18 +340,18 @@ async def delete_element(
         
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Element not found or access denied"
             )
             
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=http_status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete element: {str(e)}"
         )
 
@@ -387,6 +386,6 @@ async def validate_template(
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to validate template: {str(e)}"
         ) 

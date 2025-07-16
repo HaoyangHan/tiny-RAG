@@ -172,7 +172,7 @@ export interface ElementCreateRequest {
   project_id: string;
   element_type: ElementType;
   template_content: string;
-  variables?: string[];
+  additional_instructions_template?: string;
   execution_config?: Record<string, any>;
   tags?: string[];
 }
@@ -192,18 +192,26 @@ export enum GenerationStatus {
 export interface Generation {
   id: string;
   element_id: string;
-  element_name?: string;
   project_id: string;
   status: GenerationStatus;
-  input_data: Record<string, any>;
-  output_text?: string;
   model_used?: string;
-  tokens_used: number;
-  execution_time: number;
-  cost: number;
-  error_message?: string;
+  chunk_count: number;
+  token_usage: number;
   created_at: string;
   updated_at: string;
+  // Optional fields for enhanced responses
+  content?: string;
+  cost_usd?: number;
+  generation_time_ms?: number;
+  // Legacy fields for backward compatibility
+  element_name?: string;
+  additional_instructions?: string;
+  source_chunks?: Array<Record<string, any>>;
+  output_text?: string;
+  tokens_used?: number; // Legacy - maps to token_usage
+  execution_time?: number; // Legacy - maps to generation_time_ms
+  cost?: number; // Legacy - maps to cost_usd
+  error_message?: string;
 }
 
 export interface TokenUsage {

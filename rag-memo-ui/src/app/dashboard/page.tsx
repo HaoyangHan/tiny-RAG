@@ -307,9 +307,9 @@ export default function Dashboard() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {stat.name}
-                      </dt>
+                                    <dt className="text-sm font-medium text-gray-600 truncate">
+                {stat.name}
+              </dt>
                       <dd className="text-lg font-medium text-gray-900">
                         {stat.value}
                       </dd>
@@ -339,7 +339,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <h4 className="text-sm font-medium text-gray-900">{action.title}</h4>
-                        <p className="text-sm text-gray-500">{action.description}</p>
+                        <p className="text-sm text-gray-600">{action.description}</p>
                       </div>
                     </button>
                   ))}
@@ -371,7 +371,7 @@ export default function Dashboard() {
                           <FolderPlusIcon className="h-6 w-6 text-blue-600" />
                           <div>
                             <h4 className="text-sm font-medium text-gray-900">{project.name}</h4>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-600">
                               {getTenantTypeDisplay(project.tenant_type)} • {formatDate(project.created_at)}
                             </p>
                           </div>
@@ -388,7 +388,7 @@ export default function Dashboard() {
                   <div className="text-center py-12">
                     <FolderPlusIcon className="mx-auto h-12 w-12 text-gray-400" />
                     <h4 className="mt-2 text-sm font-medium text-gray-900">No projects yet</h4>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-gray-600">
                       Get started by creating your first RAG project.
                     </p>
                     <div className="mt-6">
@@ -414,7 +414,7 @@ export default function Dashboard() {
                 <h3 className="text-lg font-medium text-gray-900 mb-6">Recent Activity</h3>
                 <div className="text-center py-8">
                   <ChartBarIcon className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">
+                  <p className="mt-2 text-sm text-gray-600">
                     No recent activity. Start using TinyRAG to see your activity here!
                   </p>
                 </div>

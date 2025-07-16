@@ -95,7 +95,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   }`}
                 >
                   <item.icon className={`mr-4 flex-shrink-0 h-6 w-6 ${
-                    item.current ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                    item.current ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'
                   }`} />
                   {item.name}
                 </button>
@@ -125,7 +125,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   }`}
                 >
                   <item.icon className={`mr-3 flex-shrink-0 h-5 w-5 ${
-                    item.current ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                    item.current ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-600'
                   }`} />
                   {item.name}
                 </button>
@@ -143,7 +143,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             <div className="flex-1 flex items-center">
               <button
                 type="button"
-                className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 md:hidden"
+                className="px-4 border-r border-gray-200 text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 md:hidden"
                 onClick={() => setSidebarOpen(true)}
               >
                 <Bars3Icon className="h-6 w-6" />
@@ -158,7 +158,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   {/* Notifications */}
                   <button
                     type="button"
-                    className="bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="bg-white p-1 rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     <BellIcon className="h-6 w-6" />
                   </button>
@@ -168,7 +168,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                     <div className="flex items-center space-x-3">
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-700">{user?.username}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
+                        <p className="text-xs text-gray-600">{user?.email}</p>
                       </div>
                       <button
                         onClick={handleLogout}

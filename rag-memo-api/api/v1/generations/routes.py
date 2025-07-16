@@ -1,8 +1,13 @@
 """
-Generation routes for TinyRAG v1.4.
+Generation Routes for TinyRAG v1.4.3
+====================================
 
-This module contains generation management endpoints for tracking and managing
-LLM-generated content and their evaluation results.
+This module provides API routes for managing element generations,
+LLM-generated content and their evaluation.
+
+Author: TinyRAG Development Team
+Version: 1.4.3
+Last Updated: January 2025
 """
 
 from typing import List, Optional
@@ -21,116 +26,152 @@ from dependencies import get_llamaindex_rag_service
 router = APIRouter()
 
 
+class GenerationRequest(BaseModel):
+    """Request model for generation operations."""
+    project_id: str = Field(..., description="Project ID")
+    prompt: str = Field(..., description="Generation prompt")
+    additional_instructions: Optional[str] = Field(None, description="Additional instructions")
+
+
 class GenerationResponse(BaseModel):
-    """Response schema for generation data."""
-    
-    id: str = Field(description="Generation ID")
-    element_id: str = Field(description="Element ID that generated this content")
-    project_id: str = Field(description="Associated project ID")
-    status: GenerationStatus = Field(description="Generation status")
-    model_used: Optional[str] = Field(description="LLM model used")
-    chunk_count: int = Field(description="Number of content chunks")
-    token_usage: int = Field(description="Total tokens used")
-    created_at: str = Field(description="Creation timestamp")
-    updated_at: str = Field(description="Last update timestamp")
+    """Response model for generation data."""
+    id: str
+    user_id: str
+    element_id: Optional[str]
+    project_id: str
+    status: GenerationStatus
+    model_used: Optional[str]
+    chunk_count: int
+    token_usage: int
+    additional_instructions: Optional[str]
+    content: str
+    cost_usd: float
+    generation_time_ms: int
+    error_message: Optional[str]
+    created_at: str
+    updated_at: str
 
 
-class GenerationDetailResponse(GenerationResponse):
-    """Response schema for detailed generation data."""
-    
-    prompt: str = Field(description="Input prompt")
-    content: str = Field(description="Generated content")
-    cost_usd: float = Field(description="Generation cost in USD")
-    generation_time_ms: int = Field(description="Generation time in milliseconds")
-    error_message: Optional[str] = Field(description="Error message if failed")
+class GenerationListResponse(BaseModel):
+    """Response model for generation list with pagination."""
+    generations: List[GenerationResponse]
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
-@router.get(
-    "/",
-    response_model=List[GenerationResponse],
-    summary="List generations",
-    description="Get a list of generations"
-)
+@router.get("/", response_model=GenerationListResponse)
 async def list_generations(
     project_id: Optional[str] = Query(None, description="Filter by project ID"),
     element_id: Optional[str] = Query(None, description="Filter by element ID"),
+    execution_id: Optional[str] = Query(None, description="Filter by execution ID"),
     status: Optional[GenerationStatus] = Query(None, description="Filter by status"),
+    include_content: bool = Query(False, description="Include generated content in response"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
     current_user: User = Depends(get_current_user),
     generation_service: ElementGenerationService = Depends(get_generation_service)
-) -> List[GenerationResponse]:
+) -> GenerationListResponse:
     """List generations."""
     try:
         generations, total_count = await generation_service.list_generations(
             user_id=str(current_user.id),
-            page=page,
-            page_size=page_size,
             project_id=project_id,
             element_id=element_id,
-            status=status
+            execution_id=execution_id,
+            status=status,
+            include_content=include_content,
+            page=page,
+            page_size=page_size
         )
         
-        generation_responses = [
-            GenerationResponse(
+        # Convert to response models
+        generation_responses = []
+        for generation in generations:
+            # Get full content if requested
+            full_content = generation.get_full_content() if include_content else ""
+            
+            response = GenerationResponse(
                 id=str(generation.id),
+                user_id=generation.user_id,
                 element_id=generation.element_id,
                 project_id=generation.project_id,
                 status=generation.status,
-                model_used=generation.config.get("model"),
-                chunk_count=generation.get_chunk_count(),
-                token_usage=generation.metrics.total_tokens,
+                model_used=generation.model_used,
+                chunk_count=len(generation.generated_content),
+                token_usage=generation.metrics.total_tokens if generation.metrics else 0,
+                additional_instructions=generation.additional_instructions,
+                content=full_content,
+                cost_usd=generation.metrics.estimated_cost if generation.metrics and generation.metrics.estimated_cost else 0.0,
+                generation_time_ms=generation.metrics.generation_time_ms if generation.metrics and generation.metrics.generation_time_ms else 0,
+                error_message=generation.error_details.get("error_message") if generation.error_details else None,
                 created_at=generation.created_at.isoformat(),
                 updated_at=generation.updated_at.isoformat()
             )
-            for generation in generations
-        ]
+            generation_responses.append(response)
         
-        return generation_responses
+        total_pages = (total_count + page_size - 1) // page_size
+        
+        return GenerationListResponse(
+            generations=generation_responses,
+            total_count=total_count,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list generations: {str(e)}"
+            status_code=500,
+            detail=f"Error listing generations: {str(e)}"
         )
 
 
-@router.get(
-    "/{generation_id}",
-    response_model=GenerationDetailResponse,
-    summary="Get generation details",
-    description="Get detailed information about a specific generation"
-)
+@router.get("/{generation_id}", response_model=GenerationResponse)
 async def get_generation(
     generation_id: str,
     current_user: User = Depends(get_current_user),
     generation_service: ElementGenerationService = Depends(get_generation_service)
-) -> GenerationDetailResponse:
-    """Get generation details."""
-    generation = await generation_service.get_generation(generation_id, str(current_user.id))
-    
-    if not generation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Generation not found"
+) -> GenerationResponse:
+    """Get a specific generation by ID."""
+    try:
+        generation = await generation_service.get_generation(generation_id, str(current_user.id))
+        
+        if not generation:
+            raise HTTPException(
+                status_code=404,
+                detail="Generation not found"
+            )
+        
+        # Get full content
+        full_content = generation.get_full_content()
+        
+        return GenerationResponse(
+            id=str(generation.id),
+            user_id=generation.user_id,
+            element_id=generation.element_id,
+            project_id=generation.project_id,
+            status=generation.status,
+            model_used=generation.model_used,
+            chunk_count=len(generation.generated_content),
+            token_usage=generation.metrics.total_tokens if generation.metrics else 0,
+            additional_instructions=generation.additional_instructions,
+            content=full_content,
+            cost_usd=generation.metrics.estimated_cost if generation.metrics and generation.metrics.estimated_cost else 0.0,
+            generation_time_ms=generation.metrics.generation_time_ms if generation.metrics and generation.metrics.generation_time_ms else 0,
+            error_message=generation.error_details.get("error_message") if generation.error_details else None,
+            created_at=generation.created_at.isoformat(),
+            updated_at=generation.updated_at.isoformat()
         )
-    
-    return GenerationDetailResponse(
-        id=str(generation.id),
-        element_id=generation.element_id,
-        project_id=generation.project_id,
-        status=generation.status,
-        model_used=generation.config.get("model"),
-        chunk_count=generation.get_chunk_count(),
-        token_usage=generation.metrics.total_tokens,
-        prompt=generation.prompt,
-        content=generation.get_full_content(),
-        cost_usd=generation.metrics.cost_usd,
-        generation_time_ms=generation.metrics.generation_time_ms,
-        error_message=generation.error_message,
-        created_at=generation.created_at.isoformat(),
-        updated_at=generation.updated_at.isoformat()
-    ) 
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting generation: {str(e)}"
+        )
 
 
 @router.post("/generate-llamaindex", response_model=ElementGeneration)
@@ -208,4 +249,4 @@ async def generate_with_llamaindex(
         raise HTTPException(
             status_code=500,
             detail=f"Error in LlamaIndex generation: {str(e)}"
-    ) 
+        ) 

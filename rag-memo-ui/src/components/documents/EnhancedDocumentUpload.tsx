@@ -177,7 +177,7 @@ export function EnhancedDocumentUpload({
   const getStatusIcon = (status: DocumentUploadStatus['status']) => {
     switch (status) {
       case 'pending':
-        return <ClockIcon className="h-5 w-5 text-gray-400" />;
+        return <ClockIcon className="h-5 w-5 text-gray-500" />;
       case 'uploading':
       case 'processing':
         return <ArrowPathIcon className="h-5 w-5 text-blue-500 animate-spin" />;
@@ -186,7 +186,7 @@ export function EnhancedDocumentUpload({
       case 'failed':
         return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
       default:
-        return <DocumentIcon className="h-5 w-5 text-gray-400" />;
+        return <DocumentIcon className="h-5 w-5 text-gray-500" />;
     }
   };
 
@@ -219,7 +219,7 @@ export function EnhancedDocumentUpload({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-900">Upload Documents</h2>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-600">
           {documents.length}/{maxFiles} files • Max {maxSizePerFile}MB per file
         </div>
       </div>
@@ -236,18 +236,18 @@ export function EnhancedDocumentUpload({
         }`}
       >
         <input {...getInputProps()} />
-        <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <DocumentIcon className="mx-auto h-12 w-12 text-gray-500" />
         <div className="mt-4">
           {isDragActive ? (
             <p className="text-blue-600">Drop the files here...</p>
           ) : isUploading ? (
-            <p className="text-gray-500">Upload in progress...</p>
+            <p className="text-gray-600">Upload in progress...</p>
           ) : (
             <div>
               <p className="text-gray-600">
                 Drag & drop documents here, or click to select
               </p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-gray-600 mt-2">
                 Supports PDF, TXT, DOC, DOCX files
               </p>
             </div>
@@ -274,11 +274,11 @@ export function EnhancedDocumentUpload({
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {doc.name}
                       </p>
-                      <p className="text-xs text-gray-500 ml-2">
+                      <p className="text-xs text-gray-600 ml-2">
                         {formatFileSize(doc.size)}
                       </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-600 mt-1">
                       {getStatusText(doc)}
                     </p>
                     {/* Progress Bar */}

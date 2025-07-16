@@ -174,9 +174,19 @@ class ElementGeneration(BaseDocument):
     )
     
     # Input and Output
-    input_data: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Input data provided for generation"
+    # input_data: Dict[str, Any] = Field(
+    #     default_factory=dict,
+    #     description="Input data provided for generation"
+    # )  # REMOVED: Simplified to chunks + additional_instructions approach
+    
+    additional_instructions: Optional[str] = Field(
+        None,
+        description="Optional additional instructions provided by user"
+    )
+    
+    source_chunks: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Document chunks retrieved and used for generation"
     )
     generated_content: List[GenerationChunk] = Field(
         default_factory=list,
