@@ -1,0 +1,19 @@
+# Test Document with Enhanced Processing
+
+This is a test document to verify enhanced processing capabilities.
+
+## Sample Table Data
+| Name     | Age | Department |
+|----------|-----|------------|
+| Alice    | 30  | Engineering|
+| Bob      | 25  | Marketing  |
+| Charlie  | 35  | Sales      |
+
+## Text Content
+This document contains mixed content including text, tables, and would normally include images in a real PDF.
+
+The enhanced processor should:
+1. Extract and summarize tables
+2. Process any images with GPT-4 Vision
+3. Create appropriate chunks for each content type
+4. Generate embeddings for semantic search

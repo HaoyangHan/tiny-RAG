@@ -1,241 +1,211 @@
 """
-Document service for TinyRAG v1.4.
+Document Service for TinyRAG v1.4.3
+===================================
 
-This module contains the business logic for document management including
-file upload, processing, project integration, and document analytics.
+This module provides document management services including
+file upload, processing, project integration, and metadata extraction.
+
+Author: TinyRAG Development Team
+Version: 1.4.3
+Last Updated: January 2025
 """
 
 import logging
+import tempfile
+import os
 import hashlib
 from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime
+from pathlib import Path
 from beanie import PydanticObjectId
 from beanie.operators import In, And, Or
 
-from models import Document, Project, DocumentStatus
-from models.document import DocumentMetadata, DocumentChunk
+from models.document import Document, DocumentStatus, DocumentMetadata
+from models.project import Project
+from services.document_processor import DocumentProcessor
+from services.enhanced_document_processor import create_enhanced_document_processor
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentService:
     """
-    Service class for document management operations in v1.4.
+    Service class for document management operations.
     
-    Handles all business logic related to documents including file upload,
-    processing, project integration, and analytics while maintaining
-    compatibility with existing document processing logic.
+    Provides comprehensive document processing with enhanced metadata extraction,
+    table and image processing, and project integration.
     """
     
-    def __init__(self):
-        """Initialize the document service."""
-        self.legacy_service = None
-    
-    async def _check_duplicate_document(
-        self,
-        project_id: str,
-        file_content: bytes,
-        filename: str
-    ) -> Optional[Document]:
-        """
-        Check if a document with the same content already exists in the project.
-        
-        Args:
-            project_id: Project ID to check within
-            file_content: File content bytes for hash comparison
-            filename: Original filename
-            
-        Returns:
-            Document: Existing document if duplicate found, None otherwise
-        """
-        try:
-            # Generate content hash
-            content_hash = hashlib.sha256(file_content).hexdigest()
-            
-            # Check for existing documents in the same project with the same hash or filename
-            existing_docs = await Document.find(
-                And(
-                    Document.project_id == project_id,
-                    Document.is_deleted == False,
-                    Or(
-                        Document.filename == filename,
-                        # We'll store content_hash in metadata for comparison
-                        Document.metadata.content_hash == content_hash
-                    )
-                )
-            ).to_list()
-            
-            # Check for exact content match
-            for doc in existing_docs:
-                if hasattr(doc.metadata, 'content_hash') and doc.metadata.content_hash == content_hash:
-                    logger.info(f"Found duplicate document by content hash: {doc.id}")
-                    return doc
-                elif doc.filename == filename and doc.file_size == len(file_content):
-                    logger.info(f"Found potential duplicate document by filename and size: {doc.id}")
-                    return doc
-            
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error checking for duplicate document: {str(e)}")
-            return None
-    
+    @staticmethod
     async def upload_document(
-        self,
-        project_id: str,
         file_content: bytes,
         filename: str,
         content_type: str,
         user_id: str,
-        metadata: Optional[Dict[str, Any]] = None
+        project_id: str,
+        metadata: Optional[DocumentMetadata] = None
     ) -> Document:
         """
-        Upload and process a document for a project.
+        Upload and process a document with enhanced capabilities.
         
         Args:
-            project_id: Associated project ID
-            file_content: File content bytes
+            file_content: Raw file content
             filename: Original filename
-            content_type: MIME content type
-            user_id: ID of the uploading user
+            content_type: MIME type of the file
+            user_id: ID of the user uploading the document
+            project_id: ID of the project to associate with
             metadata: Optional document metadata
             
         Returns:
-            Document: Created document instance
+            Document: Created document instance with processed content, tables, and images
             
         Raises:
             ValueError: If validation fails or duplicate found
             Exception: If upload/processing fails
         """
         try:
-            logger.info(f"Starting document upload: {filename} ({len(file_content)} bytes) for project {project_id}")
-            
-            # Verify project exists and user has access
-            project = await Project.get(PydanticObjectId(project_id))
-            if not project or project.is_deleted:
-                raise ValueError("Project not found")
-            
-            if not project.is_accessible_by(user_id):
-                raise ValueError("Access denied to project")
-            
-            # Check for duplicate documents
-            duplicate_doc = await self._check_duplicate_document(project_id, file_content, filename)
-            if duplicate_doc:
-                raise ValueError(f"Document already exists in project: {duplicate_doc.filename} (ID: {duplicate_doc.id})")
-            
-            # Generate content hash for future duplicate detection
+            # Generate content hash for duplicate detection
             content_hash = hashlib.sha256(file_content).hexdigest()
             
-            # Create document metadata with content hash
-            doc_metadata = DocumentMetadata(
+            # Check for duplicate documents
+            existing_document = await Document.find_one(
+                And(
+                    Document.content_hash == content_hash,
+                    Document.user_id == user_id
+                )
+            )
+            
+            if existing_document:
+                raise ValueError(f"Document with identical content already exists: {existing_document.id}")
+            
+            # Create document metadata
+            document_metadata = metadata or DocumentMetadata(
                 filename=filename,
                 content_type=content_type,
                 size=len(file_content),
                 upload_date=datetime.utcnow(),
                 processed=False,
+                has_tables=False,
+                has_images=False,
                 content_hash=content_hash  # Add content hash for duplicate detection
             )
             
             # Create document instance
             document = Document(
                 user_id=user_id,
-                project_id=project_id,  # Direct field
+                project_id=project_id,
                 filename=filename,
-                file_size=len(file_content),
                 content_type=content_type,
+                file_size=len(file_content),
                 status=DocumentStatus.UPLOADING,
-                metadata=doc_metadata,
-                chunks=[]
+                metadata=document_metadata,
+                chunks=[],
+                tables=[],
+                images=[]
             )
             
-            # Save to database first
-            await document.insert()
-            logger.info(f"Document saved to database with ID: {document.id}")
+            # Save document initially
+            await document.save()
             
-            try:
-                # Process document with chunking and embeddings
-                import tempfile
-                import os
-                from pathlib import Path
-                from services.document_processor import DocumentProcessor
+            # Get OpenAI API key for enhanced processing
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            
+            if not openai_api_key:
+                logger.warning("OpenAI API key not configured - basic processing only")
                 
-                # Get OpenAI API key for processing
-                openai_api_key = os.getenv("OPENAI_API_KEY")
-                if not openai_api_key:
-                    logger.warning("OpenAI API key not configured - basic processing only")
+                # Basic processing without LLM
+                document.status = DocumentStatus.COMPLETED
+                document.metadata.processed = True
+                logger.info("Document processed without embeddings (no OpenAI key)")
+                
+            else:
+                # Enhanced processing with comprehensive metadata extraction
+                from services.enhanced_document_processor import create_enhanced_document_processor
+                processor = create_enhanced_document_processor(openai_api_key)
+                
+                # Create temporary file for processing
+                with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as temp_file:
+                    temp_file.write(file_content)
+                    temp_path = Path(temp_file.name)
+                
+                try:
+                    # Update status to processing
+                    document.status = DocumentStatus.PROCESSING
+                    await document.save()
                     
-                    # Basic processing without LLM
-                    document.status = DocumentStatus.COMPLETED
-                    document.metadata.processed = True
-                    logger.info("Document processed without embeddings (no OpenAI key)")
+                    # Process document with enhanced capabilities and metadata extraction
+                    processed_document = await processor.process_document(
+                        file_path=temp_path,
+                        user_id=user_id,
+                        document_id=str(document.id),
+                        project_id=project_id
+                    )
                     
-                else:
-                    # Full processing with chunking and embeddings
-                    processor = DocumentProcessor(openai_api_key)
-                    logger.info("Starting document processing with OpenAI embeddings")
+                    # Update the document with processed results
+                    document.chunks = processed_document.chunks
+                    document.tables = processed_document.tables
+                    document.images = processed_document.images
+                    document.metadata.has_tables = processed_document.metadata.has_tables
+                    document.metadata.has_images = processed_document.metadata.has_images
+                    document.metadata.processed = processed_document.metadata.processed
+                    document.status = processed_document.status
                     
-                    # Create temporary file for processing
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{filename}") as temp_file:
-                        temp_file.write(file_content)
-                        temp_path = Path(temp_file.name)
+                    logger.info(f"Enhanced processing completed: {len(document.chunks)} chunks, "
+                              f"{len(document.tables)} tables, {len(document.images)} images")
                     
-                    try:
-                        # Process document (this will populate chunks and embeddings)
-                        if content_type == "application/pdf":
-                            await processor._process_pdf(temp_path, document)
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = True
-                            logger.info(f"PDF processed successfully with {len(document.chunks)} chunks")
-                        elif content_type.startswith('text/'):
-                            # Handle text files
-                            text_content = file_content.decode('utf-8', errors='ignore')
-                            chunks = processor.text_splitter.split_text(text_content)
-                            
-                            # Create document chunks with embeddings
-                            for chunk_idx, chunk_text in enumerate(chunks):
-                                chunk = DocumentChunk(
-                                    text=chunk_text,
-                                    page_number=1,  # Text files are single page
-                                    chunk_index=chunk_idx
-                                )
-                                # Generate embedding
-                                chunk.embedding = await processor._generate_embedding(chunk_text)
-                                document.chunks.append(chunk)
-                            
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = True
-                            logger.info(f"Text file processed successfully with {len(document.chunks)} chunks")
-                        else:
-                            # Unsupported file type - store without processing
-                            document.status = DocumentStatus.COMPLETED
-                            document.metadata.processed = False
-                            logger.warning(f"Unsupported content type for processing: {content_type}")
+                    # Log metadata extraction summary
+                    metadata_count = 0
+                    for chunk in document.chunks:
+                        if chunk.chunk_metadata:
+                            metadata_count += len(chunk.chunk_metadata)
+                    
+                    logger.info(f"Metadata extraction completed: {metadata_count} total metadata fields extracted")
+                    
+                    # Mark as completed if processed successfully
+                    if document.status != DocumentStatus.COMPLETED:
+                        document.status = DocumentStatus.COMPLETED
+                        document.metadata.processed = True
                         
-                    finally:
-                        # Clean up temporary file
+                finally:
+                    # Clean up temporary file
+                    if temp_path.exists():
                         temp_path.unlink()
-                
-                # Save updates
-                await document.save()
-                
-                # Add to project's document list
+            
+            # Save final document state
+            await document.save()
+            
+            # Add document to project
+            project = await Project.get(project_id)
+            if project:
                 project.add_document(str(document.id))
                 await project.save()
-                
-                logger.info(f"Successfully uploaded and processed document {document.id} to project {project_id} with {len(document.chunks)} chunks")
-                return document
-                
-            except Exception as processing_error:
-                # Update status to failed
-                document.status = DocumentStatus.FAILED
-                document.metadata.error = str(processing_error)
-                await document.save()
-                logger.error(f"Document processing failed: {str(processing_error)}")
-                raise processing_error
-                
+            
+            # Log comprehensive processing results
+            logger.info(
+                f"Document upload completed: {document.id} -> Project {project_id}\n"
+                f"  - Chunks: {len(document.chunks)} (text: {len([c for c in document.chunks if c.chunk_type == 'text'])}, "
+                f"table: {len([c for c in document.chunks if c.chunk_type == 'table'])}, "
+                f"image: {len([c for c in document.chunks if c.chunk_type == 'image'])})\n"
+                f"  - Tables: {len(document.tables)}\n"
+                f"  - Images: {len(document.images)}\n"
+                f"  - Status: {document.status}"
+            )
+            
+            return document
+            
+        except Exception as processing_error:
+            # Update status to failed
+            document.status = DocumentStatus.FAILED
+            document.metadata.error = str(processing_error)
+            document.metadata.processed = False
+            await document.save()
+            
+            logger.error(f"Document processing failed for {document.id}: {str(processing_error)}")
+            raise processing_error
+            
         except Exception as e:
-            logger.error(f"Failed to upload document: {str(e)}")
-            raise
+            logger.error(f"Document upload failed: {str(e)}")
+            raise e
     
     async def get_document(self, document_id: str, user_id: str) -> Optional[Document]:
         """
@@ -455,7 +425,12 @@ class DocumentService:
                         "text": chunk.text,
                         "page_number": chunk.page_number,
                         "chunk_index": chunk.chunk_index,
-                        "embedding": chunk.embedding  # Include full embedding vector
+                        "chunk_type": getattr(chunk, 'chunk_type', 'text'),
+                        "embedding": chunk.embedding,
+                        "chunk_metadata": getattr(chunk, 'chunk_metadata', {}),
+                        "start_pos": getattr(chunk, 'start_pos', None),
+                        "end_pos": getattr(chunk, 'end_pos', None),
+                        "section": getattr(chunk, 'section', None)
                     }
                     for chunk in document.chunks
                 ],

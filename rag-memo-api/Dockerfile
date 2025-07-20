@@ -1,54 +1,43 @@
-# Build stage
-FROM python:3.11-bullseye AS builder
+# Use a base image that might have better connectivity
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libmagic1 \
-    && rm -rf /var/lib/apt/lists/*
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    NLTK_DATA=/app/nltk_data \
+    TRANSFORMERS_CACHE=/app/transformers_cache \
+    HF_HOME=/app/huggingface
 
-# Copy core library source
-COPY rag-memo-core-lib/src/rag_memo_core_lib /app/rag_memo_core_lib
-
-# Copy requirements and install API dependencies
+# Copy requirements first for better caching
 COPY rag-memo-api/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY rag-memo-api/ .
-
-# Production stage
-FROM python:3.11-slim-bullseye
-
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    libmagic1 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin/ /usr/local/bin/
-
-# Copy core library
-COPY --from=builder /app/rag_memo_core_lib /app/rag_memo_core_lib
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY rag-memo-api/ .
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create app user and directories
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/uploads /app/logs /app/nltk_data /app/transformers_cache /app/huggingface && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV PORT=8000
+# Switch to app user
+USER appuser
+
+# Pre-download NLTK data to avoid permission issues
+RUN python -c "import nltk; nltk.download('stopwords', download_dir='/app/nltk_data'); nltk.download('punkt', download_dir='/app/nltk_data')"
+
+# Health check (using Python)
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 # Expose port
 EXPOSE 8000
 
-# Start the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Start API server
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 

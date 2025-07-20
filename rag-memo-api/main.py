@@ -11,9 +11,10 @@ This is the main entry point for the TinyRAG API service, integrating:
 import os
 import logging
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File, Request
+from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -79,6 +80,9 @@ document_service: Optional[DocumentService] = None
 generation_service: Optional[GenerationService] = None
 llm_extractor = None
 enhanced_reranker = None
+
+
+
 
 
 @asynccontextmanager
@@ -219,6 +223,13 @@ async def lifespan(app_instance: FastAPI):
         app_instance.include_router(v1_router, prefix="/api/v1")
         logger.info("v1.4 API routes initialized")
         
+        # Set custom OpenAPI after all routes are included
+        try:
+            app_instance.openapi = create_custom_openapi
+            logger.info("Custom OpenAPI schema applied to fix Swagger UI issues")
+        except Exception as e:
+            logger.warning(f"Failed to apply custom OpenAPI: {e}")
+        
         # Create default admin user if none exists
         await create_default_admin_user()
         
@@ -286,13 +297,37 @@ app = FastAPI(
     All endpoints require JWT authentication. Get your token from `/auth/login`.
     
     ## 📖 Documentation
-    - **Interactive API Docs**: Available at `/docs` (Swagger UI)
-    - **Alternative Docs**: Available at `/redoc` (ReDoc)
+    - **✅ ReDoc Documentation**: Available at `/redoc` (Recommended - Better rendering)
+    - **⚠️ Swagger UI**: Available at `/docs` (May have rendering issues with complex schemas)
+    
+    ### 🔧 Note for Developers
+    If you encounter "😱 Could not render responses_Responses" in Swagger UI, 
+    please use ReDoc at `/redoc` for better API documentation experience.
     """,
     version="1.4.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
+    swagger_ui_parameters={
+        "tryItOutEnabled": True,
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+        "filter": True,
+        "showCommonExtensions": False,
+        "defaultModelsExpandDepth": 0,
+        "defaultModelExpandDepth": 0,
+        "displayOperationId": False,
+        "showExtensions": False,
+        "deepLinking": False,
+        "syntaxHighlight.theme": "agate",
+        "layout": "BaseLayout",
+        "validatorUrl": None,
+        "presets": ["standalone"],
+        "plugins": ["topbar"],
+        "supportedSubmitMethods": ["get", "post", "put", "delete", "patch", "head", "options"],
+        "operationsSorter": "alpha",
+        "tagsSorter": "alpha"
+    },
     openapi_tags=[
         {
             "name": "Authentication",
@@ -346,6 +381,101 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Apply custom OpenAPI schema to fix Swagger UI rendering issues
+def create_custom_openapi():
+    """
+    Create custom OpenAPI schema to fix Swagger UI rendering issues.
+    """
+    print("🔧 DEBUG: Creating custom OpenAPI schema...")  # Debug log
+    
+    if app.openapi_schema:
+        print("🔧 DEBUG: Returning cached schema")  # Debug log
+        return app.openapi_schema
+    
+    # Generate the standard OpenAPI schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags,
+    )
+    
+    print("🔧 DEBUG: Generated base OpenAPI schema")  # Debug log
+    
+    # Track fixes applied
+    fixes_applied = 0
+    
+    def simplify_anyof(obj, path="root"):
+        """Recursively simplify anyOf patterns in the schema."""
+        nonlocal fixes_applied
+        
+        if isinstance(obj, dict):
+            # Handle anyOf patterns
+            if "anyOf" in obj:
+                anyof_items = obj["anyOf"]
+                
+                # Look for the pattern: [actual_type, null_type]
+                if len(anyof_items) == 2:
+                    null_item = None
+                    actual_item = None
+                    
+                    for item in anyof_items:
+                        if isinstance(item, dict):
+                            if item.get("type") == "null":
+                                null_item = item
+                            else:
+                                actual_item = item
+                    
+                    # If we found both patterns, replace with nullable version
+                    if null_item is not None and actual_item is not None:
+                        print(f"🔧 DEBUG: Fixing anyOf at {path}")  # Debug log
+                        
+                        # Preserve title and description
+                        title = obj.get("title")
+                        description = obj.get("description")
+                        
+                        # Create new schema from actual item
+                        new_schema = actual_item.copy()
+                        new_schema["nullable"] = True
+                        
+                        if title:
+                            new_schema["title"] = title
+                        if description:
+                            new_schema["description"] = description
+                        
+                        # Replace the current object content
+                        obj.clear()
+                        obj.update(new_schema)
+                        fixes_applied += 1
+                        return obj
+            
+            # Recursively process all nested objects
+            for key, value in list(obj.items()):
+                if isinstance(value, (dict, list)):
+                    simplify_anyof(value, f"{path}.{key}")
+        
+        elif isinstance(obj, list):
+            # Process each item in the list
+            for i, item in enumerate(obj):
+                if isinstance(item, (dict, list)):
+                    simplify_anyof(item, f"{path}[{i}]")
+        
+        return obj
+    
+    # Apply the simplification to the entire schema
+    simplify_anyof(openapi_schema)
+    
+    print(f"🔧 DEBUG: Applied {fixes_applied} anyOf fixes")  # Debug log
+    
+    # Cache the modified schema
+    app.openapi_schema = openapi_schema
+    return openapi_schema
+
+# Set the custom OpenAPI function
+print("🔧 DEBUG: Setting custom OpenAPI function")  # Debug log
+app.openapi = create_custom_openapi
 
 
 # Dependency functions moved to dependencies.py

@@ -1,0 +1,19 @@
+TinyRAG Enhanced Metadata Test Document
+
+Section 1: Overview
+This is a test document to verify enhanced metadata extraction capabilities in TinyRAG v1.4.
+
+Section 2: Technical Details
+The enhanced processor should extract:
+- Document structure and sections
+- Enhanced metadata with keywords and entities
+- Position tracking for each chunk
+- Comprehensive analysis of content
+
+Section 3: Test Results
+This document will help verify that enhanced metadata fields are properly:
+1. Extracted during processing
+2. Stored in the database
+3. Returned via the API endpoints
+
+Keywords: TinyRAG, metadata, testing, enhanced processing, document analysis

@@ -5,14 +5,18 @@ This module contains document management endpoints adapted for the v1.4 API stru
 maintaining compatibility with existing document functionality.
 """
 
-from typing import List, Optional
+import tempfile
+import uuid
+from typing import List, Optional, Dict, Any
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile
 from pydantic import BaseModel, Field
 
 from auth.models import User
-from auth.service import get_current_active_user
+from auth.service import get_current_active_user as get_current_user
 from .service import DocumentService
-from models import DocumentStatus
+from models import DocumentStatus, Document
+from dependencies import get_llamaindex_document_processor
 
 router = APIRouter()
 
@@ -23,11 +27,36 @@ class DocumentChunkResponse(BaseModel):
     text: str = Field(description="Chunk text content")
     page_number: int = Field(description="Page number in source document")
     chunk_index: int = Field(description="Index of chunk within document")
+    chunk_type: str = Field(default="text", description="Type of chunk: text, table, or image")
     embedding: Optional[List[float]] = Field(description="Vector embedding for the chunk")
+    chunk_metadata: Optional[Dict[str, Any]] = Field(description="Comprehensive metadata from extractor")
+    start_pos: Optional[int] = Field(description="Start position in document")
+    end_pos: Optional[int] = Field(description="End position in document")
+    section: Optional[str] = Field(description="Document section")
+
+
+class TableDataResponse(BaseModel):
+    """Response schema for table data extracted from documents."""
+    
+    page_number: int = Field(description="Page number where table is located")
+    table_index: int = Field(description="Index of table on the page")
+    content: List[List[str]] = Field(description="Table content as rows and columns")
+    summary: str = Field(description="AI-generated summary of table content")
+    row_count: int = Field(description="Number of rows in the table")
+    column_count: int = Field(description="Number of columns in the table")
+
+
+class ImageDataResponse(BaseModel):
+    """Response schema for image data extracted from documents."""
+    
+    page_number: int = Field(description="Page number where image is located")
+    image_index: int = Field(description="Index of image on the page")
+    description: str = Field(description="AI-generated description of image content")
+    # Note: Raw image content is not included in API response for performance
 
 
 class DocumentResponse(BaseModel):
-    """Response schema for document data."""
+    """Response schema for document data with enhanced table and image support."""
     
     id: str = Field(description="Document ID")
     filename: str = Field(description="Original filename")
@@ -36,7 +65,13 @@ class DocumentResponse(BaseModel):
     file_size: int = Field(description="File size in bytes")
     status: str = Field(description="Processing status")
     chunks: List[DocumentChunkResponse] = Field(description="Document chunks with text and embeddings")
+    tables: List[TableDataResponse] = Field(description="Extracted tables with summaries")
+    images: List[ImageDataResponse] = Field(description="Extracted images with descriptions")
     chunk_count: int = Field(description="Number of text chunks")
+    table_count: int = Field(description="Number of extracted tables")
+    image_count: int = Field(description="Number of extracted images")
+    has_tables: bool = Field(description="Whether document contains tables")
+    has_images: bool = Field(description="Whether document contains images")
     created_at: str = Field(description="Upload timestamp")
     updated_at: str = Field(description="Last update timestamp")
 
@@ -63,7 +98,7 @@ async def list_documents(
     status: Optional[str] = Query(None, description="Filter by processing status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> DocumentListResponse:
     """List documents."""
     try:
@@ -102,11 +137,39 @@ async def list_documents(
                         text=chunk.text,
                         page_number=chunk.page_number,
                         chunk_index=chunk.chunk_index,
-                        embedding=chunk.embedding
+                        chunk_type=getattr(chunk, 'chunk_type', 'text'),
+                        embedding=chunk.embedding,
+                        chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                        start_pos=getattr(chunk, 'start_pos', None),
+                        end_pos=getattr(chunk, 'end_pos', None),
+                        section=getattr(chunk, 'section', None)
                     )
                     for chunk in doc.chunks
                 ],
+                tables=[
+                    TableDataResponse(
+                        page_number=table.page_number,
+                        table_index=table.table_index,
+                        content=table.content,
+                        summary=table.summary,
+                        row_count=getattr(table, 'row_count', 0),
+                        column_count=getattr(table, 'column_count', 0)
+                    )
+                    for table in doc.tables
+                ],
+                images=[
+                    ImageDataResponse(
+                        page_number=image.page_number,
+                        image_index=image.image_index,
+                        description=image.description
+                    )
+                    for image in doc.images
+                ],
                 chunk_count=len(doc.chunks),
+                table_count=len(doc.tables),
+                image_count=len(doc.images),
+                has_tables=bool(doc.tables),
+                has_images=bool(doc.images),
                 created_at=doc.created_at.isoformat(),
                 updated_at=doc.updated_at.isoformat()
             )
@@ -144,7 +207,7 @@ async def list_documents(
 async def upload_document(
     file: UploadFile = File(...),
     project_id: Optional[str] = Query(None, description="Project ID to associate with"),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> DocumentResponse:
     """Upload a document."""
     try:
@@ -188,11 +251,39 @@ async def upload_document(
                     text=chunk.text,
                     page_number=chunk.page_number,
                     chunk_index=chunk.chunk_index,
-                    embedding=chunk.embedding
+                    chunk_type=getattr(chunk, 'chunk_type', 'text'),
+                    embedding=chunk.embedding,
+                    chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                    start_pos=getattr(chunk, 'start_pos', None),
+                    end_pos=getattr(chunk, 'end_pos', None),
+                    section=getattr(chunk, 'section', None)
                 )
                 for chunk in document.chunks
             ],
+            tables=[
+                TableDataResponse(
+                    page_number=table.page_number,
+                    table_index=table.table_index,
+                    content=table.content,
+                    summary=table.summary,
+                    row_count=getattr(table, 'row_count', 0),
+                    column_count=getattr(table, 'column_count', 0)
+                )
+                for table in document.tables
+            ],
+            images=[
+                ImageDataResponse(
+                    page_number=image.page_number,
+                    image_index=image.image_index,
+                    description=image.description
+                )
+                for image in document.images
+            ],
             chunk_count=len(document.chunks),
+            table_count=len(document.tables),
+            image_count=len(document.images),
+            has_tables=bool(document.tables),
+            has_images=bool(document.images),
             created_at=document.created_at.isoformat(),
             updated_at=document.updated_at.isoformat()
         )
@@ -209,6 +300,90 @@ async def upload_document(
         )
 
 
+@router.post("/upload-llamaindex", response_model=DocumentResponse)
+async def upload_document_llamaindex(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    project_id: Optional[str] = Query(None, description="Project ID for v1.4"),
+    llamaindex_processor = Depends(get_llamaindex_document_processor)
+) -> DocumentResponse:
+    """Upload and process a document using LlamaIndex ingestion pipeline."""
+    try:
+        # Create temporary file with original filename extension
+        file_extension = Path(file.filename).suffix if file.filename else ""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_path = Path(temp_file.name)
+
+        # Process document with LlamaIndex processor
+        document = await llamaindex_processor.process_document(
+            temp_path,
+            str(current_user.id),
+            str(uuid.uuid4()),  # Generate document ID
+            project_id
+        )
+
+        # Clean up temporary file
+        temp_path.unlink()
+
+        # Convert to response format
+        return DocumentResponse(
+            id=str(document.id),
+            filename=document.filename,
+            project_id=document.project_id,
+            content_type=document.content_type,
+            file_size=document.file_size,
+            status=document.status,
+            chunks=[
+                DocumentChunkResponse(
+                    text=chunk.text,
+                    page_number=chunk.page_number,
+                    chunk_index=chunk.chunk_index,
+                    chunk_type=getattr(chunk, 'chunk_type', 'text'),
+                    embedding=chunk.embedding,
+                    chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                    start_pos=getattr(chunk, 'start_pos', None),
+                    end_pos=getattr(chunk, 'end_pos', None),
+                    section=getattr(chunk, 'section', None)
+                )
+                for chunk in document.chunks
+            ],
+            tables=[
+                TableDataResponse(
+                    page_number=table.page_number,
+                    table_index=table.table_index,
+                    content=table.content,
+                    summary=table.summary,
+                    row_count=getattr(table, 'row_count', 0),
+                    column_count=getattr(table, 'column_count', 0)
+                )
+                for table in document.tables
+            ],
+            images=[
+                ImageDataResponse(
+                    page_number=image.page_number,
+                    image_index=image.image_index,
+                    description=image.description
+                )
+                for image in document.images
+            ],
+            chunk_count=len(document.chunks),
+            table_count=len(document.tables),
+            image_count=len(document.images),
+            has_tables=bool(document.tables),
+            has_images=bool(document.images),
+            created_at=document.created_at.isoformat(),
+            updated_at=document.updated_at.isoformat()
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing document with LlamaIndex: {str(e)}"
+        )
+
+
 @router.get(
     "/{document_id}",
     response_model=DocumentResponse,
@@ -217,7 +392,7 @@ async def upload_document(
 )
 async def get_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> DocumentResponse:
     """Get document details."""
     try:
@@ -245,11 +420,39 @@ async def get_document(
                     text=chunk.text,
                     page_number=chunk.page_number,
                     chunk_index=chunk.chunk_index,
-                    embedding=chunk.embedding
+                    chunk_type=getattr(chunk, 'chunk_type', 'text'),
+                    embedding=chunk.embedding,
+                    chunk_metadata=getattr(chunk, 'chunk_metadata', {}),
+                    start_pos=getattr(chunk, 'start_pos', None),
+                    end_pos=getattr(chunk, 'end_pos', None),
+                    section=getattr(chunk, 'section', None)
                 )
                 for chunk in document.chunks
             ],
+            tables=[
+                TableDataResponse(
+                    page_number=table.page_number,
+                    table_index=table.table_index,
+                    content=table.content,
+                    summary=table.summary,
+                    row_count=getattr(table, 'row_count', 0),
+                    column_count=getattr(table, 'column_count', 0)
+                )
+                for table in document.tables
+            ],
+            images=[
+                ImageDataResponse(
+                    page_number=image.page_number,
+                    image_index=image.image_index,
+                    description=image.description
+                )
+                for image in document.images
+            ],
             chunk_count=len(document.chunks),
+            table_count=len(document.tables),
+            image_count=len(document.images),
+            has_tables=bool(document.tables),
+            has_images=bool(document.images),
             created_at=document.created_at.isoformat(),
             updated_at=document.updated_at.isoformat()
         )
@@ -271,7 +474,7 @@ async def get_document(
 )
 async def get_document_content(
     document_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> dict:
     """Get document content with full chunk details."""
     try:
@@ -306,7 +509,7 @@ async def get_document_content(
 )
 async def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_user)
 ) -> None:
     """Delete a document."""
     try:

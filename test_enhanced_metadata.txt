@@ -1,0 +1,14 @@
+This is a test document for TinyRAG enhanced metadata extraction. 
+
+Section 1: Introduction
+This document contains multiple sections to test the enhanced document processing capabilities of TinyRAG v1.4.
+
+Section 2: Technical Details  
+The enhanced processor should extract:
+- Chunk metadata with keywords and entities
+- Start and end positions for each chunk
+- Section information for better organization
+- Chunk types (text, table, image)
+
+Section 3: Conclusion
+This test will verify that all enhanced metadata fields are properly stored and returned by the API.
