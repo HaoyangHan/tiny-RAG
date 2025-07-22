@@ -65,7 +65,7 @@ class LlamaIndexDocumentProcessor:
         
         # Initialize LLM and embedding models
         self.llm = OpenAI(
-            model="gpt-4o-mini",
+            model="gpt-4.1-nano",
             api_key=openai_api_key,
             base_url=openai_base_url
         )
@@ -154,42 +154,42 @@ class LlamaIndexDocumentProcessor:
 
     async def _process_pdf_with_llamaindex(self, file_path: Path, document: Document, document_id: str) -> None:
         """Process PDF document using LlamaIndex ingestion pipeline."""
-        
         try:
-            # For now, let's use a simpler approach without tempfile
-            # Create a simple document from the file path
-            llama_doc = LlamaDocument(
-                text=f"PDF document: {file_path.name}",
-                metadata={
-                    "source": str(file_path),
-                    "filename": file_path.name,
-                    "content_type": "application/pdf",
-                    "document_id": document_id,
-                    "user_id": document.user_id,
-                    "project_id": document.project_id,
-                    "upload_date": datetime.utcnow().isoformat()
-                }
-            )
-            
-            # Split text into chunks
-            text = llama_doc.text
-            chunks = self._split_text_into_chunks(text, 512, 20)
-            
+            import fitz
+            doc_fitz = fitz.open(str(file_path))
+            page_texts = []
+            page_start_positions = []
+            full_text = ""
+            for page in doc_fitz:
+                page_start_positions.append(len(full_text))
+                page_text = page.get_text()
+                page_texts.append(page_text)
+                full_text += page_text
+            doc_fitz.close()
+
+            # Split full text into chunks
+            chunks = self._split_text_into_chunks(full_text, 512, 20)
             for j, chunk_text in enumerate(chunks):
-                # Create enhanced chunk with metadata using enhanced processor
+                # Find which page this chunk belongs to
+                chunk_start = j * 512
+                page_number = 1
+                for idx, start_pos in enumerate(page_start_positions):
+                    if chunk_start >= start_pos:
+                        page_number = idx + 1
+                    else:
+                        break
                 await self._create_enhanced_chunk(
                     document=document,
                     text=chunk_text,
                     chunk_type="text",
-                    page_number=1,
+                    page_number=page_number,
                     document_id=document_id,
-                    start_pos=j * 512,
+                    start_pos=chunk_start,
                     section="Content"
                 )
-            
+
             # Process tables and images with enhanced metadata
             await self._process_tables_and_images_enhanced(file_path, document, document_id)
-            
         except Exception as e:
             logger.error(f"Error processing PDF with LlamaIndex: {e}")
             raise
@@ -257,91 +257,68 @@ class LlamaIndexDocumentProcessor:
             raise
 
     async def _process_tables_and_images_enhanced(self, file_path: Path, document: Document, document_id: str) -> None:
-        """Process tables and images with enhanced metadata extraction."""
-        
+        """Process tables and images with enhanced metadata extraction in parallel."""
+        import asyncio
         try:
-            # Use the existing enhanced processor for table/image extraction
             temp_processor = self.enhanced_processor
-            
-            # Extract tables and images using PyMuPDF in single loop
-            try:
-                doc = fitz.open(str(file_path))
-                total_pages = len(doc)
-                logger.info(f"Processing PDF with {total_pages} pages")
-                
-                for page_num in range(total_pages):  # Process only existing pages
-                    page = doc[page_num]
-                    logger.info(f"Processing page {page_num + 1}/{total_pages}")
-                    
-                    # Extract tables from this page with enhanced metadata
-                    if hasattr(temp_processor, '_extract_tables_with_pymupdf') and PYMUPDF_AVAILABLE:
-                        try:
-                            tables = temp_processor._extract_tables_with_pymupdf(file_path, page_num + 1)
-                            if tables:
-                                document.metadata.has_tables = True
-                                for table_idx, table_data in enumerate(tables):
-                                    table_text = temp_processor._format_table_for_summary(table_data)
-                                    
-                                    # Create enhanced table chunk with metadata and reuse the results
-                                    table_summary, table_metadata = await self._create_enhanced_table_chunk(
+            doc = fitz.open(str(file_path))
+            total_pages = len(doc)
+            logger.info(f"Processing PDF with {total_pages} pages")
+
+            tasks = []
+            for page_num in range(total_pages):
+                page = doc[page_num]
+                logger.info(f"Processing page {page_num + 1}/{total_pages}")
+
+                # Table extraction tasks
+                if hasattr(temp_processor, '_extract_tables_with_pymupdf') and PYMUPDF_AVAILABLE:
+                    try:
+                        tables = temp_processor._extract_tables_with_pymupdf(file_path, page_num + 1)
+                        if tables:
+                            document.metadata.has_tables = True
+                            for table_idx, table_data in enumerate(tables):
+                                table_text = temp_processor._format_table_for_summary(table_data)
+                                tasks.append(
+                                    self._create_enhanced_table_chunk(
                                         document=document,
                                         table_text=table_text,
                                         page_number=page_num + 1,
                                         document_id=document_id,
-                                        start_pos=table_idx * 1000,  # Approximate position
+                                        start_pos=table_idx * 1000,
                                         section="Table"
                                     )
-                                    
-                                    # Create table data object for backward compatibility using reused metadata
-                                    table_data_obj = TableData(
-                                        page_number=page_num + 1,
-                                        table_index=table_idx,
-                                        content=table_data,
-                                        summary=table_summary,
-                                        row_count=len(table_data),
-                                        column_count=len(table_data[0]) if table_data else 0
-                                    )
-                                    document.tables.append(table_data_obj)
-                        except Exception as e:
-                            logger.error(f"Error extracting tables from page {page_num + 1}: {e}")
-                    
-                                        # Extract images from this page with enhanced metadata
-                    if PYMUPDF_AVAILABLE:
-                        try:
-                            images = temp_processor._extract_images_from_page(page)
-                            if images:
-                                document.metadata.has_images = True
-                                logger.info(f"Found {len(images)} images on page {page_num + 1}")
-                                for img_idx, img_data in enumerate(images):
-                                    # Create enhanced image chunk with metadata and reuse the results
-                                    description, image_metadata = await self._create_enhanced_image_chunk(
+                                )
+                    except Exception as e:
+                        logger.error(f"Error extracting tables from page {page_num + 1}: {e}")
+
+                # Image extraction tasks
+                if PYMUPDF_AVAILABLE:
+                    try:
+                        images = temp_processor._extract_images_from_page(page)
+                        if images:
+                            document.metadata.has_images = True
+                            logger.info(f"Found {len(images)} images on page {page_num + 1}")
+                            for img_idx, img_data in enumerate(images):
+                                tasks.append(
+                                    self._create_enhanced_image_chunk(
                                         document=document,
                                         image_data=img_data,
                                         page_number=page_num + 1,
                                         document_id=document_id,
-                                        start_pos=img_idx * 1000,  # Approximate position
+                                        start_pos=img_idx * 1000,
                                         section="Image"
                                     )
-                                    
-                                    # Create image data object for backward compatibility using reused metadata
-                                    image_data_obj = ImageData(
-                                        page_number=page_num + 1,
-                                        image_index=img_idx + 1,
-                                        content=img_data,
-                                        description=description
-                                    )
-                                    document.images.append(image_data_obj)
-                            else:
-                                logger.info(f"No images found on page {page_num + 1}")
-                        except Exception as e:
-                            logger.error(f"Error extracting images from page {page_num + 1}: {e}")
-                    else:
-                        logger.info(f"PyMuPDF not available - skipping image extraction on page {page_num + 1}")
-                
-                doc.close()
-            except Exception as e:
-                logger.error(f"Error extracting tables and images: {e}")
-                            
+                                )
+                        else:
+                            logger.info(f"No images found on page {page_num + 1}")
+                    except Exception as e:
+                        logger.error(f"Error extracting images from page {page_num + 1}: {e}")
+                else:
+                    logger.info(f"PyMuPDF not available - skipping image extraction on page {page_num + 1}")
+
+            doc.close()
+            if tasks:
+                await asyncio.gather(*tasks)
         except Exception as e:
             logger.error(f"Error processing tables and images: {e}")
             # Don't raise - this is optional processing
