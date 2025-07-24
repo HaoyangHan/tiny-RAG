@@ -1,505 +1,113 @@
-# TinyRAG v1.4.1 ✅ PRODUCTION READY
+# TinyRAG - Intelligent Memo Generation Platform
 
-**Advanced RAG Platform with Project-Based Architecture & Core Library Foundation**
-
-**Current Status**: v1.4.1 Production Ready ✅ COMPLETED (June 26, 2025)  
-**Achievement**: 100% API Success Rate with Complete Frontend Integration
-
-TinyRAG v1.4.1 delivers a complete, production-ready RAG platform with advanced project-based organization, extensible core library architecture, comprehensive API coverage, and a modern Next.js frontend for seamless AI workflow management including RAG, agentic systems, and MCP integration.
-
-## ✅ v1.4.1 Production Achievements (COMPLETED)
-
-### 🎨 **Complete Frontend Integration**
-- **Modern Next.js 14 UI**: Responsive React frontend with TypeScript
-- **Comprehensive Page Coverage**: All major workflows accessible via web interface
-- **Real-time Monitoring**: Live generation tracking and status updates
-- **Built-in Testing Suite**: Frontend API testing interface at `/testing`
-- **Production-Ready Deployment**: Docker integration with backend services
-
-### 🏗️ **Advanced Project-Based Architecture**
-- **Multi-Tenant Organization**: Personal, Team, Enterprise, Research project types
-- **Role-Based Access Control**: Owner, Collaborator, Viewer permissions
-- **Project Collaboration**: Real-time sharing and team workspace management
-- **Hierarchical Resource Management**: Projects → Elements → Generations → Evaluations
-
-### 🤖 **Versatile AI Workflow Support**
-- **Raw LLM Access**: Direct language model interactions with full configuration
-- **RAG Pipeline**: Document-based question answering with semantic search
-- **Agentic Workflows**: Multi-step autonomous AI task execution
-- **MCP Integration**: Model Context Protocol for standardized tool usage
-
-### ⚡ **Advanced Element & Template System**
-- **Reusable Prompt Templates**: Variable substitution and version control
-- **MCP Configuration Elements**: Standardized AI tool and agent definitions
-- **Execution Engine**: Automated element processing with tracking
-- **Cross-Project Sharing**: Template library and element marketplace
-
-### 📈 **Comprehensive Evaluation Framework**
-- **LLM-as-a-Judge**: Automated quality assessment using language models
-- **Multi-Criteria Scoring**: Accuracy, relevance, clarity, completeness metrics
-- **Hallucination Detection**: Advanced content verification systems
-- **Performance Analytics**: Cost tracking, usage metrics, optimization insights
-
-### 🔧 **Extensible Core Library**
-- **Abstract Provider System**: Pluggable LLM and vector store backends
-- **Type-Safe Interfaces**: Comprehensive abstractions for all AI components
-- **Factory Pattern Implementation**: Dynamic provider registration and configuration
-- **Mock Providers**: Zero-dependency testing with configurable behavior
-
-### 📊 **Production-Ready API (100% Success Rate)**
-- **49/49 Core Tests Passing**: Complete API coverage with full functionality
-- **JWT Authentication**: Secure token-based user management
-- **Comprehensive Documentation**: Interactive API docs with examples
-- **Error Handling**: Structured exception hierarchy with detailed context
-
-### 🐳 **Enhanced Infrastructure**
-- **Complete Docker Stack**: Containerized services with health monitoring
-- **Service Integration**: MongoDB, Redis, Qdrant with optimized configurations
-- **Auto-scaling Workers**: Background processing with queue management
-- **Production Monitoring**: Real-time metrics and performance tracking
-
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    UI[React Frontend<br/>v1.4 Project UI<br/>Port 3000] --> API[FastAPI v1.4 API<br/>Project-Based<br/>Port 8000]
-    API --> Auth[JWT Authentication<br/>RBAC System]
-    API --> CoreLib[Core Library<br/>Abstraction Layer]
-    
-    CoreLib --> LLMFactory[LLM Factory<br/>Provider System]
-    CoreLib --> VectorFactory[Vector Store<br/>Factory]
-    CoreLib --> Worker[Element Execution<br/>Engine]
-    
-    API --> Mongo[(MongoDB<br/>Projects & Elements)]
-    API --> Redis[(Redis<br/>Sessions & Cache)]
-    API --> Qdrant[(Qdrant<br/>Vector Embeddings)]
-    
-    LLMFactory --> OpenAI[OpenAI Provider<br/>GPT-4o-mini]
-    LLMFactory --> Anthropic[Anthropic Provider<br/>Claude]
-    LLMFactory --> Mock[Mock Provider<br/>Testing]
-    
-    subgraph "v1.4 Project Architecture"
-        Project[Project] --> Elements[Elements<br/>Templates & Tools]
-        Elements --> Generations[Generations<br/>Executions]
-        Generations --> Evaluations[Evaluations<br/>Quality Scores]
-    end
-    
-    subgraph "Extensible Workflows"
-        RAG[RAG Pipeline<br/>Doc Q&A]
-        Agentic[Agentic Tasks<br/>Multi-step AI]
-        MCP[MCP Integration<br/>Tool Protocol]
-        Raw[Raw LLM<br/>Direct Access]
-    end
-```
+## Overview
+TinyRAG is an intelligent AI-powered platform that automates the creation of first-draft memos from dense, complex documents. Using cutting-edge Retrieval-Augmented Generation (RAG), it ensures every statement is grounded in source documents with verifiable citations.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
+- Python 3.11+
+- Node.js 18+
 - Docker & Docker Compose
-- OpenAI API key (required for LLM features)
-- 8GB+ RAM recommended
+- MongoDB Atlas Account
+- OpenAI API Key
 
-### 1. Clone and Setup
-
+### Local Development Setup
+1. Clone the repositories:
 ```bash
-git clone https://github.com/yourusername/tiny-RAG.git
-cd tiny-RAG
-
-# Copy environment template
-cp env.example .env
-
-# Edit .env with your configuration
-# REQUIRED: Set OPENAI_API_KEY and JWT_SECRET_KEY
-nano .env
+git clone https://github.com/your-org/rag-memo-api.git
+git clone https://github.com/your-org/rag-memo-ui.git
+git clone https://github.com/your-org/rag-memo-core-lib.git
 ```
 
-### 2. One-Command Startup
-
+2. Set up the backend:
 ```bash
-# Start all services
-./scripts/start-tinyrag.sh
-
-# Or with options
-./scripts/start-tinyrag.sh --rebuild  # Rebuild images
-./scripts/start-tinyrag.sh --logs     # Show logs after start
-```
-
-### 3. Access the Application
-
-- **🌐 Frontend UI**: http://localhost:3000
-  - **Landing Page**: Modern authentication interface
-  - **Dashboard**: Project management and analytics
-  - **Document Upload**: Drag & drop file processing
-  - **Element Management**: Template and tool creation
-  - **Generation Tracking**: Real-time execution monitoring
-- **📚 API Documentation**: http://localhost:8000/docs
-- **🔍 API Health Check**: http://localhost:8000/health
-- **📖 ReDoc Documentation**: http://localhost:8000/redoc
-
-### 4. Frontend Features & Navigation
-
-The **Next.js frontend** provides a complete user interface for TinyRAG:
-
-#### 🏠 **Main Pages**
-- **`/`** - Landing page with authentication
-- **`/dashboard`** - Main dashboard with project overview
-- **`/projects`** - Project management and creation
-- **`/documents`** - Document upload and management
-- **`/elements`** - Template and element management
-- **`/generations`** - Execution history and monitoring
-- **`/evaluations`** - Quality assessment results
-- **`/testing`** - Built-in API testing suite
-
-#### 🔐 **Authentication Flow**
-1. **Register**: Create new account with email verification
-2. **Login**: Secure JWT-based authentication
-3. **Dashboard**: Access project workspace immediately
-4. **Profile**: Manage user settings and API keys
-
-#### 🎨 **UI Components**
-- **Responsive Design**: Mobile-first with Tailwind CSS
-- **Modern Components**: Radix UI component library
-- **Real-time Updates**: WebSocket integration for live data
-- **Interactive Forms**: Comprehensive validation and error handling
-- **Dark/Light Mode**: Theme switching support
-
-### 5. Default Test User Login
-
-For testing purposes, use these credentials:
-
-```
-Email: tester3@example.com
-Username: tester3
-Password: TestPassword123!
-```
-
-⚠️ **For production, create your own admin account immediately!**
-
-## 📋 Core Features
-
-### 🔐 Authentication System
-
-- **User Registration & Login**: Secure JWT-based authentication
-- **Role-Based Access**: Admin, User, and Viewer roles
-- **API Key Management**: Generate and manage API keys for programmatic access
-- **Rate Limiting**: Configurable rate limits for security
-- **Session Management**: Secure session handling with Redis
-
-### 🧠 Intelligent Metadata Extraction
-
-- **LLM-Powered Analysis**: Uses GPT-4o-mini for comprehensive metadata extraction
-- **Multi-Type Extraction**: Keywords, entities, dates, topics, sentiment, summaries
-- **Quality Assessment**: Content readability and information density scoring
-- **Confidence Scoring**: All extractions include confidence levels
-- **Caching**: Intelligent caching to reduce LLM API costs
-
-### 🎯 Advanced Retrieval & Reranking
-
-- **Semantic Search**: Vector-based similarity matching
-- **Metadata Filtering**: Filter by dates, entities, topics, quality scores
-- **Intelligent Reranking**: Multi-factor scoring algorithm
-- **Diversity Filtering**: Ensures diverse, non-redundant results
-- **Explanation System**: Detailed scoring explanations for transparency
-
-### 📄 Document Processing
-
-- **Multi-Format Support**: PDF, DOCX, TXT, MD files
-- **Intelligent Chunking**: Context-aware document segmentation
-- **Metadata Preservation**: Maintains document structure and metadata
-- **Batch Processing**: Efficient handling of multiple documents
-- **Progress Tracking**: Real-time processing status updates
-
-## 🛠️ Development Setup
-
-### Docker Development (Recommended)
-
-```bash
-# Start all services with Docker
-./scripts/start-tinyrag.sh
-
-# Access applications:
-# - Frontend: http://localhost:3000
-# - API: http://localhost:8000
-# - API Docs: http://localhost:8000/docs
-```
-
-### Local Development
-
-#### Backend Setup
-```bash
-# Install Python dependencies
-pip install -r rag-memo-api/requirements.txt
-pip install -r rag-memo-core-lib/requirements.txt
-
-# Start infrastructure services only
-docker-compose up -d tinyrag-mongodb tinyrag-redis tinyrag-qdrant
-
-# Run API locally
 cd rag-memo-api
-uvicorn main:app --reload --port 8000
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
 ```
 
-#### Frontend Setup
+3. Set up the frontend:
 ```bash
-# Navigate to frontend directory
 cd rag-memo-ui
-
-# Install Node.js dependencies
 npm install
-
-# Start development server
-npm run dev
-
-# Frontend will be available at:
-# http://localhost:3000
 ```
 
-#### Environment Configuration
+4. Configure environment variables:
 ```bash
-# Copy environment template
-cp env.template .env
-
-# Edit with your settings
-nano .env
-
-# Required variables:
-# OPENAI_API_KEY=sk-your-key-here
-# JWT_SECRET_KEY=your-secret-key
+# Copy example env files
+cp .env.example .env  # in each repository
 ```
 
-### Testing
+5. Start the development environment:
+```bash
+docker-compose up -d
+```
+
+## 🛠️ Features
+
+### Core Features
+- 📄 PDF Document Processing
+- 🤖 AI-Powered Memo Generation
+- 📝 Citation System
+- 🔍 Source Verification
+- 🎯 Customizable Prompts
+
+### Technical Features
+- ⚡ FastAPI Backend
+- 🔄 Asynchronous Processing
+- 🎨 Modern React/Vue.js Frontend
+- 📊 MongoDB + Vector Search
+- 🔒 Secure Authentication
+
+## 📚 Documentation
+
+- [API Documentation](docs/api/README.md)
+- [Architecture Overview](docs/architecture/README.md)
+- [Development Guide](docs/Contributing.md)
+- [User Guide](docs/user/README.md)
+
+## 🧪 Testing
 
 ```bash
-# Run API tests
+# Backend Tests
 cd rag-memo-api
-pytest tests/ -v
+pytest
 
-# Run UI tests
+# Frontend Tests
 cd rag-memo-ui
 npm test
-
-# Run integration tests
-./scripts/run-tests.sh
 ```
 
-## 📚 API Usage Examples
+## 📈 Performance Metrics
 
-### v1.4 API Authentication
+- Document Processing: < 30 seconds
+- Memo Generation: < 60 seconds
+- API Response: < 200ms
+- System Uptime: > 99%
 
-```bash
-# Register a new user
-curl -X POST "http://localhost:8000/api/v1/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "username": "newuser",
-    "password": "SecurePass123!",
-    "full_name": "John Doe"
-  }'
+## 🔄 Development Workflow
 
-# Login
-curl -X POST "http://localhost:8000/api/v1/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "identifier": "user@example.com",
-    "password": "SecurePass123!"
-  }'
-```
-
-### Project-Based Workflow
-
-```bash
-# Create a project
-curl -X POST "http://localhost:8000/api/v1/projects" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Customer Analysis",
-    "description": "RAG system for customer data analysis",
-    "tenant_type": "TEAM"
-  }'
-
-# Upload document to project
-curl -X POST "http://localhost:8000/api/v1/documents/upload?project_id=PROJECT_ID" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -F "file=@document.pdf"
-```
-
-### Element & Generation System
-
-```bash
-# Create prompt template element
-curl -X POST "http://localhost:8000/api/v1/elements" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Document Analyzer",
-    "project_id": "PROJECT_ID",
-    "element_type": "PROMPT_TEMPLATE",
-    "template_content": "Analyze this document: {content}",
-    "variables": ["content"]
-  }'
-
-# Execute element
-curl -X POST "http://localhost:8000/api/v1/elements/ELEMENT_ID/execute" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "variables": {
-      "content": "Document content to analyze..."
-    }
-  }'
-```
-
-### Evaluation System
-
-```bash
-# Create evaluation for generation
-curl -X POST "http://localhost:8000/api/v1/evaluations" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "generation_id": "GENERATION_ID",
-    "evaluator_model": "gpt-4o",
-    "custom_criteria": {
-      "accuracy": 0.4,
-      "relevance": 0.3,
-      "clarity": 0.3
-    }
-  }'
-```
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-Key configuration options in `.env`:
-
-```bash
-# Authentication
-JWT_SECRET_KEY=your-super-secret-key
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# LLM Configuration
-OPENAI_API_KEY=sk-your-openai-key
-LLM_MODEL=gpt-4o-mini
-
-# Features
-ENABLE_METADATA_EXTRACTION=true
-ENABLE_ENHANCED_RERANKING=true
-
-# Performance
-WORKER_CONCURRENCY=4
-RATE_LIMIT_ENABLED=true
-```
-
-### Advanced Configuration
-
-See `Docs/TinyRAG-v1.4-API-Documentation.md` for complete API reference and `Docs/DevLog/2025-06-25_v1.4-core-lib-implementation-progress.md` for detailed architecture information.
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-1. **Services won't start**
-   ```bash
-   # Check Docker status
-   docker info
-   
-   # Check service logs
-   docker-compose logs tinyrag-api
-   ```
-
-2. **Authentication errors**
-   ```bash
-   # Verify JWT secret is set
-   echo $JWT_SECRET_KEY
-   
-   # Check API health
-   curl http://localhost:8000/health
-   ```
-
-3. **LLM extraction fails**
-   ```bash
-   # Verify OpenAI API key
-   echo $OPENAI_API_KEY
-   
-   # Check worker logs
-   docker-compose logs tinyrag-worker
-   ```
-
-### Reset Everything
-
-```bash
-# Stop all services and remove data
-docker-compose down -v
-
-# Rebuild and restart
-./scripts/start-tinyrag.sh --rebuild
-```
-
-## 📊 Monitoring & Logging
-
-### Service Monitoring
-
-```bash
-# Check all service status
-docker-compose ps
-
-# View real-time logs
-docker-compose logs -f
-
-# Monitor specific service
-docker-compose logs -f tinyrag-api
-```
-
-### Health Checks
-
-- **API Health**: `GET /health`
-- **Database Status**: Included in health endpoint
-- **LLM Service Status**: Monitored automatically
-- **Authentication Status**: JWT validation checks
+1. Create feature branch
+2. Implement changes
+3. Run tests
+4. Submit PR
+5. Code review
+6. Merge to main
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Follow the coding standards in `.cursorrules`
-4. Add comprehensive tests
-5. Commit with semantic messages (`git commit -m 'feat: add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+Please read our [Contributing Guide](docs/Contributing.md) for details on our code of conduct and the process for submitting pull requests.
 
-### Development Standards
-
-- **Type Annotations**: All Python code must be fully typed
-- **Documentation**: Google-style docstrings required
-- **Testing**: 90%+ test coverage target
-- **Security**: Follow OWASP guidelines
-- **Performance**: Profile and optimize critical paths
-
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🔗 Links
 
-- OpenAI for GPT-4o-mini API
-- Anthropic for Claude API
-- FastAPI for the excellent web framework
-- Qdrant for vector database capabilities
-- The open-source community for inspiration and tools
-
-## 📞 Support
-
-- **Documentation**: `/docs` when running locally
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-- **Security**: security@tinyrag.local
-
----
-
-**TinyRAG v1.4.0** - Complete RAG Platform for Modern AI Workflows! 🚀
-
-📖 **Full API Documentation**: [TinyRAG v1.4 API Guide](Docs/TinyRAG-v1.4-API-Documentation.md)
+- [Project Structure](docs/ProjectStructure.md)
+- [Version Plan](docs/Todo/VersionPlanDoc.md)
+- [Change Log](docs/ChangeLog.md)
+- [FAQ](docs/FAQ.md)
+- [Technical Debt](docs/TechDebt.md)
